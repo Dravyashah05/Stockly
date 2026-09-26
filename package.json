@@ -8,7 +8,7 @@
   ],
   "scripts": {
     "dev": "concurrently \"npm run dev --workspace server\" \"npm run dev --workspace client\"",
-    "build": "npm run build --workspace client",
+    "build": "npm run build --workspace client && node -e \"const fs=require('fs'); if(fs.existsSync('dist')) fs.cpSync('dist','client/dist',{recursive:true}); if(fs.existsSync('client/dist')&&!fs.existsSync('dist')) fs.cpSync('client/dist','dist',{recursive:true});\"",
     "build:client": "npm run build --workspace client",
     "build:server": "node -e \"console.log('Server build verified')\"",
     "vercel-build": "npm run build",

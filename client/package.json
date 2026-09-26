@@ -5,7 +5,7 @@
   "type": "module",
   "scripts": {
     "dev": "vite",
-    "build": "vite build",
+    "build": "vite build && node -e \"const fs=require('fs'); if(fs.existsSync('../dist')) fs.cpSync('../dist','dist',{recursive:true});\"",
     "preview": "vite preview"
   },
   "dependencies": {
