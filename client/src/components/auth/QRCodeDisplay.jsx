@@ -5,7 +5,7 @@ import { useToast } from "../../context/ToastContext";
 
 export default function QRCodeDisplay({
   value,
-  size = 200,
+  size = 180,
   copyValue = "",
   showControls = true,
   title = "",
@@ -19,8 +19,8 @@ export default function QRCodeDisplay({
   useEffect(() => {
     if (!value) return;
     QRCode.toDataURL(value, {
-      width: size * 2,
-      margin: 2,
+      width: Math.max(size * 2, 360),
+      margin: 1.5,
       color: {
         dark: "#18181b", // zinc-900
         light: "#ffffff",
@@ -59,29 +59,52 @@ export default function QRCodeDisplay({
   };
 
   return (
-    <div className="flex flex-col items-center">
-      {title && <h4 className="text-sm font-semibold text-zinc-900 dark:text-white mb-1">{title}</h4>}
-      {description && <p className="text-xs text-zinc-500 dark:text-zinc-400 mb-3 text-center">{description}</p>}
+    <div className="flex flex-col items-center w-full max-w-full">
+      {title && (
+        <h4 className="text-sm font-semibold text-zinc-900 dark:text-white mb-1 text-center">
+          {title}
+        </h4>
+      )}
+      {description && (
+        <p className="text-xs text-zinc-500 dark:text-zinc-400 mb-3 text-center max-w-xs">
+          {description}
+        </p>
+      )}
 
-      <div className="relative p-3 bg-white rounded-2xl shadow-sm border border-zinc-200 dark:border-zinc-700/60 inline-flex flex-col items-center">
+      <div className="relative p-2.5 sm:p-3 bg-white rounded-2xl shadow-sm border border-zinc-200 dark:border-zinc-700/60 inline-flex flex-col items-center justify-center max-w-full">
         {dataUrl ? (
           <img
             src={dataUrl}
             alt="Pairing QR Code"
-            className="rounded-xl object-contain"
-            style={{ width: size, height: size }}
+            className="rounded-xl object-contain max-w-full block"
+            style={{
+              width: `min(${size}px, 46vw)`,
+              height: `min(${size}px, 46vw)`,
+              minWidth: "120px",
+              minHeight: "120px",
+            }}
           />
         ) : error ? (
           <div
             className="grid place-items-center bg-zinc-50 rounded-xl text-xs text-red-500 p-4 text-center"
-            style={{ width: size, height: size }}
+            style={{
+              width: `min(${size}px, 46vw)`,
+              height: `min(${size}px, 46vw)`,
+              minWidth: "120px",
+              minHeight: "120px",
+            }}
           >
             {error}
           </div>
         ) : (
           <div
             className="grid place-items-center bg-zinc-50 rounded-xl"
-            style={{ width: size, height: size }}
+            style={{
+              width: `min(${size}px, 46vw)`,
+              height: `min(${size}px, 46vw)`,
+              minWidth: "120px",
+              minHeight: "120px",
+            }}
           >
             <div className="w-6 h-6 border-2 border-zinc-300 border-t-zinc-900 rounded-full animate-spin" />
           </div>

@@ -111,19 +111,19 @@ export default function LinkDeviceModal({ open, onClose, onDeviceLinked }) {
       open={open}
       onClose={handleClose}
       title="Link a New Device"
-      description="Scan this QR code or enter the code on your second device to log in without retyping your password"
+      description="Scan this QR code or enter the code on your second device to log in instantly"
       size="md"
     >
-      <div className="flex flex-col items-center space-y-5">
+      <div className="flex flex-col items-center space-y-4 sm:space-y-5">
         {loading ? (
-          <div className="p-12 flex flex-col items-center gap-3">
+          <div className="p-10 flex flex-col items-center gap-3">
             <div className="w-8 h-8 border-2 border-zinc-300 border-t-violet-600 rounded-full animate-spin" />
             <span className="text-xs text-zinc-500">Generating secure pairing code…</span>
           </div>
         ) : claimedDevice ? (
-          <div className="p-8 flex flex-col items-center text-center animate-scale-in">
-            <div className="w-16 h-16 rounded-full bg-emerald-50 dark:bg-emerald-500/10 border border-emerald-200 dark:border-emerald-500/20 grid place-items-center text-emerald-600 dark:text-emerald-400 mb-3">
-              <CheckCircle2 size={32} />
+          <div className="p-6 flex flex-col items-center text-center animate-scale-in">
+            <div className="w-14 h-14 rounded-full bg-emerald-50 dark:bg-emerald-500/10 border border-emerald-200 dark:border-emerald-500/20 grid place-items-center text-emerald-600 dark:text-emerald-400 mb-3">
+              <CheckCircle2 size={28} />
             </div>
             <h3 className="text-base font-bold text-zinc-900 dark:text-white">Device Connected!</h3>
             <p className="text-xs text-zinc-500 mt-1 max-w-xs">
@@ -133,20 +133,20 @@ export default function LinkDeviceModal({ open, onClose, onDeviceLinked }) {
         ) : (
           <>
             {/* QR Code */}
-            <div className="relative">
+            <div className="relative flex justify-center w-full">
               <QRCodeDisplay
                 value={pairingData?.url || ""}
-                size={180}
+                size={170}
                 copyValue={pairingData?.url || ""}
                 showControls={false}
               />
 
               {isExpired && (
-                <div className="absolute inset-0 bg-white/90 dark:bg-zinc-900/90 backdrop-blur-sm rounded-2xl flex flex-col items-center justify-center p-4 text-center z-10 animate-fade-in">
-                  <AlertCircle size={24} className="text-amber-500 mb-2" />
+                <div className="absolute inset-0 bg-white/95 dark:bg-zinc-900/95 backdrop-blur-sm rounded-2xl flex flex-col items-center justify-center p-3 text-center z-10 animate-fade-in">
+                  <AlertCircle size={22} className="text-amber-500 mb-1" />
                   <span className="text-xs font-semibold text-zinc-900 dark:text-white">Code Expired</span>
-                  <p className="text-[11px] text-zinc-500 mt-0.5 mb-3">For your security, pairing codes expire in 2 minutes.</p>
-                  <Button size="sm" onClick={loadCode} className="text-xs">
+                  <p className="text-[11px] text-zinc-500 mt-0.5 mb-2.5">Pairing codes expire in 2 minutes for security.</p>
+                  <Button size="sm" onClick={loadCode} className="text-xs py-1 px-2.5">
                     <RefreshCw size={12} /> Generate new code
                   </Button>
                 </div>
@@ -154,29 +154,29 @@ export default function LinkDeviceModal({ open, onClose, onDeviceLinked }) {
             </div>
 
             {/* 8-character Code Box */}
-            <div className="w-full max-w-sm bg-zinc-50 dark:bg-zinc-800/60 border border-zinc-200 dark:border-zinc-700/60 rounded-2xl p-4 flex flex-col items-center">
-              <span className="text-[11px] font-semibold tracking-widest uppercase text-zinc-500 dark:text-zinc-400">
+            <div className="w-full max-w-sm bg-zinc-50 dark:bg-zinc-800/60 border border-zinc-200 dark:border-zinc-700/60 rounded-xl p-3 sm:p-4 flex flex-col items-center">
+              <span className="text-[10px] sm:text-[11px] font-semibold tracking-widest uppercase text-zinc-500 dark:text-zinc-400">
                 Or enter this code on your device
               </span>
-              <div className="flex items-center gap-3 mt-2">
-                <span className="font-mono text-2xl sm:text-3xl font-bold tracking-wider text-zinc-900 dark:text-white select-all">
+              <div className="flex items-center justify-center gap-2 sm:gap-3 mt-1.5 w-full">
+                <span className="font-mono text-xl sm:text-2xl md:text-3xl font-bold tracking-wider text-zinc-900 dark:text-white select-all text-center">
                   {formattedCode}
                 </span>
                 <button
                   type="button"
                   onClick={handleCopyCode}
                   disabled={isExpired}
-                  className="p-2 rounded-xl bg-white dark:bg-zinc-700 border border-zinc-200 dark:border-zinc-600 hover:bg-zinc-100 dark:hover:bg-zinc-600 text-zinc-600 dark:text-zinc-200 transition disabled:opacity-40"
+                  className="p-1.5 sm:p-2 rounded-lg bg-white dark:bg-zinc-700 border border-zinc-200 dark:border-zinc-600 hover:bg-zinc-100 dark:hover:bg-zinc-600 text-zinc-600 dark:text-zinc-200 transition disabled:opacity-40 shrink-0"
                   title="Copy Code"
                 >
-                  {copied ? <Check size={16} className="text-emerald-500" /> : <Copy size={16} />}
+                  {copied ? <Check size={14} className="text-emerald-500" /> : <Copy size={14} />}
                 </button>
               </div>
             </div>
 
             {/* Countdown and Progress */}
-            <div className="w-full max-w-sm flex flex-col gap-1.5">
-              <div className="flex items-center justify-between text-xs text-zinc-500 dark:text-zinc-400 px-1">
+            <div className="w-full max-w-sm flex flex-col gap-1">
+              <div className="flex items-center justify-between text-[11px] text-zinc-500 dark:text-zinc-400 px-1">
                 <span className="inline-flex items-center gap-1.5">
                   <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />
                   Waiting for device connection…
@@ -196,13 +196,13 @@ export default function LinkDeviceModal({ open, onClose, onDeviceLinked }) {
             </div>
 
             {/* Steps & Guidance */}
-            <div className="w-full text-xs text-zinc-500 dark:text-zinc-400 bg-violet-50/50 dark:bg-violet-500/5 border border-violet-100 dark:border-violet-500/10 rounded-xl p-3.5 space-y-1.5">
+            <div className="w-full text-[11px] text-zinc-500 dark:text-zinc-400 bg-violet-50/50 dark:bg-violet-500/5 border border-violet-100 dark:border-violet-500/10 rounded-xl p-3 space-y-1">
               <div className="font-semibold text-zinc-800 dark:text-zinc-200 flex items-center gap-1.5">
-                <Sparkles size={13} className="text-violet-600 dark:text-violet-400" /> How it works
+                <Sparkles size={12} className="text-violet-600 dark:text-violet-400" /> How it works
               </div>
-              <p>1. Open Stockly on your second device (laptop, tablet, phone).</p>
-              <p>2. Go to the login page and choose <strong>Pair with Code / QR</strong>.</p>
-              <p>3. Enter the 8-character code above or scan the QR code to sign in instantly.</p>
+              <p>1. Open Stockly on your second device.</p>
+              <p>2. Choose <strong>Device Code / QR</strong> on the login screen.</p>
+              <p>3. Enter the 8-character code or scan the QR code to log in.</p>
             </div>
 
             {/* Action Buttons */}
@@ -214,7 +214,7 @@ export default function LinkDeviceModal({ open, onClose, onDeviceLinked }) {
                 disabled={loading}
                 className="text-xs"
               >
-                <RefreshCw size={12} className={loading ? "animate-spin" : ""} /> Refresh code
+                <RefreshCw size={12} className={loading ? "animate-spin" : ""} /> Refresh
               </Button>
               <Button variant="secondary" size="sm" onClick={handleClose}>
                 Done

@@ -45,7 +45,11 @@
       "destination": "/api/index.js"
     },
     {
-      "source": "/((?!api/|assets/|favicon.ico|manifest.json|robots.txt|icon-.*\\.(?:png|ico|svg)).*)",
+      "source": "/health",
+      "destination": "/api/index.js"
+    },
+    {
+      "source": "/((?!api/|health|assets/|favicon\\.svg|favicon\\.ico|manifest\\.json|robots\\.txt|icon-.*\\.(?:png|ico|svg)).*)",
       "destination": "/index.html"
     }
   ]
