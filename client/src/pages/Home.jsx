@@ -22,10 +22,13 @@ import {
   TrendingUp,
   TrendingDown,
   ExternalLink,
+  Bot,
+  Wand2,
 } from "lucide-react";
 import { getProducts } from "../api/products";
 import { getCategories } from "../api/categories";
 import { getRecentTransactions } from "../api/stock";
+import { openAiCopilot } from "../api/ai";
 import { useAuth } from "../context/AuthContext";
 import Badge, { getProductStatus } from "../components/ui/Badge";
 import { StatsSkeleton } from "../components/ui/Loader";
@@ -410,7 +413,41 @@ export default function Home() {
         </div>
       </div>
 
-      {/* 6. RECENT ACTIVITY LEDGER */}
+      {/* 6. AI COPILOT INTELLIGENCE BANNER */}
+      <div className="p-4 rounded-2xl bg-gradient-to-br from-violet-600 via-indigo-600 to-violet-700 text-white shadow-xl shadow-violet-600/15 relative overflow-hidden group">
+        <div className="absolute right-0 top-0 translate-x-4 -translate-y-4 w-40 h-40 bg-white/10 rounded-full blur-2xl pointer-events-none" />
+
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 relative z-10">
+          <div className="flex items-start gap-3">
+            <div className="w-10 h-10 rounded-2xl bg-white/15 backdrop-blur-md grid place-items-center text-white shrink-0 border border-white/20 shadow-sm">
+              <Sparkles size={18} />
+            </div>
+            <div>
+              <div className="flex items-center gap-2">
+                <span className="text-sm font-black tracking-tight">Stockly AI Copilot</span>
+                <span className="px-1.5 py-0.2 rounded-md bg-white/20 text-[9px] font-extrabold uppercase tracking-wider">
+                  Live
+                </span>
+              </div>
+              <p className="text-xs text-violet-100 mt-0.5 max-w-md">
+                Live inventory-aware assistant powered by Opencode. Ask about low stock, valuations, or catalog metrics.
+              </p>
+            </div>
+          </div>
+
+          <button
+            type="button"
+            onClick={openAiCopilot}
+            className="self-start sm:self-center px-3.5 py-2 rounded-xl bg-white text-violet-900 font-bold text-xs hover:bg-violet-50 active:scale-95 transition flex items-center gap-1.5 shadow-md shrink-0"
+          >
+            <Bot size={14} className="text-violet-700" />
+            <span>Open Copilot</span>
+            <ArrowRight size={13} className="text-violet-500" />
+          </button>
+        </div>
+      </div>
+
+      {/* 7. RECENT ACTIVITY LEDGER */}
       <div className="card p-0 overflow-hidden">
         <div className="px-4 py-3.5 border-b border-zinc-100 dark:border-zinc-800 flex items-center justify-between">
           <div className="flex items-center gap-2">

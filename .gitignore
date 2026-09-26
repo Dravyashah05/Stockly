@@ -1,6 +1,94 @@
-node_modules
+# ===================================================
+# Dependencies
+# ===================================================
+node_modules/
+client/node_modules/
+server/node_modules/
+.pnp
+.pnp.js
+
+# ===================================================
+# Production Builds & Bundles
+# ===================================================
+dist/
+client/dist/
+build/
+client/build/
+.next/
+out/
+
+# ===================================================
+# Environment & Private Configuration Files
+# (CRITICAL: NEVER COMMIT REAL SECRETS TO REPOSITORY)
+# ===================================================
 .env
 .env.*
+.env.local
+.env.development.local
+.env.test.local
+.env.production.local
+server/.env
+server/.env.*
+server/.env.local
+server/.env.production
+client/.env
+client/.env.*
+client/.env.local
+client/.env.production
+
+# Allow documented example template files ONLY
 !.env.example
-dist
+!server/.env.example
+!client/.env.example
+
+# ===================================================
+# Logs & Diagnostic Files
+# ===================================================
+logs
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+lerna-debug.log*
+
+# ===================================================
+# Security Keys & Credentials
+# ===================================================
+*.pem
+*.key
+*.cert
+*.crt
+*.pfx
+secrets/
+credentials.json
+
+# ===================================================
+# Operating System & Editor Files
+# ===================================================
 .DS_Store
+.DS_Store?
+._*
+.Spotlight-V100
+.Trashes
+ehthumbs.db
+Thumbs.db
+.vscode/
+!.vscode/extensions.json
+.idea/
+*.suo
+*.ntvs*
+*.njsproj
+*.sln
+*.sw?
+
+# ===================================================
+# Local Tooling & AI Memory Caches
+# ===================================================
+.claude-omniroute/
+.claude/
+.turbo/
+.cache/
+.parcel-cache/
+.nyc_output/
+coverage/

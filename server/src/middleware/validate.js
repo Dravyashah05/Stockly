@@ -53,3 +53,29 @@ export const validatePagination = [
   query("type").optional().isIn(["IN","OUT"]).withMessage("Type must be IN or OUT"),
   handleValidation
 ];
+
+export const validateCategory = [
+  body("name").trim().isLength({min:1, max:50}).withMessage("Name required 1-50 chars"),
+  handleValidation
+];
+
+export const validateSupplier = [
+  body("name").trim().isLength({min:2, max:100}).withMessage("Supplier name must be 2-100 chars"),
+  body("contactPerson").optional().trim().isLength({max:100}).withMessage("Contact person name too long"),
+  body("email").optional().isEmail().normalizeEmail().withMessage("Valid email required"),
+  body("phone").optional().trim().notEmpty().withMessage("Phone number cannot be empty if provided"),
+  body("address").optional().trim().isLength({max:500}).withMessage("Address too long"),
+  handleValidation
+];
+
+
+export const validateAiChat = [
+  body("message").trim().notEmpty().withMessage("Message required"),
+  handleValidation
+];
+
+export const validateAiDescription = [
+  body("productId").custom(v=> isObjectId(v)).withMessage("Valid productId required"),
+  handleValidation
+];
+

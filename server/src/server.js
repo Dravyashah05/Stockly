@@ -9,6 +9,7 @@ import hpp from "hpp";
 import path from "path";
 import { fileURLToPath } from "url";
 import mongoose from "mongoose";
+import logger from "./utils/logger.js";
 
 import { connectDatabase } from "./config/database.js";
 import { validateEnv } from "./config/env.js";
@@ -31,7 +32,7 @@ dotenv.config({ path: path.join(__dirname, "../.env") });
 dotenv.config(); // fallback to root .env / process cwd
 let env;
 try { env = validateEnv(); } catch(e){
-  console.error("Env validation failed:", e.message);
+  logger.error("Env validation failed:", e.message);
   if(process.env.NODE_ENV==="production") process.exit(1);
 }
 
@@ -148,7 +149,7 @@ app.use("/api", (req,res)=>{
 
 // Global error handler
 app.use((error, req, res, next) => {
-  console.error(`[${new Date().toISOString()}]`, error);
+  logger.error(`[${new Date().toISOString()}] ${error.message}`, { stack: error.stack });
   let status = error.status || 500;
   let message = error.message || "Something went wrong";
   if(error.name === "ValidationError") { status = 400; message = Object.values(error.errors||{}).map(e=>e.message).join(", ") || message; }
@@ -165,19 +166,19 @@ const PORT = process.env.PORT || 5000;
 let server;
 connectDatabase()
   .then(() => {
-    server = app.listen(PORT, () => console.log(`API running on port ${PORT} [${process.env.NODE_ENV||"development"}]`));
+    server = app.listen(PORT, () => logger.info(`API running on port ${PORT} [${process.env.NODE_ENV||"development"}]`));
   })
   .catch((error) => {
-    console.error("Startup failed:", error);
+    logger.error("Startup failed:", error);
     process.exit(1);
   });
 
 // Graceful shutdown
 function shutdown(signal){
-  console.log(`Received ${signal}, shutting down gracefully`);
+  logger.info(`Received ${signal}, shutting down gracefully`);
   if(server) server.close(()=> {
     mongoose.connection.close(false).then(()=> {
-      console.log("Closed out remaining connections");
+      logger.info("Closed out remaining connections");
       process.exit(0);
     });
   });
@@ -185,7 +186,7 @@ function shutdown(signal){
 }
 process.on("SIGTERM", ()=> shutdown("SIGTERM"));
 process.on("SIGINT", ()=> shutdown("SIGINT"));
-process.on("unhandledRejection", (err)=>{ console.error("Unhandled Rejection:", err); });
-process.on("uncaughtException", (err)=>{ console.error("Uncaught Exception:", err); process.exit(1); });
+process.on("unhandledRejection", (err)=>{ logger.error("Unhandled Rejection:", err); });
+process.on("uncaughtException", (err)=>{ logger.error("Uncaught Exception:", err); process.exit(1); });
 
 export default app;

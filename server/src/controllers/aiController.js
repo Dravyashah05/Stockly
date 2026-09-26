@@ -3,6 +3,7 @@ import {
   callOpencodeChat,
   generateLocalAiResponse,
 } from "../services/aiService.js";
+import logger from "../utils/logger.js";
 
 /**
  * Extract client-provided or environment AI config
@@ -96,7 +97,7 @@ GUIDELINES:
           provider: "opencode",
         });
       } catch (apiError) {
-        console.warn("Opencode API call failed, falling back to local heuristic:", apiError.message);
+        logger.warn("Opencode API call failed, falling back to local heuristic:", apiError.message);
         // Fall back gracefully to local engine
         const fallbackReply = generateLocalAiResponse({ prompt: message, context });
         return res.json({
@@ -118,7 +119,7 @@ GUIDELINES:
       provider: "local",
     });
   } catch (error) {
-    console.error("AI Copilot Error:", error);
+    logger.error("AI Copilot Error:", error);
     return res.status(500).json({ success: false, message: error.message });
   }
 }
@@ -164,7 +165,7 @@ export async function generateProductDescription(req, res) {
           model: result.model,
         });
       } catch (err) {
-        console.warn("AI Description API failed, using fallback:", err.message);
+        logger.warn("AI Description API failed, using fallback:", err.message);
       }
     }
 
@@ -180,7 +181,7 @@ export async function generateProductDescription(req, res) {
       model: "stockly-local-heuristic",
     });
   } catch (error) {
-    console.error("Generate Description Error:", error);
+    logger.error("Generate Description Error:", error);
     return res.status(500).json({ success: false, message: error.message });
   }
 }
@@ -236,7 +237,7 @@ export async function getRestockForecast(req, res) {
           });
         }
       } catch (err) {
-        console.warn("Forecast API failed, using local forecast:", err.message);
+        logger.warn("Forecast API failed, using local forecast:", err.message);
       }
     }
 
@@ -247,7 +248,7 @@ export async function getRestockForecast(req, res) {
       model: "stockly-local-forecast",
     });
   } catch (error) {
-    console.error("Restock Forecast Error:", error);
+    logger.error("Restock Forecast Error:", error);
     return res.status(500).json({ success: false, message: error.message });
   }
 }

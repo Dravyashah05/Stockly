@@ -30,6 +30,7 @@ import { useSearch } from "../context/SearchContext";
 import { getProducts } from "../api/products";
 import BottomNav from "./BottomNav";
 import TopProgress from "../components/ui/TopProgress";
+import AiCopilotDrawer from "../components/ai/AiCopilotDrawer";
 
 export default function AppLayout({ children }) {
   const [sidebarOpen, setSidebarOpen] = useState(() => {
@@ -41,6 +42,7 @@ export default function AppLayout({ children }) {
     }
   });
   const [mobileDrawerOpen, setMobileDrawerOpen] = useState(false);
+  const [aiCopilotOpen, setAiCopilotOpen] = useState(false);
   const [searchOpen, setSearchOpen] = useState(false);
   const [notificationsOpen, setNotificationsOpen] = useState(false);
   const [lowStockItems, setLowStockItems] = useState([]);
@@ -103,6 +105,10 @@ export default function AppLayout({ children }) {
         e.preventDefault();
         toggleSidebar();
       }
+      if ((e.ctrlKey || e.metaKey) && (e.key === "k" || e.key === "j")) {
+        e.preventDefault();
+        setAiCopilotOpen((v) => !v);
+      }
       if (e.key === "Escape") {
         setSearchOpen(false);
         setMobileDrawerOpen(false);
@@ -111,6 +117,12 @@ export default function AppLayout({ children }) {
     };
     window.addEventListener("keydown", handleKeyDown);
     return () => window.removeEventListener("keydown", handleKeyDown);
+  }, []);
+
+  useEffect(() => {
+    const handleOpenCopilot = () => setAiCopilotOpen(true);
+    window.addEventListener("stockly:open-copilot", handleOpenCopilot);
+    return () => window.removeEventListener("stockly:open-copilot", handleOpenCopilot);
   }, []);
 
   useEffect(() => {
@@ -133,8 +145,15 @@ export default function AppLayout({ children }) {
       ],
     },
     {
-      group: "Intelligence",
+      group: "Intelligence & AI",
       items: [
+        {
+          to: "#ai",
+          label: "Stockly AI Copilot",
+          icon: Sparkles,
+          isAi: true,
+          badge: "AI",
+        },
         { to: "/dashboard", label: "Insights & KPIs", icon: BarChart3 },
         { to: "/reports", label: "Reports & Export", icon: LayoutDashboard },
         { to: "/audit", label: "Security & Audit", icon: Shield },
@@ -207,6 +226,23 @@ export default function AppLayout({ children }) {
                 <div className="space-y-0.5">
                   {g.items.map((item) => {
                     const Icon = item.icon;
+                    if (item.isAi) {
+                      return (
+                        <button
+                          key={item.label}
+                          type="button"
+                          onClick={() => setAiCopilotOpen(true)}
+                          className="w-full flex items-center gap-3 px-3.5 py-2.5 rounded-2xl text-xs font-bold text-violet-700 dark:text-violet-300 bg-violet-50/70 dark:bg-violet-500/10 hover:bg-violet-100 dark:hover:bg-violet-500/20 active:scale-[0.98] transition-all duration-150 group"
+                        >
+                          <Icon size={16} className="text-violet-600 dark:text-violet-400 group-hover:scale-110 transition-transform" />
+                          <span className="flex-1 text-left truncate">{item.label}</span>
+                          <span className="px-1.5 py-0.5 rounded-full bg-violet-600 text-white text-[9px] font-extrabold uppercase shadow-2xs">
+                            AI
+                          </span>
+                        </button>
+                      );
+                    }
+
                     const active = isActive(item.to);
                     return (
                       <NavLink
@@ -317,6 +353,26 @@ export default function AppLayout({ children }) {
                   <div className="space-y-0.5">
                     {g.items.map((item) => {
                       const Icon = item.icon;
+                      if (item.isAi) {
+                        return (
+                          <button
+                            key={item.label}
+                            type="button"
+                            onClick={() => {
+                              setMobileDrawerOpen(false);
+                              setAiCopilotOpen(true);
+                            }}
+                            className="w-full flex items-center gap-3 px-3.5 py-2.5 rounded-2xl text-xs font-bold text-violet-700 dark:text-violet-300 bg-violet-50/70 dark:bg-violet-500/10 hover:bg-violet-100 active:scale-[0.98] transition-all"
+                          >
+                            <Icon size={16} className="text-violet-600 dark:text-violet-400" />
+                            <span className="flex-1 text-left truncate">{item.label}</span>
+                            <span className="px-1.5 py-0.5 rounded-full bg-violet-600 text-white text-[9px] font-extrabold">
+                              AI
+                            </span>
+                          </button>
+                        );
+                      }
+
                       const active = isActive(item.to);
                       return (
                         <NavLink
@@ -459,6 +515,17 @@ export default function AppLayout({ children }) {
 
             {/* Right Action Icons */}
             <div className="flex items-center gap-1.5 sm:gap-2 ml-auto">
+              {/* AI Copilot Trigger Button */}
+              <button
+                type="button"
+                onClick={() => setAiCopilotOpen(true)}
+                className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-gradient-to-r from-violet-600 to-indigo-600 hover:from-violet-700 hover:to-indigo-700 text-white text-xs font-bold shadow-sm shadow-violet-500/25 active:scale-95 transition"
+                title="Open AI Copilot (Ctrl+K)"
+              >
+                <Sparkles size={14} className="animate-pulse" />
+                <span className="hidden sm:inline">AI Copilot</span>
+              </button>
+
               {/* Mobile search trigger */}
               {showSearch && (
                 <button
@@ -600,6 +667,9 @@ export default function AppLayout({ children }) {
 
         {/* 5. DOCKED MOBILE BOTTOM APP BAR */}
         <BottomNav />
+
+        {/* 6. AI COPILOT SLIDE-OVER DRAWER */}
+        <AiCopilotDrawer open={aiCopilotOpen} onClose={() => setAiCopilotOpen(false)} />
       </div>
     </div>
   );

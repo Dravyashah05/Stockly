@@ -1,4 +1,4 @@
-import api from "./http";
+import api from "./client";
 
 export function getStoredAiSettings() {
   try {
@@ -56,4 +56,10 @@ export async function getRestockForecast() {
   const headers = getAiHeaders();
   const res = await api.post("/ai/forecast", {}, { headers });
   return res.data;
+}
+
+export function openAiCopilot() {
+  if (typeof window !== "undefined") {
+    window.dispatchEvent(new CustomEvent("stockly:open-copilot"));
+  }
 }

@@ -30,6 +30,10 @@ import {
   KeyRound,
   Info,
   Layers,
+  Bot,
+  Eye,
+  EyeOff,
+  Wand2,
 } from "lucide-react";
 import Modal from "../components/ui/Modal";
 import Button from "../components/ui/Button";
@@ -45,6 +49,12 @@ import {
 import { getProducts, createProduct } from "../api/products";
 import { getCategories, createCategory } from "../api/categories";
 import { getStockHistory } from "../api/stock";
+import {
+  getStoredAiSettings,
+  saveStoredAiSettings,
+  chatCopilot,
+  getAiStatus,
+} from "../api/ai";
 
 function formatRelative(dateStr) {
   if (!dateStr) return "—";
@@ -167,6 +177,12 @@ export default function Settings() {
   const [showLinkModal, setShowLinkModal] = useState(false);
   const [showAuthorizeModal, setShowAuthorizeModal] = useState(false);
 
+  // Opencode AI Settings
+  const [aiSettings, setAiSettings] = useState(() => getStoredAiSettings());
+  const [showAiKey, setShowAiKey] = useState(false);
+  const [aiTesting, setAiTesting] = useState(false);
+  const [aiTestResult, setAiTestResult] = useState(null);
+
   useEffect(() => {
     setEditForm({ name: user?.name || "", email: user?.email || "" });
   }, [user]);
@@ -262,6 +278,41 @@ export default function Settings() {
       push(e.message, "error");
     } finally {
       setPwdSaving(false);
+    }
+  };
+
+  const handleSaveAi = (newSettings) => {
+    const toSave = newSettings || aiSettings;
+    saveStoredAiSettings(toSave);
+    setAiSettings(toSave);
+    push("Opencode AI configuration saved", "success");
+  };
+
+  const handleTestAi = async () => {
+    setAiTesting(true);
+    setAiTestResult(null);
+    try {
+      saveStoredAiSettings(aiSettings);
+      const res = await chatCopilot("Hello! Please return a 1-sentence warehouse status confirmation.");
+      if (res?.success) {
+        setAiTestResult({
+          success: true,
+          model: res.model || aiSettings.model,
+          provider: res.provider || "opencode",
+          message: res.reply || "Connection active.",
+        });
+        push("AI Connection Verified!", "success");
+      } else {
+        throw new Error(res?.message || "Failed to reach AI endpoint");
+      }
+    } catch (err) {
+      setAiTestResult({
+        success: false,
+        message: err.message || "Failed to connect. Check your API key and URL.",
+      });
+      push("AI Test Failed: " + (err.message || "Check settings"), "error");
+    } finally {
+      setAiTesting(false);
     }
   };
 
@@ -609,7 +660,173 @@ export default function Settings() {
         </div>
       </div>
 
-      {/* 5. DATA, EXPORT & BACKUP */}
+      {/* 5. OPENCODE AI & INTELLIGENCE */}
+      <div className="space-y-2">
+        <div className="text-[11px] font-bold uppercase tracking-wider text-zinc-400 px-1 flex items-center justify-between">
+          <span>Opencode & AI Intelligence</span>
+          <span className="text-[10px] font-bold text-violet-600 dark:text-violet-400 bg-violet-50 dark:bg-violet-500/10 px-2 py-0.5 rounded-md">
+            Live Copilot & Auto-Write
+          </span>
+        </div>
+
+        <div className="inset-group">
+          <div className="p-3.5 sm:p-4 space-y-4">
+            <div className="flex items-center justify-between gap-3">
+              <div className="flex items-center gap-3">
+                <div className="w-9 h-9 rounded-xl bg-gradient-to-tr from-violet-600 to-indigo-500 text-white grid place-items-center shadow-sm">
+                  <Sparkles size={16} />
+                </div>
+                <div>
+                  <div className="text-xs sm:text-sm font-bold text-zinc-900 dark:text-white flex items-center gap-2">
+                    Opencode API Configuration
+                  </div>
+                  <div className="text-[11px] text-zinc-500">
+                    Powers Copilot chat, catalog auto-writing, and restock forecasting
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            {/* API Key Input */}
+            <div>
+              <label className="block text-[11px] font-bold uppercase tracking-wider text-zinc-500 mb-1">
+                API Key
+              </label>
+              <div className="relative">
+                <input
+                  type={showAiKey ? "text" : "password"}
+                  value={aiSettings.apiKey || ""}
+                  onChange={(e) => setAiSettings({ ...aiSettings, apiKey: e.target.value })}
+                  placeholder="sk-or-v1-... (Opencode / OpenRouter / OpenAI)"
+                  className="input-field h-11 text-xs pr-10 font-mono"
+                />
+                <button
+                  type="button"
+                  onClick={() => setShowAiKey(!showAiKey)}
+                  className="absolute right-2.5 top-1/2 -translate-y-1/2 text-zinc-400 hover:text-zinc-600 dark:hover:text-zinc-200"
+                >
+                  {showAiKey ? <EyeOff size={15} /> : <Eye size={15} />}
+                </button>
+              </div>
+              <p className="text-[10.5px] text-zinc-400 mt-1">
+                Works with Opencode, OpenRouter, DeepSeek, and OpenAI-compatible endpoints.
+              </p>
+            </div>
+
+            {/* Base URL */}
+            <div>
+              <div className="flex items-center justify-between mb-1">
+                <label className="block text-[11px] font-bold uppercase tracking-wider text-zinc-500">
+                  Endpoint Base URL
+                </label>
+                <div className="flex gap-1.5 text-[10px]">
+                  <button
+                    type="button"
+                    onClick={() => setAiSettings({ ...aiSettings, baseURL: "https://api.opencode.ai/v1" })}
+                    className="text-violet-600 dark:text-violet-400 hover:underline"
+                  >
+                    Opencode
+                  </button>
+                  <span className="text-zinc-300">•</span>
+                  <button
+                    type="button"
+                    onClick={() => setAiSettings({ ...aiSettings, baseURL: "https://openrouter.ai/api/v1" })}
+                    className="text-violet-600 dark:text-violet-400 hover:underline"
+                  >
+                    OpenRouter
+                  </button>
+                </div>
+              </div>
+              <input
+                value={aiSettings.baseURL || ""}
+                onChange={(e) => setAiSettings({ ...aiSettings, baseURL: e.target.value })}
+                placeholder="https://api.opencode.ai/v1"
+                className="input-field h-11 text-xs font-mono"
+              />
+            </div>
+
+            {/* Model identifier */}
+            <div>
+              <label className="block text-[11px] font-bold uppercase tracking-wider text-zinc-500 mb-1">
+                Model Identifier
+              </label>
+              <input
+                value={aiSettings.model || ""}
+                onChange={(e) => setAiSettings({ ...aiSettings, model: e.target.value })}
+                placeholder="deepseek/deepseek-chat"
+                className="input-field h-11 text-xs font-mono"
+              />
+              <div className="flex flex-wrap gap-1.5 mt-2">
+                {[
+                  "deepseek/deepseek-chat",
+                  "gpt-4o-mini",
+                  "anthropic/claude-3.5-sonnet",
+                  "meta-llama/llama-3-8b-instruct:free",
+                ].map((m) => (
+                  <button
+                    key={m}
+                    type="button"
+                    onClick={() => setAiSettings({ ...aiSettings, model: m })}
+                    className={`px-2 py-1 rounded-lg text-[10px] font-semibold transition ${
+                      aiSettings.model === m
+                        ? "bg-violet-600 text-white shadow-xs"
+                        : "bg-zinc-100 dark:bg-zinc-800 text-zinc-600 dark:text-zinc-300 hover:bg-zinc-200 dark:hover:bg-zinc-700"
+                    }`}
+                  >
+                    {m.split("/")[1] || m}
+                  </button>
+                ))}
+              </div>
+            </div>
+
+            {/* Test result box */}
+            {aiTestResult && (
+              <div
+                className={`p-3 rounded-xl text-xs border leading-relaxed ${
+                  aiTestResult.success
+                    ? "bg-emerald-50 dark:bg-emerald-500/10 border-emerald-200 dark:border-emerald-500/20 text-emerald-800 dark:text-emerald-300"
+                    : "bg-red-50 dark:bg-red-500/10 border-red-200 dark:border-red-500/20 text-red-800 dark:text-red-300"
+                }`}
+              >
+                <div className="font-bold flex items-center gap-1.5 mb-1">
+                  {aiTestResult.success ? <Check size={14} /> : <AlertTriangle size={14} />}
+                  {aiTestResult.success ? "AI Endpoint Connected" : "Connection Test Failed"}
+                  {aiTestResult.provider && (
+                    <span className="text-[10px] font-normal opacity-80">
+                      via {aiTestResult.provider} ({aiTestResult.model})
+                    </span>
+                  )}
+                </div>
+                <div className="text-[11px] opacity-90 line-clamp-3">
+                  {aiTestResult.message}
+                </div>
+              </div>
+            )}
+
+            {/* Action Buttons */}
+            <div className="flex gap-2 pt-1">
+              <button
+                type="button"
+                onClick={handleTestAi}
+                disabled={aiTesting}
+                className="flex-1 p-2.5 rounded-xl border border-zinc-200 dark:border-zinc-700 hover:bg-zinc-50 dark:hover:bg-zinc-800 font-bold text-xs flex items-center justify-center gap-1.5 active:scale-95 transition disabled:opacity-50"
+              >
+                <RefreshCw size={13} className={aiTesting ? "animate-spin" : ""} />
+                {aiTesting ? "Testing..." : "Test Connection"}
+              </button>
+              <button
+                type="button"
+                onClick={() => handleSaveAi()}
+                className="flex-1 p-2.5 rounded-xl bg-violet-600 hover:bg-violet-700 text-white font-bold text-xs flex items-center justify-center gap-1.5 active:scale-95 transition shadow-sm"
+              >
+                <Sparkles size={13} /> Save AI Settings
+              </button>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      {/* 6. DATA, EXPORT & BACKUP */}
       <div className="space-y-2">
         <div className="text-[11px] font-bold uppercase tracking-wider text-zinc-400 px-1">
           Warehouse Data & Backup

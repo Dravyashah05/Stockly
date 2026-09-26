@@ -1,10 +1,11 @@
 import express from "express";
 import { authRequired } from "../middleware/auth.js";
 import { getSuppliers, createSupplier, updateSupplier, deleteSupplier } from "../controllers/supplierController.js";
+import { validateSupplier, validateIdParam } from "../middleware/validate.js";
 const router = express.Router();
 router.get("/", authRequired, getSuppliers);
-router.post("/", authRequired, createSupplier);
-router.put("/:id", authRequired, updateSupplier);
-router.patch("/:id", authRequired, updateSupplier);
-router.delete("/:id", authRequired, deleteSupplier);
+router.post("/", authRequired, validateSupplier, createSupplier);
+router.put("/:id", authRequired, validateIdParam, validateSupplier, updateSupplier);
+router.patch("/:id", authRequired, validateIdParam, validateSupplier, updateSupplier);
+router.delete("/:id", authRequired, validateIdParam, deleteSupplier);
 export default router;

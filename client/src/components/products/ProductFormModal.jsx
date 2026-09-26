@@ -21,6 +21,7 @@ import {
 import Modal from "../ui/Modal";
 import Button from "../ui/Button";
 import { uploadProductImage } from "../../api/products";
+import { generateProductDescription } from "../../api/ai";
 import { useToast } from "../../context/ToastContext";
 
 const COMMON_UNITS = ["pcs", "box", "kg", "g", "ltr", "pack", "m", "pair", "set"];
@@ -52,6 +53,7 @@ export default function ProductFormModal({
 
   const [imagePreview, setImagePreview] = useState("");
   const [uploadingImage, setUploadingImage] = useState(false);
+  const [generatingDesc, setGeneratingDesc] = useState(false);
   const [showUrlInput, setShowUrlInput] = useState(false);
   const [validationErrors, setValidationErrors] = useState({});
 
@@ -121,6 +123,32 @@ export default function ProductFormModal({
     setForm((prev) => ({ ...prev, image: "" }));
     setImagePreview("");
     if (fileInputRef.current) fileInputRef.current.value = "";
+  };
+
+  const handleAiGenerateDesc = async () => {
+    if (!form.name.trim()) {
+      push("Enter a product name first to generate AI description", "warning");
+      return;
+    }
+    setGeneratingDesc(true);
+    try {
+      const selectedCat = categories.find((c) => String(c._id) === String(form.category));
+      const res = await generateProductDescription({
+        name: form.name.trim(),
+        category: selectedCat?.name || "General",
+        unit: form.unit || "pcs",
+        currentDescription: form.description || "",
+      });
+
+      if (res?.description) {
+        setForm((prev) => ({ ...prev, description: res.description }));
+        push("AI generated product description!", "success");
+      }
+    } catch (err) {
+      push(err.message || "Failed to generate AI description", "error");
+    } finally {
+      setGeneratingDesc(false);
+    }
   };
 
   const validate = () => {
@@ -615,10 +643,22 @@ export default function ProductFormModal({
 
         {/* 5. DESCRIPTION */}
         <div className="space-y-1.5">
-          <label className="text-xs font-medium text-zinc-700 dark:text-zinc-300 flex items-center gap-1.5">
-            <FileText size={13} className="text-zinc-500" />
-            Description & Notes <span className="text-zinc-400 font-normal">(Optional)</span>
-          </label>
+          <div className="flex items-center justify-between">
+            <label className="text-xs font-medium text-zinc-700 dark:text-zinc-300 flex items-center gap-1.5">
+              <FileText size={13} className="text-zinc-500" />
+              Description & Notes <span className="text-zinc-400 font-normal">(Optional)</span>
+            </label>
+
+            <button
+              type="button"
+              onClick={handleAiGenerateDesc}
+              disabled={generatingDesc}
+              className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-xl bg-violet-50 text-violet-700 dark:bg-violet-500/15 dark:text-violet-300 hover:bg-violet-100 dark:hover:bg-violet-500/25 text-[11px] font-bold active:scale-95 transition disabled:opacity-50"
+            >
+              <Sparkles size={13} className={generatingDesc ? "animate-spin text-violet-600" : "text-violet-600 dark:text-violet-400"} />
+              {generatingDesc ? "AI Writing..." : "AI Auto-Write"}
+            </button>
+          </div>
           <textarea
             value={form.description}
             onChange={(e) => setForm({ ...form, description: e.target.value })}
