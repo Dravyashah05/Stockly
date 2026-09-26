@@ -158,12 +158,19 @@ app.use("/api/options", optionsRoutes);
 app.use("/api/ai", aiRoutes);
 
 // Serve client in production (single deployment)
-const clientDist = path.join(__dirname, "../../client/dist");
+const rootDist = path.join(__dirname, "../../dist");
+const clientSubDist = path.join(__dirname, "../../client/dist");
+const clientDist = path.join(__dirname, "../../dist");
 app.use(express.static(clientDist));
+app.use(express.static(clientSubDist));
 app.get("/{*any}", (req,res,next)=>{
   if(req.path.startsWith("/api")) return next();
   res.sendFile(path.join(clientDist, "index.html"), (err)=>{
-    if(err) next();
+    if(err) {
+      res.sendFile(path.join(clientSubDist, "index.html"), (err2) => {
+        if(err2) next();
+      });
+    }
   });
 });
 

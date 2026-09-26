@@ -10,6 +10,8 @@ export default defineConfig({
     }
   },
   build: {
+    outDir: '../dist',
+    emptyOutDir: true,
     target: 'es2018',
     cssCodeSplit: true,
     chunkSizeWarningLimit: 500,
