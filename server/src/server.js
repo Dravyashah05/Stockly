@@ -33,7 +33,7 @@ dotenv.config(); // fallback to root .env / process cwd
 let env;
 try { env = validateEnv(); } catch(e){
   logger.error("Env validation failed:", e.message);
-  if(process.env.NODE_ENV==="production") process.exit(1);
+  if(process.env.NODE_ENV==="production" && !process.env.VERCEL && !process.env.NOW_REGION) process.exit(1);
 }
 
 configureCloudinary();
