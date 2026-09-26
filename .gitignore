@@ -92,3 +92,6 @@ Thumbs.db
 .parcel-cache/
 .nyc_output/
 coverage/
+
+.vercel
+.env*

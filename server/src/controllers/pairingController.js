@@ -5,6 +5,7 @@ import LoginCode from "../models/LoginCode.js";
 import LoginTicket from "../models/LoginTicket.js";
 import { sign, createSession, parseDevice, SESSION_TTL_DAYS } from "../utils/authTokens.js";
 import { AUDIT_ACTIONS, AUDIT_ENTITIES } from "../constants/index.js";
+import logger from "../utils/logger.js";
 
 // 32-char alphabet with visually ambiguous characters (0/O, 1/I/L) removed.
 const CODE_ALPHABET = "ABCDEFGHJKMNPQRSTUVWXYZ23456789";
@@ -191,7 +192,7 @@ export async function claimPairingCode(req, res, next){
         before: null,
         after: { method: "pairing_code", device: claimed.claimedDevice },
       });
-    }catch(e){ console.error("audit log failed", e.message); }
+    }catch(e){ logger.error("audit log failed", e.message); }
 
     res.json({ success: true, data: { token, user: { _id: user._id, name: user.name, email: user.email } } });
   }catch(e){ next(e); }
@@ -358,7 +359,7 @@ export async function authorizeLoginTicket(req, res, next){
       expiresAt,
       lastActiveAt: new Date(),
     }).catch(e => {
-      if(e.code !== 11000) console.error("createSession error on ticket authorization", e);
+      if(e.code !== 11000) logger.error("createSession error on ticket authorization", e);
     });
 
     const approvingDevice = parseDevice(req.headers["user-agent"] || "").device;
@@ -385,7 +386,7 @@ export async function authorizeLoginTicket(req, res, next){
         before: null,
         after: { method: "qr_ticket_authorize", device: reqDevice.device, authorizedBy: approvingDevice },
       });
-    }catch(e){ console.error("audit log failed", e.message); }
+    }catch(e){ logger.error("audit log failed", e.message); }
 
     res.json({
       success: true,
