@@ -1,6 +1,13 @@
 import axios from "axios";
 
-const API_URL = import.meta.env.VITE_API_URL || "/api";
+const isNativePlatform = typeof window !== "undefined" && (
+  Boolean(window.Capacitor?.isNativePlatform?.()) ||
+  window.location.protocol === "capacitor:" ||
+  window.location.protocol === "ionic:"
+);
+
+const DEFAULT_REMOTE_API = "https://stocklybydns.vercel.app/api";
+const API_URL = import.meta.env.VITE_API_URL || (isNativePlatform ? DEFAULT_REMOTE_API : "/api");
 
 const client = axios.create({
   baseURL: API_URL,

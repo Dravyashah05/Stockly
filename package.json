@@ -12,12 +12,24 @@
     "build:client": "npm run build --workspace client",
     "build:server": "node -e \"console.log('Server build verified')\"",
     "vercel-build": "npm run build",
-    "start": "npm run start --workspace server"
+    "start": "npm run start --workspace server",
+    "mobile:build": "npm run build && npx cap sync android",
+    "mobile:sync": "npx cap sync android",
+    "mobile:open": "npx cap open android",
+    "mobile:run": "npx cap run android"
   },
   "devDependencies": {
     "concurrently": "^9.1.2"
   },
   "dependencies": {
+    "@capacitor/android": "^7.0.1",
+    "@capacitor/app": "^7.0.0",
+    "@capacitor/cli": "^7.0.1",
+    "@capacitor/core": "^7.0.1",
+    "@capacitor/haptics": "^7.0.0",
+    "@capacitor/keyboard": "^7.0.0",
+    "@capacitor/splash-screen": "^7.0.0",
+    "@capacitor/status-bar": "^7.0.0",
     "bcryptjs": "^3.0.3",
     "cloudinary": "^2.11.0",
     "compression": "^1.8.1",
