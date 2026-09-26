@@ -1,0 +1,10 @@
+import express from "express";
+import { authRequired } from "../middleware/auth.js";
+import { getSuppliers, createSupplier, updateSupplier, deleteSupplier } from "../controllers/supplierController.js";
+const router = express.Router();
+router.get("/", authRequired, getSuppliers);
+router.post("/", authRequired, createSupplier);
+router.put("/:id", authRequired, updateSupplier);
+router.patch("/:id", authRequired, updateSupplier);
+router.delete("/:id", authRequired, deleteSupplier);
+export default router;

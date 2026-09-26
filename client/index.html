@@ -1,0 +1,45 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover, maximum-scale=5, user-scalable=yes" />
+    <meta name="theme-color" content="#fcfcf9" />
+    <meta name="apple-mobile-web-app-capable" content="yes" />
+    <meta name="mobile-web-app-capable" content="yes" />
+    <meta name="apple-mobile-web-app-status-bar-style" content="default" />
+    <meta name="format-detection" content="telephone=no" />
+    <meta name="color-scheme" content="light dark" />
+    <title>Stockly — Modern Inventory</title>
+    <meta name="description" content="Stockly — Modern inventory management with manufacturing, stock IN/OUT, BOM and production tracking" />
+    <meta property="og:title" content="Stockly — Modern Inventory" />
+    <meta property="og:description" content="Modern inventory OS for products, stock and production." />
+    <meta property="og:type" content="website" />
+    <meta name="twitter:card" content="summary_large_image" />
+    <link rel="manifest" href="/manifest.json" />
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <script>
+      // Perfect no-flash theme — runs before React
+      (function(){
+        try{
+          var saved = localStorage.getItem('theme');
+          var theme = saved;
+          if(theme !== 'dark' && theme !== 'light'){
+            theme = (window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches) ? 'dark' : 'light';
+            // default to light for Stockly clarity if no saved
+            if(!saved) theme = 'light';
+          }
+          if(theme === 'dark') document.documentElement.classList.add('dark');
+          else document.documentElement.classList.remove('dark');
+          document.documentElement.style.colorScheme = theme;
+          var meta = document.querySelector('meta[name="theme-color"]');
+          if(meta) meta.setAttribute('content', theme === 'dark' ? '#09090b' : '#f7f7f5');
+        }catch(e){}
+      })();
+    </script>
+  </head>
+  <body>
+    <div id="root"></div>
+    <script type="module" src="/src/main.jsx"></script>
+  </body>
+</html>

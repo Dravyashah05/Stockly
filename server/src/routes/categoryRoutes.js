@@ -1,0 +1,14 @@
+import express from "express";
+import { getCategories, getCategory, getCategoryStats, createCategory, updateCategory, deleteCategory } from "../controllers/categoryController.js";
+import { authRequired, authOptional } from "../middleware/auth.js";
+import { validateIdParam, handleValidation } from "../middleware/validate.js";
+import { body } from "express-validator";
+const router = express.Router();
+router.get("/stats", authOptional, getCategoryStats);
+router.get("/", authOptional, getCategories);
+router.get("/:id", authOptional, validateIdParam, getCategory);
+router.post("/", authRequired, [body("name").trim().isLength({min:1, max:50}).withMessage("Name required"), handleValidation], createCategory);
+router.put("/:id", authRequired, validateIdParam, updateCategory);
+router.patch("/:id", authRequired, validateIdParam, updateCategory);
+router.delete("/:id", authRequired, validateIdParam, deleteCategory);
+export default router;

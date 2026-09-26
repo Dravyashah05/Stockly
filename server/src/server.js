@@ -1,0 +1,191 @@
+import express from "express";
+import cors from "cors";
+import dotenv from "dotenv";
+import helmet from "helmet";
+import compression from "compression";
+import morgan from "morgan";
+import rateLimit from "express-rate-limit";
+import hpp from "hpp";
+import path from "path";
+import { fileURLToPath } from "url";
+import mongoose from "mongoose";
+
+import { connectDatabase } from "./config/database.js";
+import { validateEnv } from "./config/env.js";
+import productRoutes from "./routes/productRoutes.js";
+import stockRoutes from "./routes/stockRoutes.js";
+import categoryRoutes from "./routes/categoryRoutes.js";
+import authRoutes from "./routes/authRoutes.js";
+import reportsRoutes from "./routes/reportsRoutes.js";
+import auditRoutes from "./routes/auditRoutes.js";
+import supplierRoutes from "./routes/supplierRoutes.js";
+import optionsRoutes from "./routes/optionsRoutes.js";
+import aiRoutes from "./routes/aiRoutes.js";
+import { authOptional } from "./middleware/auth.js";
+import { configureCloudinary } from "./config/cloudinary.js";
+
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
+// Load env from server/.env regardless of cwd (concurrently runs from root vs workspace)
+dotenv.config({ path: path.join(__dirname, "../.env") });
+dotenv.config(); // fallback to root .env / process cwd
+let env;
+try { env = validateEnv(); } catch(e){
+  console.error("Env validation failed:", e.message);
+  if(process.env.NODE_ENV==="production") process.exit(1);
+}
+
+configureCloudinary();
+
+const app = express();
+app.set("trust proxy", 1);
+
+// Security headers
+app.use(helmet({
+  contentSecurityPolicy: false,
+  crossOriginEmbedderPolicy: false,
+}));
+
+// CORS whitelist
+const allowed = (process.env.CLIENT_URL || "http://localhost:5173").split(",").map(s=> s.trim());
+app.use(cors({
+  origin: (origin, cb)=>{
+    if(!origin) return cb(null, true);
+    if(allowed.includes(origin) || allowed.includes("*")) return cb(null, true);
+    // allow Vercel preview etc if needed
+    return cb(null, true);
+  },
+  credentials: true
+}));
+
+app.use(compression());
+app.use(morgan(env?.isProd ? "combined" : "dev"));
+app.use(express.json({ limit: "5mb" }));
+app.use(express.urlencoded({ extended: true }));
+// Express 5: req.query is getter-only, express-mongo-sanitize tries to set it and crashes.
+// Use safe sanitizer that only touches body/params.
+app.use((req,res,next)=>{
+  const sanitize = (obj)=>{
+    if(!obj || typeof obj !== "object") return;
+    for(const k of Object.keys(obj)){
+      if(k.startsWith("$") || k.includes(".")){
+        const v = obj[k];
+        delete obj[k];
+        obj[k.replace(/^\$|\./g,"_")] = v;
+      }
+      if(typeof obj[k] === "object") sanitize(obj[k]);
+    }
+  };
+  if(req.body) sanitize(req.body);
+  if(req.params) sanitize(req.params);
+  next();
+});
+app.use(hpp());
+
+// Rate limit — increased for dashboard polling + dev StrictMode double-invoke
+const limiter = rateLimit({
+  windowMs: 15*60*1000,
+  max: process.env.NODE_ENV==="production" ? 1000 : 5000,
+  standardHeaders:true,
+  legacyHeaders:false,
+  message: { success:false, message:"Too many requests, please slow down" },
+  skip: (req)=> req.path==="/health" || req.path==="/api/health",
+});
+app.use("/api", limiter);
+const authLimiter = rateLimit({ windowMs: 15*60*1000, max: 50, message: { success:false, message:"Too many attempts, try later"} });
+app.use("/api/auth/login", authLimiter);
+app.use("/api/auth/register", authLimiter);
+// pairing codes are short-lived but guessable by design — keep the ceiling tight
+const pairingLimiter = rateLimit({ windowMs: 15*60*1000, max: 30, message: { success:false, message:"Too many pairing attempts, try later"} });
+app.use("/api/auth/pairing/claim", pairingLimiter);
+app.use("/api/auth/pairing/ticket/info", pairingLimiter);
+app.use("/api/auth/pairing/ticket/authorize", pairingLimiter);
+const pairingIssueLimiter = rateLimit({ windowMs: 15*60*1000, max: 40, message: { success:false, message:"Too many pairing requests, try later"} });
+app.use("/api/auth/pairing/code", pairingIssueLimiter);
+app.use("/api/auth/pairing/ticket", pairingIssueLimiter);
+
+app.use(authOptional);
+
+// Health with DB check
+app.get("/api/health", async (req, res) => {
+  const dbState = mongoose.connection.readyState; // 1 connected
+  const dbOk = dbState === 1;
+  res.status(dbOk ? 200 : 503).json({
+    success: dbOk,
+    message: dbOk ? "API is running" : "DB not connected",
+    uptime: process.uptime(),
+    version: process.env.npm_package_version || "1.0.0",
+    db: dbOk ? "connected" : "disconnected",
+    env: process.env.NODE_ENV || "development"
+  });
+});
+app.get("/health", (req,res)=> res.redirect("/api/health"));
+
+app.use("/api/products", productRoutes);
+app.use("/api/categories", categoryRoutes);
+app.use("/api/stock", stockRoutes);
+app.use("/api/auth", authRoutes);
+app.use("/api/reports", reportsRoutes);
+app.use("/api/audit", auditRoutes);
+app.use("/api/suppliers", supplierRoutes);
+app.use("/api/options", optionsRoutes);
+app.use("/api/ai", aiRoutes);
+
+// Serve client in production (single deployment)
+const clientDist = path.join(__dirname, "../../client/dist");
+app.use(express.static(clientDist));
+app.get("/{*any}", (req,res,next)=>{
+  if(req.path.startsWith("/api")) return next();
+  res.sendFile(path.join(clientDist, "index.html"), (err)=>{
+    if(err) next();
+  });
+});
+
+// 404 for API
+app.use("/api", (req,res)=>{
+  res.status(404).json({ success:false, message:"API route not found" });
+});
+
+// Global error handler
+app.use((error, req, res, next) => {
+  console.error(`[${new Date().toISOString()}]`, error);
+  let status = error.status || 500;
+  let message = error.message || "Something went wrong";
+  if(error.name === "ValidationError") { status = 400; message = Object.values(error.errors||{}).map(e=>e.message).join(", ") || message; }
+  if(error.code === 11000) { status = 400; const field = Object.keys(error.keyValue||{})[0]||"field"; message = `${field} already exists`; }
+  if(error.name === "CastError" || error.name === "BSONError") { status = 400; message = "Invalid id format"; }
+  if(error.name === "JsonWebTokenError" || error.name === "TokenExpiredError") { status = 401; message = "Invalid token"; }
+  // hide stack in prod
+  const payload = { success: false, message };
+  if(process.env.NODE_ENV !== "production" && error.stack) payload.stack = error.stack;
+  res.status(status).json(payload);
+});
+
+const PORT = process.env.PORT || 5000;
+let server;
+connectDatabase()
+  .then(() => {
+    server = app.listen(PORT, () => console.log(`API running on port ${PORT} [${process.env.NODE_ENV||"development"}]`));
+  })
+  .catch((error) => {
+    console.error("Startup failed:", error);
+    process.exit(1);
+  });
+
+// Graceful shutdown
+function shutdown(signal){
+  console.log(`Received ${signal}, shutting down gracefully`);
+  if(server) server.close(()=> {
+    mongoose.connection.close(false).then(()=> {
+      console.log("Closed out remaining connections");
+      process.exit(0);
+    });
+  });
+  setTimeout(()=> process.exit(1), 10000).unref();
+}
+process.on("SIGTERM", ()=> shutdown("SIGTERM"));
+process.on("SIGINT", ()=> shutdown("SIGINT"));
+process.on("unhandledRejection", (err)=>{ console.error("Unhandled Rejection:", err); });
+process.on("uncaughtException", (err)=>{ console.error("Uncaught Exception:", err); process.exit(1); });
+
+export default app;
