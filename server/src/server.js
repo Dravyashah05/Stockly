@@ -94,16 +94,16 @@ const limiter = rateLimit({
 });
 app.use("/api", limiter);
 const authLimiter = rateLimit({ windowMs: 15*60*1000, max: 50, message: { success:false, message:"Too many attempts, try later"} });
-app.use("/api/auth/login", authLimiter);
-app.use("/api/auth/register", authLimiter);
+app.use(["/api/auth/login", "/auth/login"], authLimiter);
+app.use(["/api/auth/register", "/auth/register"], authLimiter);
 // pairing codes are short-lived but guessable by design — keep the ceiling tight
 const pairingLimiter = rateLimit({ windowMs: 15*60*1000, max: 30, message: { success:false, message:"Too many pairing attempts, try later"} });
-app.use("/api/auth/pairing/claim", pairingLimiter);
-app.use("/api/auth/pairing/ticket/info", pairingLimiter);
-app.use("/api/auth/pairing/ticket/authorize", pairingLimiter);
+app.use(["/api/auth/pairing/claim", "/auth/pairing/claim"], pairingLimiter);
+app.use(["/api/auth/pairing/ticket/info", "/auth/pairing/ticket/info"], pairingLimiter);
+app.use(["/api/auth/pairing/ticket/authorize", "/auth/pairing/ticket/authorize"], pairingLimiter);
 const pairingIssueLimiter = rateLimit({ windowMs: 15*60*1000, max: 40, message: { success:false, message:"Too many pairing requests, try later"} });
-app.use("/api/auth/pairing/code", pairingIssueLimiter);
-app.use("/api/auth/pairing/ticket", pairingIssueLimiter);
+app.use(["/api/auth/pairing/code", "/auth/pairing/code"], pairingIssueLimiter);
+app.use(["/api/auth/pairing/ticket", "/auth/pairing/ticket"], pairingIssueLimiter);
 
 app.use(authOptional);
 
@@ -147,15 +147,23 @@ app.get("/api/health", async (req, res) => {
 });
 app.get("/health", (req,res)=> res.redirect("/api/health"));
 
-app.use("/api/products", productRoutes);
-app.use("/api/categories", categoryRoutes);
-app.use("/api/stock", stockRoutes);
-app.use("/api/auth", authRoutes);
-app.use("/api/reports", reportsRoutes);
-app.use("/api/audit", auditRoutes);
-app.use("/api/suppliers", supplierRoutes);
-app.use("/api/options", optionsRoutes);
-app.use("/api/ai", aiRoutes);
+// Mount API routes supporting both /api/path and /path (for Vercel serverless url variations)
+const apiRoutes = [
+  ["/products", productRoutes],
+  ["/categories", categoryRoutes],
+  ["/stock", stockRoutes],
+  ["/auth", authRoutes],
+  ["/reports", reportsRoutes],
+  ["/audit", auditRoutes],
+  ["/suppliers", supplierRoutes],
+  ["/options", optionsRoutes],
+  ["/ai", aiRoutes],
+];
+
+for (const [subPath, router] of apiRoutes) {
+  app.use(`/api${subPath}`, router);
+  app.use(subPath, router);
+}
 
 // Serve client in production (single deployment)
 const rootDist = path.join(__dirname, "../../dist");
