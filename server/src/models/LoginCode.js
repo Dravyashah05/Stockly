@@ -11,7 +11,7 @@ const schema = new mongoose.Schema(
     attempts: { type: Number, default: 0 },
     usedAt: { type: Date, default: null },
     claimedDevice: { type: String, default: "" },
-    expiresAt: { type: Date, required: true, index: true },
+    expiresAt: { type: Date, required: true },
   },
   { timestamps: true }
 );

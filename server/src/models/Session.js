@@ -11,7 +11,7 @@ const schema = new mongoose.Schema(
     os: { type: String, default: "Unknown" },
     isMobile: { type: Boolean, default: false },
     lastActiveAt: { type: Date, default: Date.now, index: true },
-    expiresAt: { type: Date, required: true, index: true },
+    expiresAt: { type: Date, required: true },
   },
   { timestamps: true }
 );

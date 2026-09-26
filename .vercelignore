@@ -1,0 +1,34 @@
+# Version control
+.git
+.github
+
+# Logs & temp files
+logs
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+.nyc_output
+coverage
+.cache
+.turbo
+
+# IDE and OS files
+.vscode
+.idea
+.DS_Store
+Thumbs.db
+
+# Docker files
+Dockerfile
+docker-compose.yml
+.dockerignore
+
+# Local secrets & envs
+.env
+.env.*
+!.env.example
+server/.env
+server/.env.*
+client/.env
+client/.env.*

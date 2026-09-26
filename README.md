@@ -169,41 +169,32 @@ npm run dev
 
 ## 🌐 Production Deployment Guides
 
-### Option A: Split Deployment (Vercel Frontend + Render Backend) — Recommended
+### Option A: Fullstack Vercel Deployment (Frontend + Serverless API) — ⚡ Recommended & Ready-to-Deploy
 
-#### 1. Deploy Backend to Render (or Railway / Fly.io)
-1. Push your repository to GitHub.
-2. Log in to [Render Dashboard](https://dashboard.render.com/) and click **New + Web Service**.
-3. Connect your GitHub repository.
-4. Set the following settings:
-   - **Root Directory**: `server`
-   - **Build Command**: `npm install`
-   - **Start Command**: `npm run start`
-5. Under **Environment Variables**, add:
-   - `NODE_ENV`: `production`
-   - `PORT`: `10000` (or leave default for Render)
-   - `MONGODB_URI`: `mongodb+srv://<user>:<pwd>@cluster0.xxx.mongodb.net/stockly`
-   - `JWT_SECRET`: *(Generate via `openssl rand -base64 32`)*
-   - `CLIENT_URL`: `https://your-stockly-app.vercel.app` *(Your Vercel URL)*
-   - `CLOUDINARY_*`: *(Optional: if using Cloudinary)*
-   - `OPENCODE_API_KEY`: *(Optional: if using server-side AI key)*
-6. Deploy the service and note your backend URL (e.g. `https://stockly-api.onrender.com`).
+Stockly is pre-configured with `vercel.json` and a Serverless function adapter (`api/index.js`), enabling you to deploy the entire frontend + backend API together on Vercel in 1-click!
 
-#### 2. Deploy Frontend to Vercel
+#### 1. Push Code to GitHub
+Push your latest commits to GitHub.
+
+#### 2. Import into Vercel
 1. Log in to [Vercel](https://vercel.com/) and click **Add New Project**.
-2. Select your repository.
-3. Set the following configuration:
-   - **Framework Preset**: `Vite`
-   - **Root Directory**: `client`
-   - **Build Command**: `npm run build`
-   - **Output Directory**: `dist`
-4. Under **Environment Variables**, add:
-   - `VITE_API_URL`: `https://stockly-api.onrender.com/api`
-5. Click **Deploy**.
+2. Select your `Stockly` repository.
+3. Keep default settings (Root directory: `./`, Framework: `Vite`, Build: `npm run build`, Output: `client/dist`).
+
+#### 3. Add Environment Variables in Vercel Settings
+In the Vercel deployment wizard or under **Project Settings → Environment Variables**, add:
+* `MONGODB_URI`: `mongodb+srv://<user>:<password>@cluster0.xxx.mongodb.net/stockly?retryWrites=true&w=majority`
+* `JWT_SECRET`: *(Generate a secure 32+ character key: `openssl rand -base64 32`)*
+* `NODE_ENV`: `production`
+* *(Optional)* `CLOUDINARY_CLOUD_NAME`, `CLOUDINARY_API_KEY`, `CLOUDINARY_API_SECRET`
+* *(Optional)* `OPENCODE_API_KEY`, `OPENCODE_BASE_URL`, `OPENCODE_MODEL`
+
+#### 4. Click Deploy
+Vercel will build the Vite SPA and deploy both the client and serverless API under the same domain (e.g. `https://stockly.vercel.app`), with zero CORS configuration required!
 
 ---
 
-### Option B: Single-Service Monolith Deployment (Render / Railway / VPS)
+### Option B: Split Deployment (Vercel Frontend + Render / Railway Backend)
 
 Stockly includes built-in static serving for `client/dist` from the Express backend, allowing you to host both client and API on a single free or low-cost server instance:
 

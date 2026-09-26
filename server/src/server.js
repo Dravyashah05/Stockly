@@ -107,8 +107,32 @@ app.use("/api/auth/pairing/ticket", pairingIssueLimiter);
 
 app.use(authOptional);
 
+// Auto-connect database in serverless/on-demand requests
+app.use(async (req, res, next) => {
+  if (req.path === "/health" || req.path === "/api/health") {
+    return next();
+  }
+  try {
+    if (mongoose.connection.readyState !== 1 && process.env.MONGODB_URI) {
+      await connectDatabase();
+    }
+    next();
+  } catch (err) {
+    logger.error(`Database connection failed on request ${req.method} ${req.path}: ${err.message}`);
+    res.status(503).json({
+      success: false,
+      message: "Database connection failed. Please ensure MONGODB_URI is correctly configured in your environment variables.",
+    });
+  }
+});
+
 // Health with DB check
 app.get("/api/health", async (req, res) => {
+  if (mongoose.connection.readyState !== 1 && process.env.MONGODB_URI) {
+    try {
+      await connectDatabase();
+    } catch {}
+  }
   const dbState = mongoose.connection.readyState; // 1 connected
   const dbOk = dbState === 1;
   res.status(dbOk ? 200 : 503).json({
@@ -117,7 +141,8 @@ app.get("/api/health", async (req, res) => {
     uptime: process.uptime(),
     version: process.env.npm_package_version || "1.0.0",
     db: dbOk ? "connected" : "disconnected",
-    env: process.env.NODE_ENV || "development"
+    env: process.env.VERCEL ? "vercel-production" : process.env.NODE_ENV || "development",
+    platform: process.env.VERCEL ? "vercel-serverless" : "node-server"
   });
 });
 app.get("/health", (req,res)=> res.redirect("/api/health"));
@@ -164,29 +189,34 @@ app.use((error, req, res, next) => {
 
 const PORT = process.env.PORT || 5000;
 let server;
-connectDatabase()
-  .then(() => {
-    server = app.listen(PORT, () => logger.info(`API running on port ${PORT} [${process.env.NODE_ENV||"development"}]`));
-  })
-  .catch((error) => {
-    logger.error("Startup failed:", error);
-    process.exit(1);
-  });
 
-// Graceful shutdown
-function shutdown(signal){
-  logger.info(`Received ${signal}, shutting down gracefully`);
-  if(server) server.close(()=> {
-    mongoose.connection.close(false).then(()=> {
-      logger.info("Closed out remaining connections");
-      process.exit(0);
+// Only start HTTP listener if running standalone (not in Vercel Serverless environment)
+if (!process.env.VERCEL && !process.env.NOW_REGION) {
+  connectDatabase()
+    .then(() => {
+      server = app.listen(PORT, () => logger.info(`API running on port ${PORT} [${process.env.NODE_ENV||"development"}]`));
+    })
+    .catch((error) => {
+      logger.error("Startup failed:", error);
+      process.exit(1);
     });
-  });
-  setTimeout(()=> process.exit(1), 10000).unref();
+
+  // Graceful shutdown for standalone server
+  function shutdown(signal){
+    logger.info(`Received ${signal}, shutting down gracefully`);
+    if(server) server.close(()=> {
+      mongoose.connection.close(false).then(()=> {
+        logger.info("Closed out remaining connections");
+        process.exit(0);
+      });
+    });
+    setTimeout(()=> process.exit(1), 10000).unref();
+  }
+  process.on("SIGTERM", ()=> shutdown("SIGTERM"));
+  process.on("SIGINT", ()=> shutdown("SIGINT"));
 }
-process.on("SIGTERM", ()=> shutdown("SIGTERM"));
-process.on("SIGINT", ()=> shutdown("SIGINT"));
+
 process.on("unhandledRejection", (err)=>{ logger.error("Unhandled Rejection:", err); });
-process.on("uncaughtException", (err)=>{ logger.error("Uncaught Exception:", err); process.exit(1); });
+process.on("uncaughtException", (err)=>{ logger.error("Uncaught Exception:", err); if(!process.env.VERCEL) process.exit(1); });
 
 export default app;

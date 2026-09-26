@@ -27,7 +27,7 @@ const schema = new mongoose.Schema(
     },
     authorizedByDevice: { type: String, default: "" },
     approvedAt: { type: Date, default: null },
-    expiresAt: { type: Date, required: true, index: true },
+    expiresAt: { type: Date, required: true },
   },
   { timestamps: true }
 );
