@@ -4,4 +4,10 @@
     <string name="title_activity_main">Stockly</string>
     <string name="package_name">com.stockly.app</string>
     <string name="custom_url_scheme">com.stockly.app</string>
+    <string name="shortcut_stock_in_short">Stock IN</string>
+    <string name="shortcut_stock_in_long">Receive Stock (Stock IN)</string>
+    <string name="shortcut_stock_out_short">Stock OUT</string>
+    <string name="shortcut_stock_out_long">Dispatch Stock (Stock OUT)</string>
+    <string name="shortcut_product_short">Add Product</string>
+    <string name="shortcut_product_long">Register New Product</string>
 </resources>

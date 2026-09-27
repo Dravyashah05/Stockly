@@ -23,9 +23,15 @@ import {
   Check,
   Info,
   HelpCircle,
+  Bell,
+  BellRing,
+  ArrowUpCircle,
 } from "lucide-react";
 import AppLogo from "../components/ui/AppLogo";
 import { useToast } from "../context/ToastContext";
+import AppUpdateModal from "../components/app/AppUpdateModal";
+import { checkAppUpdate, APP_CURRENT_VERSION } from "../api/appUpdate";
+import { sendLocalNotification, requestNotificationPermission } from "../utils/notifications";
 
 export default function AppStore() {
   const { push } = useToast();
@@ -35,6 +41,61 @@ export default function AppStore() {
   const [downloadPercent, setDownloadPercent] = useState(0);
   const [copied, setCopied] = useState(false);
   const [activeTab, setActiveTab] = useState("features");
+
+  // App Update & Notifications
+  const [checkingUpdate, setCheckingUpdate] = useState(false);
+  const [updateModalOpen, setUpdateModalOpen] = useState(false);
+  const [updateInfo, setUpdateInfo] = useState(null);
+  const [autoUpdateEnabled, setAutoUpdateEnabled] = useState(() => {
+    try {
+      return localStorage.getItem("stockly_auto_update") !== "false";
+    } catch {
+      return true;
+    }
+  });
+
+  const handleToggleAutoUpdate = () => {
+    const next = !autoUpdateEnabled;
+    setAutoUpdateEnabled(next);
+    try {
+      localStorage.setItem("stockly_auto_update", String(next));
+    } catch {}
+    push?.(next ? "Auto-update check enabled" : "Auto-update check disabled", "info");
+  };
+
+  const handleCheckUpdate = async () => {
+    setCheckingUpdate(true);
+    try {
+      const res = await checkAppUpdate();
+      if (res?.hasUpdate) {
+        setUpdateInfo(res);
+        setUpdateModalOpen(true);
+      } else {
+        push?.(`Stockly v${APP_CURRENT_VERSION} is currently the latest version.`, "success");
+      }
+    } catch (e) {
+      push?.("Failed to check for updates: " + e.message, "error");
+    } finally {
+      setCheckingUpdate(false);
+    }
+  };
+
+  const handleTestNotification = async () => {
+    try {
+      await requestNotificationPermission();
+      const res = await sendLocalNotification({
+        title: "📦 Stockly Android Notification",
+        body: "Android native notification system is active and running!",
+      });
+      if (res.success) {
+        push?.("Notification sent to device!", "success");
+      } else {
+        push?.(res.message || "Could not deliver notification", "error");
+      }
+    } catch (err) {
+      push?.("Error: " + err.message, "error");
+    }
+  };
 
   useEffect(() => {
     // Generate absolute download URL for the QR code
@@ -110,9 +171,9 @@ export default function AppStore() {
     },
     {
       icon: Zap,
-      title: "Zero Latency 120Hz Engine",
-      desc: "Hardware-accelerated native Android views with snappy transitions and instant search.",
-      color: "text-amber-600 dark:text-amber-400 bg-amber-50 dark:bg-amber-500/10",
+      title: "Home Screen Widget & Shortcuts",
+      desc: "1-Tap Stock IN, Stock OUT & Product creation right from your Android Home Screen widget or app launcher menu.",
+      color: "text-emerald-600 dark:text-emerald-400 bg-emerald-50 dark:bg-emerald-500/10",
     },
     {
       icon: QrCode,
@@ -124,7 +185,7 @@ export default function AppStore() {
       icon: ShieldCheck,
       title: "Encrypted & Offline-Ready",
       desc: "Operate in low-connectivity warehouse environments with local cache syncing.",
-      color: "text-emerald-600 dark:text-emerald-400 bg-emerald-50 dark:bg-emerald-500/10",
+      color: "text-indigo-600 dark:text-indigo-400 bg-indigo-50 dark:bg-indigo-500/10",
     },
   ];
 
@@ -314,7 +375,108 @@ export default function AppStore() {
         </div>
       </div>
 
-      {/* 4. STEP-BY-STEP APK INSTALLATION GUIDE */}
+      {/* 4. APPLICATION UPDATES & NOTIFICATIONS SETTINGS */}
+      <div className="space-y-3">
+        <div className="flex items-center justify-between px-1">
+          <h2 className="text-sm font-bold uppercase tracking-wider text-zinc-400">
+            Updates & Push Notification Engine
+          </h2>
+          <span className="text-xs font-semibold text-emerald-600 dark:text-emerald-400">
+            Real-Time Warehouse Sync
+          </span>
+        </div>
+
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3.5">
+          {/* Update Card */}
+          <div className="card p-4 sm:p-5 flex flex-col justify-between space-y-3">
+            <div className="flex items-start gap-3.5">
+              <div className="w-10 h-10 rounded-2xl bg-violet-50 dark:bg-violet-500/10 text-violet-600 dark:text-violet-400 grid place-items-center shrink-0">
+                <ArrowUpCircle size={18} />
+              </div>
+              <div className="flex-1 min-w-0">
+                <div className="flex items-center gap-2">
+                  <h3 className="font-extrabold text-xs sm:text-sm text-zinc-900 dark:text-white">
+                    Over-The-Air App Update
+                  </h3>
+                  <span className="px-1.5 py-0.5 rounded-md bg-violet-100 dark:bg-violet-500/20 text-violet-700 dark:text-violet-300 text-[9px] font-extrabold">
+                    v{APP_CURRENT_VERSION}
+                  </span>
+                </div>
+                <p className="text-xs text-zinc-500 dark:text-zinc-400 mt-1 leading-relaxed">
+                  Query the release server for updated APK builds and new warehouse features.
+                </p>
+              </div>
+            </div>
+
+            <div className="pt-2 border-t border-zinc-100 dark:border-zinc-800 flex items-center justify-between gap-2">
+              <div className="flex items-center gap-2">
+                <button
+                  onClick={handleToggleAutoUpdate}
+                  aria-label="Toggle auto update"
+                  className={`relative w-10 h-5.5 rounded-full p-0.5 transition-colors shrink-0 ${
+                    autoUpdateEnabled ? "bg-violet-600" : "bg-zinc-200 dark:bg-zinc-700"
+                  }`}
+                >
+                  <span
+                    className={`block w-4.5 h-4.5 rounded-full bg-white shadow-sm transition-transform ${
+                      autoUpdateEnabled ? "translate-x-4.5" : "translate-x-0"
+                    }`}
+                  />
+                </button>
+                <span className="text-[11px] font-bold text-zinc-600 dark:text-zinc-400">
+                  {autoUpdateEnabled ? "Auto-Check: On" : "Auto-Check: Off"}
+                </span>
+              </div>
+
+              <button
+                type="button"
+                onClick={handleCheckUpdate}
+                disabled={checkingUpdate}
+                className="px-3 py-1.5 rounded-xl bg-violet-600 hover:bg-violet-700 text-white font-bold text-xs shadow-xs active:scale-95 transition flex items-center gap-1.5 disabled:opacity-50"
+              >
+                <RefreshCw size={12} className={checkingUpdate ? "animate-spin" : ""} />
+                <span>{checkingUpdate ? "Checking…" : "Check Update"}</span>
+              </button>
+            </div>
+          </div>
+
+          {/* Notification Card */}
+          <div className="card p-4 sm:p-5 flex flex-col justify-between space-y-3">
+            <div className="flex items-start gap-3.5">
+              <div className="w-10 h-10 rounded-2xl bg-emerald-50 dark:bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 grid place-items-center shrink-0">
+                <BellRing size={18} />
+              </div>
+              <div className="flex-1 min-w-0">
+                <div className="flex items-center gap-2">
+                  <h3 className="font-extrabold text-xs sm:text-sm text-zinc-900 dark:text-white">
+                    Android Local Notifications
+                  </h3>
+                  <span className="px-1.5 py-0.5 rounded-md bg-emerald-100 dark:bg-emerald-500/20 text-emerald-700 dark:text-emerald-300 text-[9px] font-extrabold">
+                    Active
+                  </span>
+                </div>
+                <p className="text-xs text-zinc-500 dark:text-zinc-400 mt-1 leading-relaxed">
+                  Real-time device alerts for inventory stock shortages, transaction confirmations, and updates.
+                </p>
+              </div>
+            </div>
+
+            <div className="pt-2 border-t border-zinc-100 dark:border-zinc-800 flex items-center justify-between gap-2">
+              <span className="text-[11px] text-zinc-400">Hardware vibration & banners</span>
+              <button
+                type="button"
+                onClick={handleTestNotification}
+                className="px-3 py-1.5 rounded-xl bg-zinc-100 dark:bg-zinc-800 hover:bg-zinc-200 dark:hover:bg-zinc-700 font-bold text-xs text-zinc-700 dark:text-zinc-200 active:scale-95 transition flex items-center gap-1.5"
+              >
+                <Bell size={12} />
+                <span>Send Test Alert</span>
+              </button>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      {/* 5. STEP-BY-STEP APK INSTALLATION GUIDE */}
       <div className="card p-5 sm:p-6 space-y-4">
         <div className="flex items-center gap-2.5">
           <div className="w-8 h-8 rounded-xl bg-violet-50 dark:bg-violet-500/10 text-violet-600 dark:text-violet-400 grid place-items-center font-bold">
@@ -346,7 +508,7 @@ export default function AppStore() {
         </div>
       </div>
 
-      {/* 5. QUICK LINKS FOOTER */}
+      {/* 6. QUICK LINKS FOOTER */}
       <div className="flex flex-col sm:flex-row items-center justify-between gap-3 p-4 rounded-2xl bg-zinc-50 dark:bg-zinc-900 border border-zinc-200/80 dark:border-zinc-800 text-xs">
         <div className="flex items-center gap-2 text-zinc-600 dark:text-zinc-400">
           <AppLogo size="xs" />
@@ -362,6 +524,13 @@ export default function AppStore() {
           </Link>
         </div>
       </div>
+
+      {/* App Update Modal */}
+      <AppUpdateModal
+        open={updateModalOpen}
+        onClose={() => setUpdateModalOpen(false)}
+        updateInfo={updateInfo}
+      />
     </div>
   );
 }

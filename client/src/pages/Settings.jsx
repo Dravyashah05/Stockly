@@ -34,12 +34,17 @@ import {
   Eye,
   EyeOff,
   Wand2,
+  Bell,
+  BellRing,
+  ArrowUpCircle,
+  Radio,
 } from "lucide-react";
 import Modal from "../components/ui/Modal";
 import Button from "../components/ui/Button";
 import LinkDeviceModal from "../components/auth/LinkDeviceModal";
 import AuthorizeDeviceModal from "../components/auth/AuthorizeDeviceModal";
 import AppLogo from "../components/ui/AppLogo";
+import AppUpdateModal from "../components/app/AppUpdateModal";
 import {
   updateMe,
   changePassword,
@@ -56,6 +61,12 @@ import {
   chatCopilot,
   getAiStatus,
 } from "../api/ai";
+import { checkAppUpdate, APP_CURRENT_VERSION } from "../api/appUpdate";
+import {
+  sendLocalNotification,
+  requestNotificationPermission,
+  checkNotificationPermission,
+} from "../utils/notifications";
 
 function formatRelative(dateStr) {
   if (!dateStr) return "—";
@@ -183,6 +194,96 @@ export default function Settings() {
   const [showAiKey, setShowAiKey] = useState(false);
   const [aiTesting, setAiTesting] = useState(false);
   const [aiTestResult, setAiTestResult] = useState(null);
+
+  // App Updates & Notifications
+  const [autoUpdateEnabled, setAutoUpdateEnabled] = useState(() => {
+    try {
+      return localStorage.getItem("stockly_auto_update") !== "false";
+    } catch {
+      return true;
+    }
+  });
+  const [notificationsEnabled, setNotificationsEnabled] = useState(() => {
+    try {
+      return localStorage.getItem("stockly_notifications_enabled") !== "false";
+    } catch {
+      return true;
+    }
+  });
+  const [hasNotifPerm, setHasNotifPerm] = useState(false);
+  const [checkingUpdate, setCheckingUpdate] = useState(false);
+  const [updateModalOpen, setUpdateModalOpen] = useState(false);
+  const [updateInfo, setUpdateInfo] = useState(null);
+  const [sendingTestNotif, setSendingTestNotif] = useState(false);
+
+  useEffect(() => {
+    checkNotificationPermission().then(setHasNotifPerm);
+  }, []);
+
+  const handleToggleAutoUpdate = () => {
+    const next = !autoUpdateEnabled;
+    setAutoUpdateEnabled(next);
+    try {
+      localStorage.setItem("stockly_auto_update", String(next));
+    } catch {}
+    push(next ? "Auto-update check enabled" : "Auto-update check disabled", "info");
+  };
+
+  const handleToggleNotifications = async () => {
+    if (!notificationsEnabled) {
+      const granted = await requestNotificationPermission();
+      setHasNotifPerm(granted);
+      setNotificationsEnabled(true);
+      try {
+        localStorage.setItem("stockly_notifications_enabled", "true");
+      } catch {}
+      push(granted ? "Notifications enabled" : "Notification permission needed in settings", granted ? "success" : "info");
+    } else {
+      setNotificationsEnabled(false);
+      try {
+        localStorage.setItem("stockly_notifications_enabled", "false");
+      } catch {}
+      push("Notifications disabled", "info");
+    }
+  };
+
+  const handleCheckUpdate = async () => {
+    setCheckingUpdate(true);
+    try {
+      const res = await checkAppUpdate();
+      if (res?.hasUpdate) {
+        setUpdateInfo(res);
+        setUpdateModalOpen(true);
+      } else {
+        push(`Stockly v${APP_CURRENT_VERSION} is the latest version.`, "success");
+      }
+    } catch (e) {
+      push("Failed to check for updates: " + e.message, "error");
+    } finally {
+      setCheckingUpdate(false);
+    }
+  };
+
+  const handleSendTestNotification = async () => {
+    setSendingTestNotif(true);
+    try {
+      const perm = await requestNotificationPermission();
+      setHasNotifPerm(perm);
+      const res = await sendLocalNotification({
+        title: "📦 Stockly System Notification",
+        body: "Native alert test successful! Stock alerts & update notifications are working.",
+      });
+      if (res.success) {
+        push("Test notification triggered!", "success");
+      } else {
+        push(res.message || "Failed to dispatch notification", "error");
+      }
+    } catch (err) {
+      push("Notification error: " + err.message, "error");
+    } finally {
+      setSendingTestNotif(false);
+    }
+  };
 
   useEffect(() => {
     setEditForm({ name: user?.name || "", email: user?.email || "" });
@@ -609,7 +710,7 @@ export default function Settings() {
         <div className="text-[11px] font-bold uppercase tracking-wider text-zinc-400 px-1 flex items-center justify-between">
           <span>Mobile App & APK Store</span>
           <span className="text-[10px] font-bold text-emerald-600 dark:text-emerald-400 bg-emerald-50 dark:bg-emerald-500/10 px-2 py-0.5 rounded-md">
-            v1.0.0 APK Ready
+            v{APP_CURRENT_VERSION} APK Ready
           </span>
         </div>
 
@@ -645,6 +746,143 @@ export default function Settings() {
             >
               <QrCode size={14} /> Open Store
             </Link>
+          </div>
+        </div>
+      </div>
+
+      {/* 3.6. APPLICATION UPDATES & AUTO-UPDATE */}
+      <div className="space-y-2">
+        <div className="text-[11px] font-bold uppercase tracking-wider text-zinc-400 px-1 flex items-center justify-between">
+          <span>Application Updates & Auto-Update</span>
+          <span className="text-[10px] font-bold text-violet-600 dark:text-violet-400 bg-violet-50 dark:bg-violet-500/10 px-2 py-0.5 rounded-md">
+            v{APP_CURRENT_VERSION}
+          </span>
+        </div>
+
+        <div className="inset-group">
+          {/* Version Info & Check Button */}
+          <div className="p-3.5 sm:p-4 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+            <div className="flex items-center gap-3">
+              <div className="w-9 h-9 rounded-xl bg-zinc-100 dark:bg-zinc-800 text-zinc-700 dark:text-zinc-300 grid place-items-center shrink-0">
+                <ArrowUpCircle size={16} />
+              </div>
+              <div>
+                <div className="text-xs sm:text-sm font-bold text-zinc-900 dark:text-white flex items-center gap-2">
+                  <span>Stockly Client Engine</span>
+                  <span className="px-2 py-0.5 rounded-md bg-zinc-100 dark:bg-zinc-800 text-zinc-600 dark:text-zinc-400 text-[10px] font-mono font-bold">
+                    v{APP_CURRENT_VERSION}
+                  </span>
+                </div>
+                <div className="text-[11px] text-zinc-500 mt-0.5">
+                  Check server for latest APK package & feature updates
+                </div>
+              </div>
+            </div>
+
+            <button
+              type="button"
+              onClick={handleCheckUpdate}
+              disabled={checkingUpdate}
+              className="px-3.5 py-2 rounded-xl bg-violet-600 hover:bg-violet-700 text-white font-bold text-xs shadow-sm active:scale-95 transition flex items-center justify-center gap-1.5 disabled:opacity-50 shrink-0"
+            >
+              <RefreshCw size={13} className={checkingUpdate ? "animate-spin" : ""} />
+              <span>{checkingUpdate ? "Checking…" : "Check for Updates"}</span>
+            </button>
+          </div>
+
+          {/* Auto-Update Toggle */}
+          <div className="flex items-center justify-between p-3.5 sm:p-4 border-t border-zinc-100 dark:border-zinc-800">
+            <div>
+              <div className="text-xs sm:text-sm font-bold text-zinc-900 dark:text-white">
+                Automatic Update Check
+              </div>
+              <div className="text-[11px] text-zinc-500">
+                Automatically check for new releases and alert on app startup
+              </div>
+            </div>
+
+            <button
+              onClick={handleToggleAutoUpdate}
+              aria-label="Toggle auto update"
+              className={`relative w-12 h-6.5 rounded-full p-0.5 transition-colors shrink-0 ${
+                autoUpdateEnabled ? "bg-violet-600" : "bg-zinc-200 dark:bg-zinc-700"
+              }`}
+            >
+              <span
+                className={`block w-5.5 h-5.5 rounded-full bg-white shadow-sm transition-transform ${
+                  autoUpdateEnabled ? "translate-x-5.5" : "translate-x-0"
+                }`}
+              />
+            </button>
+          </div>
+        </div>
+      </div>
+
+      {/* 3.7. ANDROID & SYSTEM NOTIFICATIONS */}
+      <div className="space-y-2">
+        <div className="text-[11px] font-bold uppercase tracking-wider text-zinc-400 px-1 flex items-center justify-between">
+          <span>Notifications & Device Alerts</span>
+          <span className={`text-[10px] font-bold px-2 py-0.5 rounded-md ${
+            notificationsEnabled
+              ? "text-emerald-600 dark:text-emerald-400 bg-emerald-50 dark:bg-emerald-500/10"
+              : "text-zinc-500 bg-zinc-100 dark:bg-zinc-800"
+          }`}>
+            {notificationsEnabled ? "Active" : "Disabled"}
+          </span>
+        </div>
+
+        <div className="inset-group">
+          {/* Main Notifications Toggle */}
+          <div className="flex items-center justify-between p-3.5 sm:p-4">
+            <div className="flex items-center gap-3">
+              <div className="w-9 h-9 rounded-xl bg-zinc-100 dark:bg-zinc-800 text-zinc-700 dark:text-zinc-300 grid place-items-center shrink-0">
+                {notificationsEnabled ? <BellRing size={16} className="text-violet-600 dark:text-violet-400" /> : <Bell size={16} />}
+              </div>
+              <div>
+                <div className="text-xs sm:text-sm font-bold text-zinc-900 dark:text-white">
+                  Push & Local Notifications
+                </div>
+                <div className="text-[11px] text-zinc-500">
+                  Receive low stock warnings, restock alerts, and transaction receipts
+                </div>
+              </div>
+            </div>
+
+            <button
+              onClick={handleToggleNotifications}
+              aria-label="Toggle notifications"
+              className={`relative w-12 h-6.5 rounded-full p-0.5 transition-colors shrink-0 ${
+                notificationsEnabled ? "bg-violet-600" : "bg-zinc-200 dark:bg-zinc-700"
+              }`}
+            >
+              <span
+                className={`block w-5.5 h-5.5 rounded-full bg-white shadow-sm transition-transform ${
+                  notificationsEnabled ? "translate-x-5.5" : "translate-x-0"
+                }`}
+              />
+            </button>
+          </div>
+
+          {/* Test Notification Action Row */}
+          <div className="p-3.5 sm:p-4 border-t border-zinc-100 dark:border-zinc-800 flex flex-col sm:flex-row sm:items-center justify-between gap-3 bg-zinc-50/50 dark:bg-zinc-800/20">
+            <div>
+              <div className="text-xs font-bold text-zinc-900 dark:text-white">
+                Send Notification Test
+              </div>
+              <div className="text-[11px] text-zinc-500">
+                Trigger a sample notification with hardware vibration and alert banner
+              </div>
+            </div>
+
+            <button
+              type="button"
+              onClick={handleSendTestNotification}
+              disabled={sendingTestNotif}
+              className="px-3.5 py-2 rounded-xl bg-white dark:bg-zinc-800 border border-zinc-200 dark:border-zinc-700 font-bold text-xs text-zinc-700 dark:text-zinc-200 hover:bg-zinc-50 active:scale-95 transition flex items-center justify-center gap-1.5 shrink-0"
+            >
+              <Bell size={13} className={sendingTestNotif ? "animate-bounce text-violet-600" : ""} />
+              <span>{sendingTestNotif ? "Dispatching…" : "Send Test Alert"}</span>
+            </button>
           </div>
         </div>
       </div>
@@ -1078,6 +1316,12 @@ export default function Settings() {
         open={showAuthorizeModal}
         onClose={() => setShowAuthorizeModal(false)}
         onAuthorized={loadSessions}
+      />
+
+      <AppUpdateModal
+        open={updateModalOpen}
+        onClose={() => setUpdateModalOpen(false)}
+        updateInfo={updateInfo}
       />
     </div>
   );

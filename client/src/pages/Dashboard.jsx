@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
-import { Link } from "react-router-dom";
-import { TrendingUp, TrendingDown, Package, Layers, AlertTriangle, FolderKanban, Coins, Calendar, Activity, Flame, BarChart3, PieChart, Lightbulb, ShieldCheck, RefreshCw, Target, Beaker, ArrowRight } from "lucide-react";
+import { Link, useNavigate } from "react-router-dom";
+import { TrendingUp, TrendingDown, Package, Layers, AlertTriangle, FolderKanban, Coins, Calendar, Activity, Flame, BarChart3, PieChart, Lightbulb, ShieldCheck, RefreshCw, Target, Beaker, ArrowRight, ArrowUpCircle, ArrowDownCircle } from "lucide-react";
 import { getProducts } from "../api/products";
 import { getCategories, getCategoryStats } from "../api/categories";
 import { getStockHistory, getRecentTransactions } from "../api/stock";
@@ -27,6 +27,7 @@ function Stat({ label, value, sub, icon: Icon, tone="zinc" }){
 }
 
 export default function Dashboard(){
+  const navigate = useNavigate();
   const [loading,setLoading]=useState(true);
   const [products,setProducts]=useState([]);
   const [cats,setCats]=useState([]);
@@ -110,15 +111,34 @@ export default function Dashboard(){
   return (
     <div className="space-y-6 pb-6">
       {/* header */}
-      <div className="card p-5">
-        <div className="flex flex-wrap items-start justify-between gap-4">
+      <div className="card p-4 sm:p-5">
+        <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
           <div>
-            <h1 className="text-xl font-semibold tracking-tight flex items-center gap-2 text-zinc-900 dark:text-white"><BarChart3 size={18}/> Insights</h1>
-            <p className="text-sm text-zinc-500 dark:text-zinc-400 mt-1">Research • Valuation • Trends • Health • Auto-synced every 30s • {new Date().toLocaleDateString()}</p>
+            <h1 className="text-xl font-bold tracking-tight flex items-center gap-2 text-zinc-900 dark:text-white"><BarChart3 size={19}/> Insights & Analytics</h1>
+            <p className="text-xs sm:text-sm text-zinc-500 dark:text-zinc-400 mt-1">Research • Valuation • Trends • Health • Auto-synced • {new Date().toLocaleDateString()}</p>
           </div>
-          <div className="flex gap-2">
-            <span className="px-3 py-1.5 rounded-full bg-zinc-100 dark:bg-zinc-800 border border-zinc-200 dark:border-zinc-700 text-xs font-medium text-zinc-600 dark:text-zinc-300">₹{totalValue.toLocaleString('en-IN')} value</span>
-            <span className="px-3 py-1.5 rounded-full bg-zinc-900 dark:bg-white text-white dark:text-zinc-900 text-xs font-bold">{healthPct}% healthy</span>
+          <div className="flex flex-wrap items-center gap-2">
+            {/* Quick Stock Action Buttons */}
+            <button
+              onClick={() => navigate("/stock?type=IN")}
+              className="flex-1 sm:flex-none inline-flex items-center justify-center gap-1.5 px-3.5 py-2 rounded-xl bg-emerald-600 hover:bg-emerald-700 active:scale-95 text-white text-xs font-bold shadow-sm shadow-emerald-500/20 transition"
+            >
+              <ArrowUpCircle size={15}/> Stock In
+            </button>
+            <button
+              onClick={() => navigate("/stock?type=OUT")}
+              className="flex-1 sm:flex-none inline-flex items-center justify-center gap-1.5 px-3.5 py-2 rounded-xl bg-rose-600 hover:bg-rose-700 active:scale-95 text-white text-xs font-bold shadow-sm shadow-rose-500/20 transition"
+            >
+              <ArrowDownCircle size={15}/> Stock Out
+            </button>
+            <button
+              onClick={() => navigate("/products")}
+              className="flex-1 sm:flex-none inline-flex items-center justify-center gap-1.5 px-3.5 py-2 rounded-xl bg-violet-600 hover:bg-violet-700 active:scale-95 text-white text-xs font-bold shadow-sm shadow-violet-500/20 transition"
+            >
+              <Package size={15}/> Catalog
+            </button>
+            <span className="hidden sm:inline-block px-3 py-1.5 rounded-full bg-zinc-100 dark:bg-zinc-800 border border-zinc-200 dark:border-zinc-700 text-xs font-medium text-zinc-600 dark:text-zinc-300">₹{totalValue.toLocaleString('en-IN')} value</span>
+            <span className="hidden sm:inline-block px-3 py-1.5 rounded-full bg-zinc-900 dark:bg-white text-white dark:text-zinc-900 text-xs font-bold">{healthPct}% healthy</span>
           </div>
         </div>
       </div>

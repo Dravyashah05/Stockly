@@ -24,15 +24,30 @@ import {
   PanelLeft,
   Menu,
   Smartphone,
+  TrendingUp,
+  TrendingDown,
+  ArrowUpCircle,
+  ArrowDownCircle,
+  CheckCircle2,
+  Clock,
+  PackageX,
 } from "lucide-react";
 import { useAuth } from "../context/AuthContext";
 import { useTheme } from "../context/ThemeContext";
 import { useSearch } from "../context/SearchContext";
 import { getProducts } from "../api/products";
+import { getRecentTransactions } from "../api/stock";
+import { checkAppUpdate } from "../api/appUpdate";
+import {
+  sendLowStockNotification,
+  sendOutOfStockNotification,
+  checkNotificationPermission,
+} from "../utils/notifications";
 import BottomNav from "./BottomNav";
 import TopProgress from "../components/ui/TopProgress";
 import AiCopilotDrawer from "../components/ai/AiCopilotDrawer";
 import AppLogo from "../components/ui/AppLogo";
+import AppUpdateModal from "../components/app/AppUpdateModal";
 
 export default function AppLayout({ children }) {
   const [sidebarOpen, setSidebarOpen] = useState(() => {
@@ -47,11 +62,23 @@ export default function AppLayout({ children }) {
   const [aiCopilotOpen, setAiCopilotOpen] = useState(false);
   const [searchOpen, setSearchOpen] = useState(false);
   const [notificationsOpen, setNotificationsOpen] = useState(false);
+  const [notifTab, setNotifTab] = useState("all"); // "all" | "alerts" | "out"
+  const [sidebarNotif, setSidebarNotif] = useState(() => {
+    try { return localStorage.getItem("stockly_sidebar_notif") !== "false"; } catch { return true; }
+  });
   const [lowStockItems, setLowStockItems] = useState([]);
+  const [outStockItems, setOutStockItems] = useState([]);
+  const [recentTx, setRecentTx] = useState([]);
+
+  // Auto-Update State
+  const [autoUpdateModalOpen, setAutoUpdateModalOpen] = useState(false);
+  const [autoUpdateInfo, setAutoUpdateInfo] = useState(null);
 
   const searchInputRef = useRef(null);
   const mobileSearchRef = useRef(null);
   const notifRef = useRef(null);
+  const updateCheckedRef = useRef(false);
+  const notifSentRef = useRef(false);
 
   const loc = useLocation();
   const navigate = useNavigate();
@@ -60,13 +87,11 @@ export default function AppLayout({ children }) {
   const { search, setSearch } = useSearch();
 
   const showSearch = ["/products", "/stock"].some((p) => loc.pathname.startsWith(p));
-
   const placeholder = loc.pathname.startsWith("/products")
     ? "Search inventory catalog…"
     : loc.pathname.startsWith("/stock")
     ? "Filter ledger records…"
     : "Quick search…";
-
   const isActive = (to) => loc.pathname === to || (to !== "/home" && loc.pathname.startsWith(to));
 
   const toggleSidebar = () => {
@@ -79,10 +104,61 @@ export default function AppLayout({ children }) {
     });
   };
 
-  // Fetch low stock items for the notification popover
+  // Auto-check for updates on app start (once per session)
   useEffect(() => {
-    getProducts("?lowStock=true&limit=8")
-      .then((r) => setLowStockItems(r.data || []))
+    if (updateCheckedRef.current) return;
+    updateCheckedRef.current = true;
+
+    try {
+      const autoUpdate = localStorage.getItem("stockly_auto_update") !== "false";
+      if (!autoUpdate) return;
+    } catch {}
+
+    const timer = setTimeout(async () => {
+      try {
+        const res = await checkAppUpdate();
+        if (res?.hasUpdate) {
+          setAutoUpdateInfo(res);
+          setAutoUpdateModalOpen(true);
+        }
+      } catch {}
+    }, 2000);
+
+    return () => clearTimeout(timer);
+  }, []);
+
+  // Fetch low/out stock items and trigger local notifications if enabled
+  useEffect(() => {
+    getProducts({ limit: 50 })
+      .then((r) => {
+        const all = r.data || [];
+        const low = all.filter(p => p.quantity > 0 && p.quantity <= (p.minimumStock ?? p.minimumQuantity ?? 5)).slice(0, 8);
+        const out = all.filter(p => p.quantity === 0).slice(0, 8);
+        setLowStockItems(low);
+        setOutStockItems(out);
+
+        // Check if we should dispatch a background notification for low/out items (once per session)
+        if (!notifSentRef.current && (low.length > 0 || out.length > 0)) {
+          try {
+            const notifEnabled = localStorage.getItem("stockly_notifications_enabled") !== "false";
+            if (notifEnabled) {
+              notifSentRef.current = true;
+              checkNotificationPermission().then((granted) => {
+                if (granted) {
+                  if (out.length > 0) {
+                    sendOutOfStockNotification(out[0].name);
+                  } else if (low.length > 0) {
+                    sendLowStockNotification(low[0].name, low[0].quantity, low[0].minimumStock ?? 5);
+                  }
+                }
+              });
+            }
+          } catch {}
+        }
+      })
+      .catch(() => {});
+    getRecentTransactions()
+      .then((r) => setRecentTx((r.data || []).slice(0, 6)))
       .catch(() => {});
   }, [loc.pathname]);
 
@@ -134,6 +210,8 @@ export default function AppLayout({ children }) {
     if (notificationsOpen) document.addEventListener("mousedown", onClickOutside);
     return () => document.removeEventListener("mousedown", onClickOutside);
   }, [notificationsOpen]);
+
+  const totalAlerts = lowStockItems.length + outStockItems.length;
 
   const navGroups = [
     {
@@ -273,6 +351,45 @@ export default function AppLayout({ children }) {
                 </div>
               </div>
             ))}
+
+            {/* Sidebar Notification Widget */}
+            {sidebarNotif && totalAlerts > 0 && (
+              <div className="space-y-1">
+                <div className="px-3 text-[10px] font-bold uppercase tracking-wider text-zinc-400 dark:text-zinc-500">
+                  Alerts
+                </div>
+                <div className="rounded-2xl border border-amber-200 dark:border-amber-500/20 bg-amber-50 dark:bg-amber-500/10 p-3 space-y-2">
+                  {outStockItems.length > 0 && (
+                    <Link to="/products" className="flex items-center gap-2.5 group">
+                      <div className="w-7 h-7 rounded-lg bg-red-100 dark:bg-red-500/20 grid place-items-center shrink-0">
+                        <PackageX size={13} className="text-red-600 dark:text-red-400" />
+                      </div>
+                      <div className="flex-1 min-w-0">
+                        <div className="text-[11px] font-bold text-red-700 dark:text-red-300 group-hover:underline">{outStockItems.length} Out of Stock</div>
+                        <div className="text-[10px] text-zinc-500 truncate">{outStockItems.slice(0,2).map(p=>p.name).join(", ")}{outStockItems.length>2?` +${outStockItems.length-2} more`:""}</div>
+                      </div>
+                    </Link>
+                  )}
+                  {lowStockItems.length > 0 && (
+                    <Link to="/products" className="flex items-center gap-2.5 group">
+                      <div className="w-7 h-7 rounded-lg bg-amber-100 dark:bg-amber-500/20 grid place-items-center shrink-0">
+                        <AlertTriangle size={13} className="text-amber-600 dark:text-amber-400" />
+                      </div>
+                      <div className="flex-1 min-w-0">
+                        <div className="text-[11px] font-bold text-amber-700 dark:text-amber-300 group-hover:underline">{lowStockItems.length} Low Stock</div>
+                        <div className="text-[10px] text-zinc-500 truncate">{lowStockItems.slice(0,2).map(p=>p.name).join(", ")}{lowStockItems.length>2?` +${lowStockItems.length-2} more`:""}</div>
+                      </div>
+                    </Link>
+                  )}
+                  <button
+                    onClick={() => { setSidebarNotif(false); try { localStorage.setItem("stockly_sidebar_notif","false"); } catch {} }}
+                    className="w-full text-[10px] text-zinc-400 hover:text-zinc-600 dark:hover:text-zinc-300 text-center pt-1 transition"
+                  >
+                    Hide from sidebar
+                  </button>
+                </div>
+              </div>
+            )}
           </div>
 
           {/* Bottom User Card */}
@@ -560,70 +677,150 @@ export default function AppLayout({ children }) {
                   aria-label="Notifications"
                 >
                   <Bell size={15} />
-                  {lowStockItems.length > 0 && (
+                  {totalAlerts > 0 && (
                     <span className="absolute -top-0.5 -right-0.5 w-4 h-4 rounded-full bg-amber-500 text-white font-bold text-[9px] grid place-items-center shadow-xs">
-                      {lowStockItems.length}
+                      {totalAlerts}
                     </span>
                   )}
                 </button>
 
                 {notificationsOpen && (
-                  <div className="absolute right-0 mt-2 w-80 rounded-2xl bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 shadow-2xl overflow-hidden z-40 py-2 animate-slide-up">
-                    <div className="px-4 py-2 border-b border-zinc-100 dark:border-zinc-800 flex items-center justify-between">
-                      <div className="font-bold text-xs uppercase tracking-wider text-zinc-500 flex items-center gap-1.5">
-                        <AlertTriangle size={13} className="text-amber-500" />
-                        Reorder Alerts ({lowStockItems.length})
+                  <div className="absolute right-0 mt-2 w-88 rounded-2xl bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 shadow-2xl overflow-hidden z-40 animate-slide-up" style={{width:"22rem"}}>
+                    {/* Panel header */}
+                    <div className="px-4 pt-3 pb-2 border-b border-zinc-100 dark:border-zinc-800 flex items-center justify-between">
+                      <div className="flex items-center gap-2">
+                        <Bell size={14} className="text-zinc-500" />
+                        <span className="font-bold text-sm text-zinc-900 dark:text-white">Notifications</span>
+                        {totalAlerts > 0 && (
+                          <span className="px-1.5 py-0.5 rounded-full bg-amber-500 text-white text-[9px] font-extrabold">{totalAlerts}</span>
+                        )}
                       </div>
-                      <Link
-                        to="/reports"
-                        onClick={() => setNotificationsOpen(false)}
-                        className="text-[11px] font-semibold text-zinc-500 hover:text-zinc-900 dark:hover:text-white"
-                      >
-                        Reports →
-                      </Link>
+                      <div className="flex items-center gap-2">
+                        <button
+                          onClick={() => { const next = !sidebarNotif; setSidebarNotif(next); try { localStorage.setItem("stockly_sidebar_notif", String(next)); } catch {} }}
+                          className="text-[10px] font-semibold text-zinc-400 hover:text-zinc-700 dark:hover:text-zinc-200 transition"
+                          title="Toggle sidebar notifications"
+                        >
+                          {sidebarNotif ? "Sidebar: On" : "Sidebar: Off"}
+                        </button>
+                        <button onClick={() => setNotificationsOpen(false)} className="w-6 h-6 grid place-items-center rounded-lg text-zinc-400 hover:text-zinc-700 dark:hover:text-white hover:bg-zinc-100 dark:hover:bg-zinc-800 transition">
+                          <X size={13}/>
+                        </button>
+                      </div>
                     </div>
 
-                    <div className="max-h-72 overflow-y-auto divide-y divide-zinc-100 dark:divide-zinc-800">
-                      {lowStockItems.length > 0 ? (
-                        lowStockItems.map((item) => (
-                          <Link
-                            key={item._id}
-                            to={`/products/${item._id}`}
-                            onClick={() => setNotificationsOpen(false)}
-                            className="p-3 flex items-center gap-3 hover:bg-zinc-50 dark:hover:bg-zinc-800/60 transition group"
-                          >
-                            <div className="w-9 h-9 rounded-xl bg-zinc-100 dark:bg-zinc-800 grid place-items-center shrink-0 overflow-hidden">
-                              {item.image ? (
-                                <img src={item.image} alt="" className="w-full h-full object-cover" />
-                              ) : (
-                                <span className="text-sm">📦</span>
-                              )}
+                    {/* Tabs */}
+                    <div className="flex border-b border-zinc-100 dark:border-zinc-800 px-2 pt-1">
+                      {[
+                        { key: "all", label: "All", count: totalAlerts + recentTx.length },
+                        { key: "alerts", label: "Low Stock", count: lowStockItems.length },
+                        { key: "out", label: "Out of Stock", count: outStockItems.length },
+                        { key: "activity", label: "Activity", count: recentTx.length },
+                      ].map(tab => (
+                        <button
+                          key={tab.key}
+                          onClick={() => setNotifTab(tab.key)}
+                          className={`flex items-center gap-1 px-3 py-2 text-[11px] font-bold rounded-t-lg transition border-b-2 -mb-px ${
+                            notifTab === tab.key
+                              ? "border-zinc-900 dark:border-white text-zinc-900 dark:text-white"
+                              : "border-transparent text-zinc-400 hover:text-zinc-600 dark:hover:text-zinc-300"
+                          }`}
+                        >
+                          {tab.label}
+                          {tab.count > 0 && (
+                            <span className={`px-1.5 rounded-full text-[9px] font-extrabold ${notifTab===tab.key ? "bg-zinc-900 dark:bg-white text-white dark:text-zinc-900" : "bg-zinc-100 dark:bg-zinc-800 text-zinc-600 dark:text-zinc-400"}`}>{tab.count}</span>
+                          )}
+                        </button>
+                      ))}
+                    </div>
+
+                    {/* Tab content */}
+                    <div className="max-h-80 overflow-y-auto divide-y divide-zinc-50 dark:divide-zinc-800/60">
+                      {/* Out of stock items */}
+                      {(notifTab === "all" || notifTab === "out") && outStockItems.map(item => (
+                        <Link key={item._id} to={`/products/${item._id}`} onClick={() => setNotificationsOpen(false)}
+                          className="p-3 flex items-center gap-3 hover:bg-zinc-50 dark:hover:bg-zinc-800/40 transition group">
+                          <div className="w-9 h-9 rounded-xl bg-red-50 dark:bg-red-500/10 border border-red-200 dark:border-red-500/20 grid place-items-center shrink-0 overflow-hidden">
+                            {item.image ? <img src={item.image} alt="" className="w-full h-full object-cover rounded-xl"/> : <PackageX size={15} className="text-red-500"/>}
+                          </div>
+                          <div className="flex-1 min-w-0">
+                            <div className="text-xs font-bold text-zinc-900 dark:text-white truncate group-hover:underline">{item.name} <ArrowUpRight size={10} className="inline text-zinc-400"/></div>
+                            <div className="text-[11px] text-zinc-500">0 units · min {item.minimumStock ?? 5}</div>
+                          </div>
+                          <span className="text-[10px] font-bold px-2 py-0.5 rounded-md bg-red-100 text-red-700 dark:bg-red-500/20 dark:text-red-300 shrink-0">Out</span>
+                        </Link>
+                      ))}
+
+                      {/* Low stock items */}
+                      {(notifTab === "all" || notifTab === "alerts") && lowStockItems.map(item => (
+                        <Link key={item._id} to={`/products/${item._id}`} onClick={() => setNotificationsOpen(false)}
+                          className="p-3 flex items-center gap-3 hover:bg-zinc-50 dark:hover:bg-zinc-800/40 transition group">
+                          <div className="w-9 h-9 rounded-xl bg-amber-50 dark:bg-amber-500/10 border border-amber-200 dark:border-amber-500/20 grid place-items-center shrink-0 overflow-hidden">
+                            {item.image ? <img src={item.image} alt="" className="w-full h-full object-cover rounded-xl"/> : <AlertTriangle size={14} className="text-amber-500"/>}
+                          </div>
+                          <div className="flex-1 min-w-0">
+                            <div className="text-xs font-bold text-zinc-900 dark:text-white truncate group-hover:underline">{item.name} <ArrowUpRight size={10} className="inline text-zinc-400"/></div>
+                            <div className="text-[11px] text-zinc-500">{item.quantity} {item.unit || "units"} · min {item.minimumStock ?? 5}</div>
+                          </div>
+                          <span className="text-[10px] font-bold px-2 py-0.5 rounded-md bg-amber-100 text-amber-700 dark:bg-amber-500/20 dark:text-amber-300 shrink-0">Low</span>
+                        </Link>
+                      ))}
+
+                      {/* Recent transactions */}
+                      {(notifTab === "all" || notifTab === "activity") && recentTx.map(t => (
+                        <div key={t._id} className="p-3 flex items-center gap-3">
+                          <div className={`w-9 h-9 rounded-xl grid place-items-center shrink-0 border ${t.type==="IN" ? "bg-emerald-50 dark:bg-emerald-500/10 border-emerald-200 dark:border-emerald-500/20" : "bg-red-50 dark:bg-red-500/10 border-red-200 dark:border-red-500/20"}`}>
+                            {t.type === "IN" ? <TrendingUp size={13} className="text-emerald-600 dark:text-emerald-400"/> : <TrendingDown size={13} className="text-red-500 dark:text-red-400"/>}
+                          </div>
+                          <div className="flex-1 min-w-0">
+                            <div className="text-xs font-bold text-zinc-900 dark:text-white truncate">{t.productId?.name || "Product"}</div>
+                            <div className="text-[11px] text-zinc-500 flex items-center gap-1">
+                              <span className={`font-semibold ${t.type==="IN"?"text-emerald-600":"text-red-500"}`}>{t.type} {t.quantity}</span>
+                              <span>·</span>
+                              <span>{t.reason || "—"}</span>
                             </div>
-                            <div className="flex-1 min-w-0">
-                              <div className="text-xs font-bold text-zinc-900 dark:text-white truncate group-hover:underline flex items-center gap-1">
-                                {item.name}
-                                <ArrowUpRight size={11} className="text-zinc-400" />
-                              </div>
-                              <div className="text-[11px] text-zinc-500 font-medium">
-                                {item.quantity} {item.unit} on hand (min {item.minimumStock ?? 5})
-                              </div>
-                            </div>
-                            <span
-                              className={`text-[10px] font-bold px-2 py-0.5 rounded-md ${
-                                item.quantity === 0
-                                  ? "bg-red-100 text-red-700 dark:bg-red-500/20 dark:text-red-300"
-                                  : "bg-amber-100 text-amber-700 dark:bg-amber-500/20 dark:text-amber-300"
-                              }`}
-                            >
-                              {item.quantity === 0 ? "Out" : "Low"}
-                            </span>
-                          </Link>
-                        ))
-                      ) : (
-                        <div className="py-8 text-center text-xs text-zinc-500">
-                          ✨ All inventory items are well-stocked!
+                          </div>
+                          <div className="text-[10px] text-zinc-400 shrink-0">{new Date(t.createdAt).toLocaleDateString(undefined,{month:"short",day:"numeric"})}</div>
+                        </div>
+                      ))}
+
+                      {/* Empty state */}
+                      {(
+                        (notifTab === "all" && totalAlerts === 0 && recentTx.length === 0) ||
+                        (notifTab === "alerts" && lowStockItems.length === 0) ||
+                        (notifTab === "out" && outStockItems.length === 0) ||
+                        (notifTab === "activity" && recentTx.length === 0)
+                      ) && (
+                        <div className="py-10 text-center text-xs text-zinc-500">
+                          <CheckCircle2 size={28} className="mx-auto mb-2 text-emerald-500 opacity-60"/>
+                          {notifTab === "activity" ? "No recent transactions" : "✨ All inventory is well-stocked!"}
                         </div>
                       )}
+                    </div>
+
+                    {/* Footer quick actions */}
+                    <div className="px-3 py-2.5 border-t border-zinc-100 dark:border-zinc-800 flex items-center gap-2">
+                      <Link
+                        to="/stock?type=IN"
+                        onClick={() => setNotificationsOpen(false)}
+                        className="flex-1 flex items-center justify-center gap-1.5 py-1.5 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white text-[11px] font-bold transition active:scale-95"
+                      >
+                        <ArrowUpCircle size={12}/> Stock In
+                      </Link>
+                      <Link
+                        to="/stock?type=OUT"
+                        onClick={() => setNotificationsOpen(false)}
+                        className="flex-1 flex items-center justify-center gap-1.5 py-1.5 rounded-xl bg-red-500 hover:bg-red-600 text-white text-[11px] font-bold transition active:scale-95"
+                      >
+                        <ArrowDownCircle size={12}/> Stock Out
+                      </Link>
+                      <Link
+                        to="/products"
+                        onClick={() => setNotificationsOpen(false)}
+                        className="flex-1 flex items-center justify-center gap-1.5 py-1.5 rounded-xl bg-zinc-100 dark:bg-zinc-800 text-zinc-700 dark:text-zinc-300 text-[11px] font-bold hover:bg-zinc-200 dark:hover:bg-zinc-700 transition active:scale-95"
+                      >
+                        Products
+                      </Link>
                     </div>
                   </div>
                 )}
@@ -677,6 +874,13 @@ export default function AppLayout({ children }) {
 
         {/* 6. AI COPILOT SLIDE-OVER DRAWER */}
         <AiCopilotDrawer open={aiCopilotOpen} onClose={() => setAiCopilotOpen(false)} />
+
+        {/* 7. APP UPDATE MODAL */}
+        <AppUpdateModal
+          open={autoUpdateModalOpen}
+          onClose={() => setAutoUpdateModalOpen(false)}
+          updateInfo={autoUpdateInfo}
+        />
       </div>
     </div>
   );

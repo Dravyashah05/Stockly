@@ -27,6 +27,17 @@ function useNativeMobileIntegration() {
   const location = useLocation();
 
   useEffect(() => {
+    window.__stocklyNavigate = (targetPath) => {
+      if (targetPath) {
+        navigate(targetPath);
+      }
+    };
+    return () => {
+      delete window.__stocklyNavigate;
+    };
+  }, [navigate]);
+
+  useEffect(() => {
     let mounted = true;
     async function initNative() {
       if (typeof window === "undefined" || !window.Capacitor?.isNativePlatform?.()) return;
@@ -51,6 +62,28 @@ function useNativeMobileIntegration() {
             navigate(-1);
           } else {
             CapApp.exitApp();
+          }
+        });
+
+        // Handle Android Home Screen Widget and Shortcut deep-links
+        CapApp.addListener("appUrlOpen", (event) => {
+          try {
+            if (!event?.url) return;
+            if (event.url.includes("stock?type=IN")) {
+              navigate("/stock?type=IN");
+            } else if (event.url.includes("stock?type=OUT")) {
+              navigate("/stock?type=OUT");
+            } else if (event.url.includes("products")) {
+              navigate("/products");
+            } else if (event.url.includes("home")) {
+              navigate("/home");
+            } else {
+              const parsed = new URL(event.url);
+              const path = (parsed.pathname || "") + (parsed.search || "");
+              if (path && path !== "/") navigate(path);
+            }
+          } catch (e) {
+            console.warn("Deep link handling error:", e);
           }
         });
       } catch {}

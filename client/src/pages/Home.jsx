@@ -133,8 +133,8 @@ export default function Home() {
 
   return (
     <div className="space-y-5 sm:space-y-6 pb-6 animate-fade-in">
-      {/* 1. MOBILE USER HEADER & GREETING */}
-      <div className="flex items-center justify-between gap-3">
+      {/* 1. MOBILE & DESKTOP USER HEADER */}
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
         <div>
           <div className="flex items-center gap-1.5 text-xs font-semibold text-zinc-500 dark:text-zinc-400 uppercase tracking-wider">
             <span>{new Date().toLocaleDateString(undefined, { weekday: "short", month: "short", day: "numeric" })}</span>
@@ -148,11 +148,20 @@ export default function Home() {
           </h1>
         </div>
 
-        {/* Quick Avatar / Scan Icon */}
+        {/* Quick Header Actions */}
         <div className="flex items-center gap-2">
+          <button
+            type="button"
+            onClick={() => setShowAddProductModal(true)}
+            className="flex-1 sm:flex-none inline-flex items-center justify-center gap-1.5 px-3.5 py-2 rounded-xl bg-violet-600 hover:bg-violet-700 text-white text-xs font-extrabold shadow-sm shadow-violet-500/25 active:scale-95 transition"
+          >
+            <Plus size={15} strokeWidth={2.5} />
+            <span>Add Product</span>
+          </button>
+
           <Link
             to="/settings"
-            className="w-10 h-10 rounded-2xl bg-zinc-900 text-white dark:bg-white dark:text-zinc-900 grid place-items-center font-bold text-sm shadow-sm active:scale-95 transition"
+            className="w-9 h-9 sm:w-10 sm:h-10 rounded-xl bg-zinc-100 dark:bg-zinc-800 text-zinc-700 dark:text-zinc-200 border border-zinc-200/80 dark:border-zinc-700/80 grid place-items-center font-bold text-xs sm:text-sm shadow-2xs active:scale-95 transition shrink-0"
             title="Settings & Profile"
           >
             {(user?.name?.[0] || "U").toUpperCase()}
@@ -247,59 +256,64 @@ export default function Home() {
         </div>
       )}
 
-      {/* 3. PRIMARY MOBILE ACTION CARDS (Stock IN / OUT & Quick Add) */}
-      <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
+      {/* 3. PRIMARY ACTION SUITE (Stock IN / OUT & Add Product) */}
+      <div className="grid grid-cols-3 gap-2.5 sm:gap-4">
         {/* Stock IN (Receive) */}
         <Link
           to="/stock?type=IN"
-          className="p-4 rounded-2xl bg-gradient-to-br from-emerald-600 to-emerald-700 text-white shadow-lg shadow-emerald-600/20 flex flex-col justify-between min-h-[110px] active:scale-[0.98] transition group"
+          className="p-3 sm:p-4 rounded-2xl bg-gradient-to-br from-emerald-600 to-emerald-700 text-white shadow-md shadow-emerald-600/20 hover:shadow-lg flex flex-col justify-between min-h-[96px] sm:min-h-[114px] active:scale-[0.96] transition-all duration-150 group"
         >
           <div className="flex items-center justify-between">
-            <div className="w-9 h-9 rounded-xl bg-white/20 backdrop-blur-sm grid place-items-center">
-              <ArrowUp size={18} className="text-white" />
+            <div className="w-8 h-8 sm:w-10 sm:h-10 rounded-xl bg-white/20 backdrop-blur-md grid place-items-center shrink-0">
+              <ArrowUp size={17} className="text-white group-hover:-translate-y-0.5 transition-transform" />
             </div>
-            <ArrowRight size={15} className="text-emerald-200 group-hover:translate-x-0.5 transition-transform" />
+            <ArrowRight size={14} className="text-emerald-200 hidden sm:block group-hover:translate-x-0.5 transition-transform" />
           </div>
-          <div>
-            <div className="text-base font-bold leading-tight">Stock IN</div>
-            <div className="text-xs text-emerald-100 mt-0.5 font-medium">Receive inventory</div>
+          <div className="mt-1">
+            <div className="text-xs sm:text-base font-extrabold leading-tight">Stock IN</div>
+            <div className="text-[10px] sm:text-xs text-emerald-100 font-medium truncate mt-0.5">
+              Receive
+            </div>
           </div>
         </Link>
 
         {/* Stock OUT (Dispatch) */}
         <Link
           to="/stock?type=OUT"
-          className="p-4 rounded-2xl bg-gradient-to-br from-zinc-900 to-zinc-800 dark:from-zinc-800 dark:to-zinc-900 text-white shadow-lg shadow-zinc-900/20 flex flex-col justify-between min-h-[110px] active:scale-[0.98] transition group"
+          className="p-3 sm:p-4 rounded-2xl bg-gradient-to-br from-rose-600 to-rose-700 text-white shadow-md shadow-rose-600/20 hover:shadow-lg flex flex-col justify-between min-h-[96px] sm:min-h-[114px] active:scale-[0.96] transition-all duration-150 group"
         >
           <div className="flex items-center justify-between">
-            <div className="w-9 h-9 rounded-xl bg-white/20 backdrop-blur-sm grid place-items-center">
-              <ArrowDown size={18} className="text-white" />
+            <div className="w-8 h-8 sm:w-10 sm:h-10 rounded-xl bg-white/20 backdrop-blur-md grid place-items-center shrink-0">
+              <ArrowDown size={17} className="text-white group-hover:translate-y-0.5 transition-transform" />
             </div>
-            <ArrowRight size={15} className="text-zinc-400 group-hover:translate-x-0.5 transition-transform" />
+            <ArrowRight size={14} className="text-rose-200 hidden sm:block group-hover:translate-x-0.5 transition-transform" />
           </div>
-          <div>
-            <div className="text-base font-bold leading-tight">Stock OUT</div>
-            <div className="text-xs text-zinc-300 mt-0.5 font-medium">Dispatch & sales</div>
+          <div className="mt-1">
+            <div className="text-xs sm:text-base font-extrabold leading-tight">Stock OUT</div>
+            <div className="text-[10px] sm:text-xs text-rose-100 font-medium truncate mt-0.5">
+              Dispatch
+            </div>
           </div>
         </Link>
 
-        {/* Add New SKU (Modal) */}
+        {/* Add New Product (Modal) */}
         <button
           type="button"
           onClick={() => setShowAddProductModal(true)}
-          className="col-span-2 sm:col-span-1 p-4 rounded-2xl bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 shadow-sm flex sm:flex-col items-center sm:items-start justify-between min-h-[64px] sm:min-h-[110px] active:scale-[0.98] transition group text-left"
+          className="p-3 sm:p-4 rounded-2xl bg-gradient-to-br from-violet-600 to-indigo-700 text-white shadow-md shadow-violet-600/25 hover:shadow-lg flex flex-col justify-between min-h-[96px] sm:min-h-[114px] active:scale-[0.96] transition-all duration-150 group text-left"
         >
-          <div className="flex items-center sm:justify-between w-full">
-            <div className="w-9 h-9 rounded-xl bg-zinc-100 dark:bg-zinc-800 text-zinc-800 dark:text-white grid place-items-center shrink-0">
-              <Plus size={18} />
+          <div className="flex items-center justify-between w-full">
+            <div className="w-8 h-8 sm:w-10 sm:h-10 rounded-xl bg-white/20 backdrop-blur-md grid place-items-center shrink-0">
+              <Plus size={18} strokeWidth={2.5} className="text-white group-hover:rotate-90 transition-transform duration-200" />
             </div>
-            <span className="hidden sm:block text-xs font-semibold text-zinc-400">1-Tap</span>
+            <Sparkles size={14} className="text-violet-200 hidden sm:block" />
           </div>
-          <div className="ml-3 sm:ml-0 sm:mt-2">
-            <div className="text-sm font-bold text-zinc-900 dark:text-white">New Product</div>
-            <div className="text-xs text-zinc-500 dark:text-zinc-400">Register new inventory SKU</div>
+          <div className="mt-1">
+            <div className="text-xs sm:text-base font-extrabold leading-tight">Add Product</div>
+            <div className="text-[10px] sm:text-xs text-violet-100 font-medium truncate mt-0.5">
+              New SKU
+            </div>
           </div>
-          <ArrowRight size={15} className="sm:hidden text-zinc-400 shrink-0 ml-auto" />
         </button>
       </div>
 

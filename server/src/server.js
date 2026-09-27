@@ -22,6 +22,7 @@ import auditRoutes from "./routes/auditRoutes.js";
 import supplierRoutes from "./routes/supplierRoutes.js";
 import optionsRoutes from "./routes/optionsRoutes.js";
 import aiRoutes from "./routes/aiRoutes.js";
+import appRoutes from "./routes/appRoutes.js";
 import { authOptional } from "./middleware/auth.js";
 import { configureCloudinary } from "./config/cloudinary.js";
 
@@ -158,6 +159,7 @@ const apiRoutes = [
   ["/suppliers", supplierRoutes],
   ["/options", optionsRoutes],
   ["/ai", aiRoutes],
+  ["/app", appRoutes],
 ];
 
 for (const [subPath, router] of apiRoutes) {
