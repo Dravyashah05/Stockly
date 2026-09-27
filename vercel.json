@@ -38,14 +38,18 @@
   "rewrites": [
     {
       "source": "/health",
-      "destination": "/api"
+      "destination": "/api/index.js"
+    },
+    {
+      "source": "/api",
+      "destination": "/api/index.js"
     },
     {
       "source": "/api/(.*)",
-      "destination": "/api"
+      "destination": "/api/index.js"
     },
     {
-      "source": "/(.*)",
+      "source": "/((?!api/|assets/|favicon\\.svg|manifest\\.json|robots\\.txt|icon-.*).*)",
       "destination": "/index.html"
     }
   ]

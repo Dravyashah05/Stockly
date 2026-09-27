@@ -1,4 +1,49 @@
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32" width="32" height="32">
-  <rect width="32" height="32" rx="8" fill="#6366f1" />
-  <text x="16" y="22" font-family="-apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif" font-size="18" font-weight="bold" fill="#ffffff" text-anchor="middle">S</text>
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512">
+  <defs>
+    <linearGradient id="bg" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0%" stop-color="#2F8CFF"/>
+      <stop offset="100%" stop-color="#0755D9"/>
+    </linearGradient>
+    <linearGradient id="box" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0%" stop-color="#FFFFFF"/>
+      <stop offset="100%" stop-color="#DCE8FA"/>
+    </linearGradient>
+    <linearGradient id="badge" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0%" stop-color="#39E39A"/>
+      <stop offset="100%" stop-color="#17B978"/>
+    </linearGradient>
+    <filter id="shadow" x="-30%" y="-30%" width="160%" height="160%">
+      <feDropShadow dx="0" dy="12" stdDeviation="14" flood-opacity=".18"/>
+    </filter>
+  </defs>
+
+  <!-- App icon background -->
+  <rect x="24" y="24" width="464" height="464" rx="112" fill="url(#bg)"/>
+
+  <!-- Inventory box -->
+  <g filter="url(#shadow)">
+    <path d="M128 178 L246 119 Q256 114 266 119 L386 178 L256 242 Z"
+          fill="#F8FBFF"/>
+    <path d="M128 178 L256 242 L256 394 Q256 402 248 398 L136 342 Q128 338 128 329 Z"
+          fill="url(#box)"/>
+    <path d="M386 178 L256 242 L256 394 Q256 402 264 398 L378 342 Q386 338 386 329 Z"
+          fill="#E9F1FC"/>
+
+    <!-- Packing tape -->
+    <path d="M214 135 L274 105 L325 131 L266 162 Z" fill="#2683F7"/>
+    <path d="M214 135 L266 162 L266 225 L214 198 Z" fill="#1975E8"/>
+    <path d="M266 162 L325 131 L325 194 L266 225 Z" fill="#3A91FA"/>
+
+    <!-- Label lines -->
+    <rect x="158" y="270" width="66" height="12" rx="6" fill="#7C9AC7"/>
+    <rect x="158" y="294" width="48" height="12" rx="6" fill="#9BB2D4"/>
+  </g>
+
+  <!-- Stock analytics badge -->
+  <g filter="url(#shadow)">
+    <circle cx="358" cy="350" r="73" fill="url(#badge)"/>
+    <rect x="325" y="373" width="18" height="38" rx="9" fill="#FFFFFF"/>
+    <rect x="353" y="350" width="18" height="61" rx="9" fill="#FFFFFF"/>
+    <rect x="381" y="320" width="18" height="91" rx="9" fill="#FFFFFF"/>
+  </g>
 </svg>

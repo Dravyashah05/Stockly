@@ -31,6 +31,7 @@ import { getProducts } from "../api/products";
 import BottomNav from "./BottomNav";
 import TopProgress from "../components/ui/TopProgress";
 import AiCopilotDrawer from "../components/ai/AiCopilotDrawer";
+import AppLogo from "../components/ui/AppLogo";
 
 export default function AppLayout({ children }) {
   const [sidebarOpen, setSidebarOpen] = useState(() => {
@@ -183,9 +184,7 @@ export default function AppLayout({ children }) {
           {/* Sidebar Workspace Brand / Header */}
           <div className="p-4 border-b border-zinc-100 dark:border-zinc-800/80 flex items-center justify-between">
             <Link to="/home" className="flex items-center gap-3 group">
-              <div className="w-10 h-10 rounded-2xl bg-zinc-900 text-white dark:bg-white dark:text-zinc-900 grid place-items-center font-black text-base shadow-sm group-hover:scale-105 transition-transform">
-                S
-              </div>
+              <AppLogo size="md" className="group-hover:scale-105 transition-transform" />
               <div className="min-w-0">
                 <div className="flex items-center gap-1.5">
                   <span className="font-extrabold text-sm text-zinc-900 dark:text-white tracking-tight">Stockly OS</span>
@@ -317,9 +316,7 @@ export default function AppLayout({ children }) {
                 onClick={() => setMobileDrawerOpen(false)}
                 className="flex items-center gap-2.5"
               >
-                <div className="w-9 h-9 rounded-2xl bg-zinc-900 text-white dark:bg-white dark:text-zinc-900 grid place-items-center font-black text-sm">
-                  S
-                </div>
+                <AppLogo size="sm" />
                 <div>
                   <div className="font-extrabold text-sm text-zinc-900 dark:text-white">Stockly OS</div>
                   <div className="text-[10px] text-zinc-400 font-medium">Inventory Workspace</div>
@@ -455,9 +452,7 @@ export default function AppLayout({ children }) {
               </button>
 
               <Link to="/home" className="flex items-center gap-2">
-                <div className="w-8 h-8 rounded-xl bg-zinc-900 text-white dark:bg-white dark:text-zinc-900 grid place-items-center font-black text-xs shadow-xs">
-                  S
-                </div>
+                <AppLogo size="sm" />
                 <div className="flex items-center gap-1.5">
                   <span className="font-extrabold text-sm tracking-tight text-zinc-900 dark:text-white">Stockly</span>
                   <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" />

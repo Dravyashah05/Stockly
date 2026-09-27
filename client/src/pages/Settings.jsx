@@ -39,6 +39,7 @@ import Modal from "../components/ui/Modal";
 import Button from "../components/ui/Button";
 import LinkDeviceModal from "../components/auth/LinkDeviceModal";
 import AuthorizeDeviceModal from "../components/auth/AuthorizeDeviceModal";
+import AppLogo from "../components/ui/AppLogo";
 import {
   updateMe,
   changePassword,
@@ -888,8 +889,9 @@ export default function Settings() {
           <LogOut size={16} /> Sign Out from This Device
         </button>
 
-        <div className="text-center text-[11px] text-zinc-400 mt-4">
-          Stockly Application • v2.4.0 • Encrypted Sessions
+        <div className="flex flex-col items-center justify-center gap-1.5 text-center text-[11px] text-zinc-400 mt-4">
+          <AppLogo size="xs" />
+          <span>Stockly Application • v2.4.0 • Encrypted Sessions</span>
         </div>
       </div>
 
