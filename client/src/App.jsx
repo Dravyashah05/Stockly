@@ -18,6 +18,7 @@ const StockHistory = lazy(()=> import("./pages/StockHistory"));
 const Settings = lazy(()=> import("./pages/Settings"));
 const Reports = lazy(()=> import("./pages/Reports"));
 const Audit = lazy(()=> import("./pages/Audit"));
+const AppStore = lazy(()=> import("./pages/AppStore"));
 const Login = lazy(()=> import("./pages/Login"));
 const NotFound = lazy(()=> import("./pages/NotFound"));
 
@@ -102,6 +103,8 @@ function AppRoutes(){
             <Route path="/settings" element={<Settings />} />
             <Route path="/reports" element={<Reports />} />
             <Route path="/audit" element={<Audit />} />
+            <Route path="/app-store" element={<AppStore />} />
+            <Route path="/download" element={<Navigate to="/app-store" replace />} />
             <Route path="*" element={<NotFound />} />
           </Routes>
           </Suspense>

@@ -23,6 +23,7 @@ import {
   PanelLeftOpen,
   PanelLeft,
   Menu,
+  Smartphone,
 } from "lucide-react";
 import { useAuth } from "../context/AuthContext";
 import { useTheme } from "../context/ThemeContext";
@@ -161,9 +162,10 @@ export default function AppLayout({ children }) {
       ],
     },
     {
-      group: "System",
+      group: "System & Apps",
       items: [
         { to: "/settings", label: "App Settings & Sync", icon: Settings },
+        { to: "/app-store", label: "Download Mobile App", icon: Smartphone, badge: "APK" },
       ],
     },
   ];
@@ -255,6 +257,11 @@ export default function AppLayout({ children }) {
                       >
                         <Icon size={16} strokeWidth={active ? 2.4 : 1.8} className="shrink-0" />
                         <span className="flex-1 truncate">{item.label}</span>
+                        {item.badge && (
+                          <span className="px-1.5 py-0.5 rounded-md bg-violet-100 dark:bg-violet-500/20 text-violet-700 dark:text-violet-300 text-[10px] font-extrabold uppercase">
+                            {item.badge}
+                          </span>
+                        )}
                         {item.to === "/products" && lowStockItems.length > 0 && (
                           <span className="px-1.5 py-0.5 rounded-full bg-amber-500 text-white text-[10px] font-bold">
                             {lowStockItems.length}
@@ -384,6 +391,11 @@ export default function AppLayout({ children }) {
                         >
                           <Icon size={16} strokeWidth={active ? 2.4 : 1.8} />
                           <span className="flex-1 truncate">{item.label}</span>
+                          {item.badge && (
+                            <span className="px-1.5 py-0.5 rounded-md bg-violet-100 dark:bg-violet-500/20 text-violet-700 dark:text-violet-300 text-[10px] font-extrabold uppercase">
+                              {item.badge}
+                            </span>
+                          )}
                           {item.to === "/products" && lowStockItems.length > 0 && (
                             <span className="px-1.5 py-0.5 rounded-full bg-amber-500 text-white text-[10px] font-bold">
                               {lowStockItems.length}

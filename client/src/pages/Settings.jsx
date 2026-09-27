@@ -604,6 +604,51 @@ export default function Settings() {
         </div>
       </div>
 
+      {/* 3.5. MOBILE APP STORE & APK DOWNLOADS */}
+      <div className="space-y-2">
+        <div className="text-[11px] font-bold uppercase tracking-wider text-zinc-400 px-1 flex items-center justify-between">
+          <span>Mobile App & APK Store</span>
+          <span className="text-[10px] font-bold text-emerald-600 dark:text-emerald-400 bg-emerald-50 dark:bg-emerald-500/10 px-2 py-0.5 rounded-md">
+            v1.0.0 APK Ready
+          </span>
+        </div>
+
+        <div className="card p-4 sm:p-5 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 bg-gradient-to-r from-zinc-900 to-zinc-800 dark:from-zinc-900 dark:to-zinc-950 text-white border-zinc-800">
+          <div className="flex items-center gap-3.5 min-w-0">
+            <div className="w-11 h-11 rounded-2xl bg-white/10 text-white grid place-items-center shrink-0 border border-white/10">
+              <Smartphone size={20} />
+            </div>
+            <div>
+              <div className="flex items-center gap-2">
+                <span className="font-extrabold text-sm sm:text-base">Stockly Android Edition</span>
+                <span className="px-2 py-0.5 rounded-md bg-emerald-400/20 text-emerald-300 text-[10px] font-extrabold uppercase">
+                  4.9 MB
+                </span>
+              </div>
+              <div className="text-xs text-zinc-300 mt-0.5">
+                Native hardware scanner, offline sync & instant QR ticket pairing
+              </div>
+            </div>
+          </div>
+
+          <div className="flex items-center gap-2 w-full sm:w-auto">
+            <a
+              href="/stockly.apk"
+              download="stockly-v1.0.0.apk"
+              className="flex-1 sm:flex-none px-4 py-2.5 rounded-xl bg-white hover:bg-zinc-100 text-zinc-900 font-extrabold text-xs shadow-sm active:scale-95 transition flex items-center justify-center gap-1.5"
+            >
+              <Download size={14} className="text-violet-600" /> Download APK
+            </a>
+            <Link
+              to="/app-store"
+              className="flex-1 sm:flex-none px-3.5 py-2.5 rounded-xl bg-white/10 hover:bg-white/20 text-white font-bold text-xs border border-white/10 active:scale-95 transition flex items-center justify-center gap-1.5"
+            >
+              <QrCode size={14} /> Open Store
+            </Link>
+          </div>
+        </div>
+      </div>
+
       {/* 4. PREFERENCES & DISPLAY */}
       <div className="space-y-2">
         <div className="text-[11px] font-bold uppercase tracking-wider text-zinc-400 px-1">

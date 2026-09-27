@@ -28,6 +28,7 @@ import {
   Moon,
   Layers,
   Activity,
+  Download,
 } from "lucide-react";
 import OTPInput from "../components/ui/OTPInput";
 import QRScannerModal from "../components/auth/QRScannerModal";
@@ -243,16 +244,28 @@ export default function Login() {
 
   return (
     <div className="min-h-screen grid lg:grid-cols-[1.1fr_0.9fr] bg-[#fcfcf9] dark:bg-zinc-950 font-sans antialiased text-zinc-900 dark:text-zinc-100 selection:bg-violet-600 selection:text-white relative">
-      {/* Absolute Theme Toggle at Top Right */}
-      <button
-        type="button"
-        onClick={toggleTheme}
-        aria-label="Toggle theme"
-        className="absolute top-4 right-4 z-40 w-9 h-9 rounded-xl bg-white/80 dark:bg-zinc-800/80 backdrop-blur border border-zinc-200/80 dark:border-zinc-700/80 text-zinc-600 dark:text-zinc-300 grid place-items-center hover:bg-white dark:hover:bg-zinc-700 active:scale-95 transition shadow-xs"
-        title={isDark ? "Switch to light mode" : "Switch to dark mode"}
-      >
-        {isDark ? <Sun size={16} /> : <Moon size={16} />}
-      </button>
+      {/* Absolute Top Right Actions: Download App & Theme Toggle */}
+      <div className="absolute top-4 right-4 z-40 flex items-center gap-2">
+        <a
+          href="/stockly.apk"
+          download="stockly-v1.0.0.apk"
+          className="px-3 py-1.5 rounded-xl bg-white/80 dark:bg-zinc-800/80 backdrop-blur border border-zinc-200/80 dark:border-zinc-700/80 text-zinc-700 dark:text-zinc-200 text-xs font-bold hover:bg-white dark:hover:bg-zinc-700 active:scale-95 transition shadow-xs flex items-center gap-1.5"
+          title="Download Stockly Android App"
+        >
+          <Smartphone size={14} className="text-violet-600 dark:text-violet-400" />
+          <span className="hidden sm:inline">Download APK</span>
+        </a>
+
+        <button
+          type="button"
+          onClick={toggleTheme}
+          aria-label="Toggle theme"
+          className="w-9 h-9 rounded-xl bg-white/80 dark:bg-zinc-800/80 backdrop-blur border border-zinc-200/80 dark:border-zinc-700/80 text-zinc-600 dark:text-zinc-300 grid place-items-center hover:bg-white dark:hover:bg-zinc-700 active:scale-95 transition shadow-xs"
+          title={isDark ? "Switch to light mode" : "Switch to dark mode"}
+        >
+          {isDark ? <Sun size={16} /> : <Moon size={16} />}
+        </button>
+      </div>
 
       {/* LEFT SIDE: Brand Showcase & Architecture Highlights (Desktop Only) */}
       <div className="hidden lg:flex flex-col relative overflow-hidden bg-gradient-to-br from-zinc-950 via-slate-900 to-indigo-950 text-white p-12 xl:p-16 justify-between select-none">
@@ -679,11 +692,21 @@ export default function Login() {
             )}
           </div>
 
-          {/* Bottom Security / Compliance Badge */}
-          <div className="text-center space-y-1 text-xs text-zinc-400 dark:text-zinc-500">
-            <p className="flex items-center justify-center gap-1.5 font-medium">
-              <ShieldCheck size={14} className="text-emerald-500" /> End-to-End Encrypted Session Management
-            </p>
+          {/* Bottom Security / Compliance & Mobile Download Link */}
+          <div className="text-center space-y-2 text-xs text-zinc-400 dark:text-zinc-500">
+            <div className="flex items-center justify-center gap-3 text-[11px]">
+              <a
+                href="/stockly.apk"
+                download="stockly-v1.0.0.apk"
+                className="text-violet-600 dark:text-violet-400 font-bold hover:underline flex items-center gap-1"
+              >
+                <Smartphone size={13} /> Stockly Android APK (4.9 MB)
+              </a>
+              <span>•</span>
+              <span className="flex items-center gap-1">
+                <ShieldCheck size={13} className="text-emerald-500" /> End-to-End Encrypted
+              </span>
+            </div>
           </div>
         </div>
       </div>
