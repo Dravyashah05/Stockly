@@ -16,13 +16,14 @@ import {
   Image as ImageIcon, CheckSquare, Square, ArrowUpDown, ChevronLeft,
   ChevronRight, ArrowRight, ExternalLink, Loader2, Copy, Check
 } from "lucide-react";
-import { Link } from "react-router-dom";
+import { Link, useSearchParams } from "react-router-dom";
 import FAB from "../components/ui/FAB";
 import { StatsSkeleton } from "../components/ui/Loader";
 
 export default function Products(){
   const { push } = useToast();
   const { search } = useSearch();
+  const [searchParams] = useSearchParams();
   const [products, setProducts] = useState([]);
   const [categories, setCategories] = useState([]);
   const [suppliers, setSuppliers] = useState([]);
@@ -33,7 +34,8 @@ export default function Products(){
   const [limit, setLimit] = useState(25);
   const [pagination, setPagination] = useState({ total: 0, pages: 1 });
   const [selectedCategory, setSelectedCategory] = useState("");
-  const [stockStatusFilter, setStockStatusFilter] = useState("");
+  const initialFilter = searchParams.get("filter") === "low" || searchParams.get("filter") === "low-stock" ? "low" : "";
+  const [stockStatusFilter, setStockStatusFilter] = useState(initialFilter);
   const [sortBy, setSortBy] = useState("createdAt");
   const [sortOrder, setSortOrder] = useState("desc");
 
@@ -45,7 +47,7 @@ export default function Products(){
   const [bulkActionLoading, setBulkActionLoading] = useState(false);
 
   // Modals & Single Operations
-  const [showModal, setShowModal] = useState(false);
+  const [showModal, setShowModal] = useState(searchParams.get("action") === "add");
   const [editing, setEditing] = useState(null);
   const [formSubmitting, setFormSubmitting] = useState(false);
   const [deleteTarget, setDeleteTarget] = useState(null);

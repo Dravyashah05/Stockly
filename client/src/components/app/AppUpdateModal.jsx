@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import {
   Download,
   Sparkles,
@@ -10,11 +10,14 @@ import {
   X,
   ArrowRight,
   ExternalLink,
+  Settings,
 } from "lucide-react";
 import Modal from "../ui/Modal";
 import Button from "../ui/Button";
 import { useToast } from "../../context/ToastContext";
-import { sendAppUpdateNotification } from "../../utils/notifications";
+import { downloadAndAutoInstall, canInstallPackages, openInstallSettings } from "../../utils/nativeUpdater";
+import { hapticSuccess, hapticWarning } from "../../utils/haptics";
+import { playSuccessSound, playErrorSound } from "../../utils/sound";
 
 export default function AppUpdateModal({
   open,
@@ -26,6 +29,15 @@ export default function AppUpdateModal({
   const [downloading, setDownloading] = useState(false);
   const [progress, setProgress] = useState(0);
   const [downloadComplete, setDownloadComplete] = useState(false);
+  const [installPermissionRequired, setInstallPermissionRequired] = useState(false);
+
+  useEffect(() => {
+    if (open) {
+      canInstallPackages().then((can) => {
+        setInstallPermissionRequired(!can);
+      });
+    }
+  }, [open]);
 
   if (!updateInfo) return null;
 
@@ -38,38 +50,42 @@ export default function AppUpdateModal({
     mandatory = false,
   } = updateInfo;
 
-  const handleStartUpdate = () => {
+  const handleStartUpdate = async () => {
     setDownloading(true);
     setProgress(0);
     setDownloadComplete(false);
 
-    // Send a native notification about update downloading
     try {
-      sendAppUpdateNotification(latestVersion);
-    } catch {}
-
-    const stepTime = 120;
-    const interval = setInterval(() => {
-      setProgress((prev) => {
-        if (prev >= 100) {
-          clearInterval(interval);
-          setDownloading(false);
-          setDownloadComplete(true);
-
-          // Trigger download
-          const a = document.createElement("a");
-          a.href = apkUrl;
-          a.download = `stockly-v${latestVersion}.apk`;
-          document.body.appendChild(a);
-          a.click();
-          a.remove();
-
-          push?.(`Stockly v${latestVersion} APK ready! Tap downloaded file to install.`, "success");
-          return 100;
-        }
-        return prev + 20;
+      const res = await downloadAndAutoInstall({
+        url: apkUrl,
+        version: latestVersion,
+        onProgress: (p) => setProgress(p),
       });
-    }, stepTime);
+
+      setDownloading(false);
+      setDownloadComplete(true);
+      hapticSuccess();
+      playSuccessSound();
+
+      if (res?.native) {
+        push?.(`Stockly v${latestVersion} installer launched! Tap 'Install' to apply update.`, "success");
+      } else {
+        push?.(`Stockly v${latestVersion} downloaded. Open file to install.`, "success");
+      }
+    } catch (err) {
+      setDownloading(false);
+      hapticWarning();
+      playErrorSound();
+      push?.(err.message || "Failed to complete update download", "error");
+    }
+  };
+
+  const handleGrantPermission = async () => {
+    await openInstallSettings();
+    setTimeout(async () => {
+      const can = await canInstallPackages();
+      setInstallPermissionRequired(!can);
+    }, 1000);
   };
 
   return (
@@ -81,15 +97,15 @@ export default function AppUpdateModal({
       <div className="space-y-4 pt-1">
         {/* Header Hero */}
         <div className="flex items-start gap-3.5 p-4 rounded-2xl bg-gradient-to-br from-violet-600 to-indigo-700 text-white shadow-md">
-          <div className="w-12 h-12 rounded-2xl bg-white/15 backdrop-blur-md grid place-items-center shrink-0 border border-white/20">
+          <div className="w-12 h-12 rounded-2xl bg-white/15 backdrop-blur-md grid place-items-center shrink-0 border border-white/20 shadow-inner">
             <Sparkles size={24} className="text-white animate-pulse" />
           </div>
           <div className="flex-1 min-w-0">
             <div className="flex items-center gap-2">
-              <span className="font-extrabold text-sm uppercase tracking-wider text-violet-200">
+              <span className="font-extrabold text-xs uppercase tracking-wider text-violet-200">
                 Application Update
               </span>
-              <span className="px-2 py-0.5 rounded-full bg-white/20 text-white text-[10px] font-black">
+              <span className="px-2 py-0.5 rounded-full bg-white/20 text-white text-[10px] font-black tracking-wide">
                 v{latestVersion}
               </span>
             </div>
@@ -97,10 +113,27 @@ export default function AppUpdateModal({
               New Version Available
             </h3>
             <p className="text-xs text-violet-100/90 mt-0.5">
-              Installed: v{currentVersion} • Latest: v{latestVersion} ({apkSize})
+              Current: v{currentVersion} • Latest: v{latestVersion} ({apkSize})
             </p>
           </div>
         </div>
+
+        {/* Permission Notice if unknown sources needed */}
+        {installPermissionRequired && (
+          <div className="p-3 rounded-2xl bg-amber-50 dark:bg-amber-500/10 border border-amber-200 dark:border-amber-500/20 flex items-center justify-between gap-3 text-xs text-amber-800 dark:text-amber-200">
+            <div className="flex items-center gap-2">
+              <ShieldCheck size={18} className="text-amber-600 dark:text-amber-400 shrink-0" />
+              <span>Allow Stockly to install APK updates automatically.</span>
+            </div>
+            <button
+              type="button"
+              onClick={handleGrantPermission}
+              className="px-3 py-1.5 rounded-xl bg-amber-600 hover:bg-amber-700 text-white font-bold text-xs whitespace-nowrap active:scale-95 transition"
+            >
+              Enable
+            </button>
+          </div>
+        )}
 
         {/* Release Notes */}
         <div className="space-y-2">
@@ -124,16 +157,16 @@ export default function AppUpdateModal({
 
         {/* Progress Bar when downloading */}
         {downloading && (
-          <div className="space-y-2 p-3.5 rounded-2xl bg-violet-50 dark:bg-violet-500/10 border border-violet-200 dark:border-violet-500/20">
+          <div className="space-y-2 p-3.5 rounded-2xl bg-violet-50 dark:bg-violet-500/10 border border-violet-200 dark:border-violet-500/20 animate-fadeIn">
             <div className="flex items-center justify-between text-xs font-bold text-violet-700 dark:text-violet-300">
               <span className="flex items-center gap-1.5">
-                <RefreshCw size={13} className="animate-spin" /> Downloading update package…
+                <RefreshCw size={13} className="animate-spin text-violet-600 dark:text-violet-400" /> Downloading & preparing auto-installer…
               </span>
               <span>{progress}%</span>
             </div>
-            <div className="h-2 bg-violet-200 dark:bg-violet-900 rounded-full overflow-hidden">
+            <div className="h-2.5 bg-violet-200 dark:bg-violet-900/60 rounded-full overflow-hidden">
               <div
-                className="h-full bg-violet-600 dark:bg-violet-400 rounded-full transition-all duration-150"
+                className="h-full bg-gradient-to-r from-violet-600 to-indigo-600 rounded-full transition-all duration-200"
                 style={{ width: `${progress}%` }}
               />
             </div>
@@ -142,9 +175,9 @@ export default function AppUpdateModal({
 
         {downloadComplete && (
           <div className="p-3.5 rounded-2xl bg-emerald-50 dark:bg-emerald-500/10 border border-emerald-200 dark:border-emerald-500/20 flex items-center gap-2.5 text-xs text-emerald-800 dark:text-emerald-300">
-            <CheckCircle2 size={16} className="text-emerald-600 dark:text-emerald-400 shrink-0" />
-            <div className="font-semibold">
-              APK Downloaded! Open notifications or file manager to tap & complete the installation.
+            <CheckCircle2 size={18} className="text-emerald-600 dark:text-emerald-400 shrink-0" />
+            <div className="font-semibold leading-relaxed">
+              Auto-Installer launched! Tap <strong>"Install"</strong> or <strong>"Update"</strong> on the prompt to complete.
             </div>
           </div>
         )}
@@ -171,17 +204,17 @@ export default function AppUpdateModal({
             {downloading ? (
               <>
                 <RefreshCw size={15} className="animate-spin" />
-                <span>Downloading…</span>
+                <span>Installing…</span>
               </>
             ) : downloadComplete ? (
               <>
-                <Download size={15} />
-                <span>Download Again</span>
+                <RefreshCw size={15} />
+                <span>Re-install</span>
               </>
             ) : (
               <>
                 <Download size={15} />
-                <span>Update Now ({apkSize})</span>
+                <span>Auto Update ({apkSize})</span>
               </>
             )}
           </button>

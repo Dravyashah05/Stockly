@@ -69,16 +69,25 @@ function useNativeMobileIntegration() {
         CapApp.addListener("appUrlOpen", (event) => {
           try {
             if (!event?.url) return;
-            if (event.url.includes("stock?type=IN")) {
+            const rawUrl = event.url;
+            if (rawUrl.includes("scan")) {
+              navigate("/stock?action=scan");
+            } else if (rawUrl.includes("add-product")) {
+              navigate("/products?action=add");
+            } else if (rawUrl.includes("filter=low") || rawUrl.includes("low-stock")) {
+              navigate("/products?filter=low");
+            } else if (rawUrl.includes("stock/history")) {
+              navigate("/stock/history");
+            } else if (rawUrl.includes("stock?type=IN")) {
               navigate("/stock?type=IN");
-            } else if (event.url.includes("stock?type=OUT")) {
+            } else if (rawUrl.includes("stock?type=OUT")) {
               navigate("/stock?type=OUT");
-            } else if (event.url.includes("products")) {
+            } else if (rawUrl.includes("products")) {
               navigate("/products");
-            } else if (event.url.includes("home")) {
+            } else if (rawUrl.includes("home")) {
               navigate("/home");
             } else {
-              const parsed = new URL(event.url);
+              const parsed = new URL(rawUrl);
               const path = (parsed.pathname || "") + (parsed.search || "");
               if (path && path !== "/") navigate(path);
             }

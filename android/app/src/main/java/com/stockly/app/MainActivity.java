@@ -9,6 +9,8 @@ public class MainActivity extends BridgeActivity {
 
     @Override
     public void onCreate(Bundle savedInstanceState) {
+        registerPlugin(AppInstallerPlugin.class);
+        registerPlugin(StocklyWidgetPlugin.class);
         super.onCreate(savedInstanceState);
         handleIntent(getIntent());
     }
@@ -33,12 +35,32 @@ public class MainActivity extends BridgeActivity {
             } else if ("STOCK_OUT".equals(action)) {
                 targetRoute = "/stock?type=OUT";
             } else if ("ADD_PRODUCT".equals(action)) {
-                targetRoute = "/products";
+                targetRoute = "/products?action=add";
+            } else if ("SCAN_BARCODE".equals(action)) {
+                targetRoute = "/stock?action=scan";
+            } else if ("LOW_STOCK".equals(action)) {
+                targetRoute = "/products?filter=low";
+            } else if ("HISTORY".equals(action)) {
+                targetRoute = "/stock/history";
             }
         } else if (data != null && "stockly".equals(data.getScheme())) {
+            String host = data.getHost() != null ? data.getHost() : "";
             String path = data.getPath() != null ? data.getPath() : "";
             String query = data.getQuery() != null ? "?" + data.getQuery() : "";
-            targetRoute = path + query;
+
+            if ("scan".equals(host)) {
+                targetRoute = "/stock?action=scan";
+            } else if ("add-product".equals(host)) {
+                targetRoute = "/products?action=add";
+            } else if ("stock".equals(host)) {
+                targetRoute = "/stock" + query;
+            } else if ("products".equals(host)) {
+                targetRoute = "/products" + query;
+            } else if ("home".equals(host)) {
+                targetRoute = "/home";
+            } else {
+                targetRoute = ("/" + host + path + query).replaceAll("^/+", "/");
+            }
         }
 
         if (targetRoute != null && bridge != null && bridge.getWebView() != null) {

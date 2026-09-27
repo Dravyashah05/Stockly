@@ -35,6 +35,9 @@ import { StatsSkeleton } from "../components/ui/Loader";
 import ProductFormModal from "../components/products/ProductFormModal";
 import { createProduct } from "../api/products";
 import { useToast } from "../context/ToastContext";
+import { syncInventoryToWidget } from "../utils/nativeWidget";
+import { hapticLight, hapticMedium } from "../utils/haptics";
+import BarcodeScannerModal from "../components/products/BarcodeScannerModal";
 
 function greeting() {
   const h = new Date().getHours();
@@ -67,6 +70,7 @@ export default function Home() {
   const [categories, setCategories] = useState([]);
   const [recent, setRecent] = useState([]);
   const [showAddProductModal, setShowAddProductModal] = useState(false);
+  const [scannerOpen, setScannerOpen] = useState(false);
   const [createLoading, setCreateLoading] = useState(false);
 
   const loadAll = async () => {
@@ -76,10 +80,24 @@ export default function Home() {
         getCategories().catch(() => ({ data: [] })),
         getRecentTransactions("?limit=10").catch(() => ({ data: [] })),
       ]);
-      setProducts(pRes.data || pRes || []);
-      setCategories(cRes.data || cRes || []);
-      const r = rRes.data || rRes || [];
-      setRecent(Array.isArray(r) ? r.slice(0, 6) : []);
+      const pList = pRes.data || pRes || [];
+      const cList = cRes.data || cRes || [];
+      const rList = Array.isArray(rRes.data || rRes) ? (rRes.data || rRes).slice(0, 6) : [];
+
+      setProducts(pList);
+      setCategories(cList);
+      setRecent(rList);
+
+      // Sync summary metrics to Android Home Widget
+      const lowCount = pList.filter((p) => p.quantity <= (p.minimumStock ?? 5)).length;
+      const inMoves = rList.filter((t) => t.type === "IN").reduce((acc, x) => acc + (x.quantity || 1), 0);
+      const outMoves = rList.filter((t) => t.type === "OUT").reduce((acc, x) => acc + (x.quantity || 1), 0);
+      syncInventoryToWidget({
+        totalProducts: pList.length,
+        lowStockCount: lowCount,
+        todayIn: inMoves,
+        todayOut: outMoves,
+      }).catch(() => {});
     } catch (e) {
       // ignore
     } finally {
@@ -152,7 +170,23 @@ export default function Home() {
         <div className="flex items-center gap-2">
           <button
             type="button"
-            onClick={() => setShowAddProductModal(true)}
+            onClick={() => {
+              hapticLight();
+              setScannerOpen(true);
+            }}
+            className="inline-flex items-center justify-center gap-1.5 px-3 py-2 rounded-xl bg-amber-500/10 hover:bg-amber-500/20 text-amber-700 dark:text-amber-300 text-xs font-extrabold border border-amber-500/20 active:scale-95 transition"
+            title="Scan Barcode"
+          >
+            <QrCode size={15} />
+            <span className="hidden sm:inline">Scan</span>
+          </button>
+
+          <button
+            type="button"
+            onClick={() => {
+              hapticLight();
+              setShowAddProductModal(true);
+            }}
             className="flex-1 sm:flex-none inline-flex items-center justify-center gap-1.5 px-3.5 py-2 rounded-xl bg-violet-600 hover:bg-violet-700 text-white text-xs font-extrabold shadow-sm shadow-violet-500/25 active:scale-95 transition"
           >
             <Plus size={15} strokeWidth={2.5} />
@@ -543,6 +577,19 @@ export default function Home() {
         onSubmit={handleCreateProduct}
         categories={categories}
         loading={createLoading}
+      />
+
+      {/* Barcode & SKU Scanner Modal */}
+      <BarcodeScannerModal
+        open={scannerOpen}
+        onClose={() => setScannerOpen(false)}
+        products={products}
+        onSelectProduct={(p) => navigate(`/products/${p._id}`)}
+        onQuickStockIn={(p) => navigate(`/stock?type=IN&product=${p._id}`)}
+        onQuickStockOut={(p) => navigate(`/stock?type=OUT&product=${p._id}`)}
+        onAddProductWithSku={(sku) => {
+          setShowAddProductModal(true);
+        }}
       />
     </div>
   );

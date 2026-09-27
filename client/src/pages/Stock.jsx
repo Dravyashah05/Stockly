@@ -32,10 +32,15 @@ import {
   CheckCircle2,
   Sparkles,
 } from "lucide-react";
-import { useSearchParams } from "react-router-dom";
+import { useSearchParams, useNavigate } from "react-router-dom";
 import Modal from "../components/ui/Modal";
 import { useSearch } from "../context/SearchContext";
 import FAB from "../components/ui/FAB";
+import { playStockInSound, playStockOutSound, playErrorSound, playSuccessSound } from "../utils/sound";
+import { hapticSuccess, hapticMedium, hapticLight, hapticWarning } from "../utils/haptics";
+import { syncInventoryToWidget } from "../utils/nativeWidget";
+import BarcodeScannerModal from "../components/products/BarcodeScannerModal";
+import { QrCode, ScanLine } from "lucide-react";
 
 function dateKeyFromISO(iso) {
   const d = new Date(iso);
@@ -70,12 +75,14 @@ function fullDateLabel(key) {
 const QUICK_ADD_AMOUNTS = [1, 5, 10, 25, 50, 100];
 
 export default function Stock() {
+  const navigate = useNavigate();
   const { push } = useToast();
   const { search: globalSearch } = useSearch();
   const [searchParams, setSearchParams] = useSearchParams();
 
   const urlType = searchParams.get("type");
   const urlProduct = searchParams.get("product");
+  const urlAction = searchParams.get("action");
 
   const [products, setProducts] = useState([]);
   const [productId, setProductId] = useState(urlProduct || "");
@@ -87,6 +94,7 @@ export default function Stock() {
   const [suppliers, setSuppliers] = useState([]);
   const [tx, setTx] = useState([]);
   const [categories, setCategories] = useState([]);
+  const [scannerOpen, setScannerOpen] = useState(urlAction === "scan");
   const [filters, setFilters] = useState({
     product: "",
     category: "",
@@ -217,8 +225,16 @@ export default function Stock() {
   const selected = products.find((p) => p._id === productId);
 
   const submit = async () => {
-    if (!productId) return push("Please select a product", "error");
-    if (!quantity || quantity <= 0) return push("Quantity must be greater than 0", "error");
+    if (!productId) {
+      hapticWarning();
+      playErrorSound();
+      return push("Please select a product", "error");
+    }
+    if (!quantity || quantity <= 0) {
+      hapticWarning();
+      playErrorSound();
+      return push("Quantity must be greater than 0", "error");
+    }
     setSubmitting(true);
     try {
       const payload = {
@@ -228,16 +244,33 @@ export default function Stock() {
         notes,
         supplier: supplier || undefined,
       };
-      if (type === "IN") await stockIn(payload);
-      else await stockOut(payload);
-      push(`Stock ${type} successful`, "success");
+      if (type === "IN") {
+        await stockIn(payload);
+        playStockInSound();
+      } else {
+        await stockOut(payload);
+        playStockOutSound();
+      }
+      hapticSuccess();
+      push(`Stock ${type} successful!`, "success");
+
       const r = await getProducts();
-      setProducts(r.data);
+      const updatedProducts = r.data || [];
+      setProducts(updatedProducts);
       setNotes("");
       setQuantity(1);
       loadHistory();
       setShowForm(false);
+
+      // Sync updated metrics to Android Home Widget
+      const lowCount = updatedProducts.filter((p) => p.quantity <= (p.minimumStock ?? 5)).length;
+      syncInventoryToWidget({
+        totalProducts: updatedProducts.length,
+        lowStockCount: lowCount,
+      }).catch(() => {});
     } catch (e) {
+      hapticWarning();
+      playErrorSound();
       push(e.message, "error");
     } finally {
       setSubmitting(false);
@@ -317,26 +350,41 @@ export default function Stock() {
         </div>
 
         {/* Quick IN / OUT Hero Trigger Buttons */}
-        <div className="grid grid-cols-2 gap-2 sm:flex sm:items-center">
+        <div className="grid grid-cols-3 gap-2 sm:flex sm:items-center">
+          <button
+            type="button"
+            onClick={() => {
+              hapticLight();
+              setScannerOpen(true);
+            }}
+            className="flex items-center justify-center gap-1.5 px-3 py-2.5 rounded-xl bg-amber-500/10 hover:bg-amber-500/20 text-amber-700 dark:text-amber-300 font-bold text-xs sm:text-sm border border-amber-500/20 active:scale-95 transition min-h-[42px]"
+            title="Scan Product Barcode"
+          >
+            <ScanLine size={16} />
+            <span>Scan</span>
+          </button>
+
           <button
             onClick={() => {
+              hapticLight();
               setType("IN");
               setReason("Purchase");
               setShowForm(true);
             }}
-            className="flex items-center justify-center gap-1.5 px-4 py-2.5 rounded-xl bg-emerald-600 text-white font-bold text-xs sm:text-sm shadow-sm hover:bg-emerald-700 active:scale-95 transition min-h-[42px]"
+            className="flex items-center justify-center gap-1.5 px-3 sm:px-4 py-2.5 rounded-xl bg-emerald-600 text-white font-bold text-xs sm:text-sm shadow-sm hover:bg-emerald-700 active:scale-95 transition min-h-[42px]"
           >
-            <ArrowUp size={15} /> Stock IN (+)
+            <ArrowUp size={15} /> Stock IN
           </button>
           <button
             onClick={() => {
+              hapticLight();
               setType("OUT");
               setReason("Sale");
               setShowForm(true);
             }}
-            className="flex items-center justify-center gap-1.5 px-4 py-2.5 rounded-xl bg-zinc-900 dark:bg-zinc-800 text-white font-bold text-xs sm:text-sm shadow-sm hover:bg-zinc-800 active:scale-95 transition min-h-[42px]"
+            className="flex items-center justify-center gap-1.5 px-3 sm:px-4 py-2.5 rounded-xl bg-zinc-900 dark:bg-zinc-800 text-white font-bold text-xs sm:text-sm shadow-sm hover:bg-zinc-800 active:scale-95 transition min-h-[42px]"
           >
-            <ArrowDown size={15} /> Stock OUT (-)
+            <ArrowDown size={15} /> Stock OUT
           </button>
         </div>
       </div>
@@ -937,6 +985,32 @@ export default function Stock() {
           </div>
         </div>
       </Modal>
+
+      {/* 8. BARCODE & SKU SCANNER MODAL */}
+      <BarcodeScannerModal
+        open={scannerOpen}
+        onClose={() => setScannerOpen(false)}
+        products={products}
+        onSelectProduct={(p) => {
+          setSelected(p);
+          setShowForm(true);
+        }}
+        onQuickStockIn={(p) => {
+          setSelected(p);
+          setType("IN");
+          setReason("Purchase");
+          setShowForm(true);
+        }}
+        onQuickStockOut={(p) => {
+          setSelected(p);
+          setType("OUT");
+          setReason("Sale");
+          setShowForm(true);
+        }}
+        onAddProductWithSku={(sku) => {
+          navigate(`/products?action=add&sku=${encodeURIComponent(sku)}`);
+        }}
+      />
     </div>
   );
 }

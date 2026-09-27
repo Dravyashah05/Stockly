@@ -32,6 +32,9 @@ import { useToast } from "../context/ToastContext";
 import AppUpdateModal from "../components/app/AppUpdateModal";
 import { checkAppUpdate, APP_CURRENT_VERSION } from "../api/appUpdate";
 import { sendLocalNotification, requestNotificationPermission } from "../utils/notifications";
+import { downloadAndAutoInstall } from "../utils/nativeUpdater";
+import { hapticSuccess, hapticMedium } from "../utils/haptics";
+import { playSuccessSound } from "../utils/sound";
 
 export default function AppStore() {
   const { push } = useToast();
@@ -115,28 +118,32 @@ export default function AppStore() {
       .catch((err) => console.error("QR Code Error:", err));
   }, []);
 
-  const handleDownload = () => {
+  const handleDownload = async () => {
     setDownloading(true);
     setDownloadPercent(0);
+    hapticMedium();
 
-    const interval = setInterval(() => {
-      setDownloadPercent((prev) => {
-        if (prev >= 100) {
-          clearInterval(interval);
-          setDownloading(false);
-          // Trigger actual file download
-          const a = document.createElement("a");
-          a.href = "/stockly.apk";
-          a.download = "stockly-v1.0.0.apk";
-          document.body.appendChild(a);
-          a.click();
-          a.remove();
-          push?.("Stockly APK download started!", "success");
-          return 100;
-        }
-        return prev + 25;
+    try {
+      const res = await downloadAndAutoInstall({
+        url: "/stockly.apk",
+        version: APP_CURRENT_VERSION,
+        onProgress: (p) => setDownloadPercent(p),
       });
-    }, 150);
+
+      setDownloading(false);
+      setDownloadPercent(100);
+      hapticSuccess();
+      playSuccessSound();
+
+      if (res?.native) {
+        push?.("Stockly APK installer launched! Tap Install to proceed.", "success");
+      } else {
+        push?.("Stockly APK download ready! Open downloaded file to install.", "success");
+      }
+    } catch (err) {
+      setDownloading(false);
+      push?.("Download failed: " + err.message, "error");
+    }
   };
 
   const handleCopyLink = () => {

@@ -10,4 +10,6 @@
     <string name="shortcut_stock_out_long">Dispatch Stock (Stock OUT)</string>
     <string name="shortcut_product_short">Add Product</string>
     <string name="shortcut_product_long">Register New Product</string>
+    <string name="shortcut_scan_short">Scan Barcode</string>
+    <string name="shortcut_scan_long">Quick Barcode Scanner</string>
 </resources>

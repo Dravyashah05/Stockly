@@ -14,11 +14,11 @@
         android:layout_height="wrap_content"
         android:gravity="center_vertical"
         android:orientation="horizontal"
-        android:paddingBottom="8dp">
+        android:paddingBottom="6dp">
 
         <ImageView
-            android:layout_width="20dp"
-            android:layout_height="20dp"
+            android:layout_width="22dp"
+            android:layout_height="22dp"
             android:src="@mipmap/ic_launcher_round"
             android:contentDescription="@string/app_name" />
 
@@ -27,21 +27,125 @@
             android:layout_height="wrap_content"
             android:layout_marginStart="8dp"
             android:text="Stockly"
-            android:textColor="#ffffff"
+            android:textColor="#FFFFFF"
             android:textSize="13sp"
             android:textStyle="bold" />
 
         <TextView
+            android:id="@+id/tv_widget_status"
             android:layout_width="0dp"
             android:layout_height="wrap_content"
             android:layout_marginStart="6dp"
             android:layout_weight="1"
-            android:text="• Quick Actions"
-            android:textColor="#a1a1aa"
+            android:text="• Live Hub"
+            android:textColor="#94A3B8"
             android:textSize="11sp" />
+
+        <ImageView
+            android:id="@+id/btn_widget_sync"
+            android:layout_width="18dp"
+            android:layout_height="18dp"
+            android:src="@drawable/ic_widget_sync"
+            android:contentDescription="Sync" />
     </LinearLayout>
 
-    <!-- 3 Action Buttons -->
+    <!-- Stats Quick Strip -->
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:orientation="horizontal"
+        android:paddingBottom="8dp">
+
+        <!-- Stat 1: Total SKUs -->
+        <LinearLayout
+            android:id="@+id/card_stat_products"
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_weight="1"
+            android:layout_marginEnd="3dp"
+            android:background="@drawable/widget_stat_bg"
+            android:gravity="center"
+            android:orientation="vertical"
+            android:padding="5dp">
+
+            <TextView
+                android:id="@+id/tv_stat_products_count"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="--"
+                android:textColor="#38BDF8"
+                android:textSize="13sp"
+                android:textStyle="bold" />
+
+            <TextView
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="Catalog"
+                android:textColor="#94A3B8"
+                android:textSize="9sp" />
+        </LinearLayout>
+
+        <!-- Stat 2: Low Stock Warning -->
+        <LinearLayout
+            android:id="@+id/card_stat_low"
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_weight="1"
+            android:layout_marginStart="3dp"
+            android:layout_marginEnd="3dp"
+            android:background="@drawable/widget_stat_bg"
+            android:gravity="center"
+            android:orientation="vertical"
+            android:padding="5dp">
+
+            <TextView
+                android:id="@+id/tv_stat_low_count"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="0"
+                android:textColor="#F43F5E"
+                android:textSize="13sp"
+                android:textStyle="bold" />
+
+            <TextView
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="Low Alert"
+                android:textColor="#94A3B8"
+                android:textSize="9sp" />
+        </LinearLayout>
+
+        <!-- Stat 3: Today's Ledger Moves -->
+        <LinearLayout
+            android:id="@+id/card_stat_moves"
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_weight="1"
+            android:layout_marginStart="3dp"
+            android:background="@drawable/widget_stat_bg"
+            android:gravity="center"
+            android:orientation="vertical"
+            android:padding="5dp">
+
+            <TextView
+                android:id="@+id/tv_stat_moves_count"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="Ledger"
+                android:textColor="#34D399"
+                android:textSize="13sp"
+                android:textStyle="bold" />
+
+            <TextView
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="Activity"
+                android:textColor="#94A3B8"
+                android:textSize="9sp" />
+        </LinearLayout>
+    </LinearLayout>
+
+    <!-- 4 Interactive Action Buttons Grid -->
     <LinearLayout
         android:layout_width="match_parent"
         android:layout_height="match_parent"
@@ -54,17 +158,17 @@
             android:layout_width="0dp"
             android:layout_height="match_parent"
             android:layout_weight="1"
-            android:layout_marginEnd="4dp"
+            android:layout_marginEnd="3dp"
             android:background="@drawable/widget_btn_in"
             android:gravity="center"
             android:clickable="true"
             android:focusable="true"
             android:orientation="vertical"
-            android:padding="6dp">
+            android:padding="5dp">
 
             <ImageView
-                android:layout_width="22dp"
-                android:layout_height="22dp"
+                android:layout_width="20dp"
+                android:layout_height="20dp"
                 android:src="@drawable/ic_widget_in"
                 android:contentDescription="Stock In" />
 
@@ -73,8 +177,8 @@
                 android:layout_height="wrap_content"
                 android:layout_marginTop="2dp"
                 android:text="Stock IN"
-                android:textColor="#ffffff"
-                android:textSize="11sp"
+                android:textColor="#FFFFFF"
+                android:textSize="10sp"
                 android:textStyle="bold" />
         </LinearLayout>
 
@@ -84,18 +188,18 @@
             android:layout_width="0dp"
             android:layout_height="match_parent"
             android:layout_weight="1"
-            android:layout_marginStart="4dp"
-            android:layout_marginEnd="4dp"
+            android:layout_marginStart="3dp"
+            android:layout_marginEnd="3dp"
             android:background="@drawable/widget_btn_out"
             android:gravity="center"
             android:clickable="true"
             android:focusable="true"
             android:orientation="vertical"
-            android:padding="6dp">
+            android:padding="5dp">
 
             <ImageView
-                android:layout_width="22dp"
-                android:layout_height="22dp"
+                android:layout_width="20dp"
+                android:layout_height="20dp"
                 android:src="@drawable/ic_widget_out"
                 android:contentDescription="Stock Out" />
 
@@ -104,38 +208,69 @@
                 android:layout_height="wrap_content"
                 android:layout_marginTop="2dp"
                 android:text="Stock OUT"
-                android:textColor="#ffffff"
-                android:textSize="11sp"
+                android:textColor="#FFFFFF"
+                android:textSize="10sp"
                 android:textStyle="bold" />
         </LinearLayout>
 
-        <!-- New Product / Catalog Button -->
+        <!-- Instant Barcode Scanner Button -->
         <LinearLayout
-            android:id="@+id/btn_products"
+            android:id="@+id/btn_widget_scan"
             android:layout_width="0dp"
             android:layout_height="match_parent"
             android:layout_weight="1"
-            android:layout_marginStart="4dp"
-            android:background="@drawable/widget_btn_neutral"
+            android:layout_marginStart="3dp"
+            android:layout_marginEnd="3dp"
+            android:background="@drawable/widget_btn_scan"
             android:gravity="center"
             android:clickable="true"
             android:focusable="true"
             android:orientation="vertical"
-            android:padding="6dp">
+            android:padding="5dp">
 
             <ImageView
-                android:layout_width="22dp"
-                android:layout_height="22dp"
-                android:src="@drawable/ic_widget_add"
-                android:contentDescription="New Product" />
+                android:layout_width="20dp"
+                android:layout_height="20dp"
+                android:src="@drawable/ic_widget_scan"
+                android:contentDescription="Scan Barcode" />
 
             <TextView
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
                 android:layout_marginTop="2dp"
-                android:text="+ Product"
-                android:textColor="#ffffff"
-                android:textSize="11sp"
+                android:text="Scan"
+                android:textColor="#FFFFFF"
+                android:textSize="10sp"
+                android:textStyle="bold" />
+        </LinearLayout>
+
+        <!-- New Product / Catalog Button -->
+        <LinearLayout
+            android:id="@+id/btn_add_product"
+            android:layout_width="0dp"
+            android:layout_height="match_parent"
+            android:layout_weight="1"
+            android:layout_marginStart="3dp"
+            android:background="@drawable/widget_btn_add"
+            android:gravity="center"
+            android:clickable="true"
+            android:focusable="true"
+            android:orientation="vertical"
+            android:padding="5dp">
+
+            <ImageView
+                android:layout_width="20dp"
+                android:layout_height="20dp"
+                android:src="@drawable/ic_widget_add"
+                android:contentDescription="Add Product" />
+
+            <TextView
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="2dp"
+                android:text="+ SKU"
+                android:textColor="#FFFFFF"
+                android:textSize="10sp"
                 android:textStyle="bold" />
         </LinearLayout>
     </LinearLayout>
