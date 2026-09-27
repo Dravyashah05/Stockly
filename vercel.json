@@ -37,7 +37,19 @@
   ],
   "rewrites": [
     {
-      "source": "/((?!api/|assets/|favicon\\.svg|manifest\\.json|robots\\.txt|icon-.*).*)",
+      "source": "/health",
+      "destination": "/api/index.js"
+    },
+    {
+      "source": "/api",
+      "destination": "/api/index.js"
+    },
+    {
+      "source": "/api/(.*)",
+      "destination": "/api/index.js"
+    },
+    {
+      "source": "/((?!api/|health|assets/|favicon\\.svg|manifest\\.json|robots\\.txt|icon-.*).*)",
       "destination": "/index.html"
     }
   ]
