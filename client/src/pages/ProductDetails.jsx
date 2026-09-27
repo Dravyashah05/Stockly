@@ -4,6 +4,8 @@ import { getProduct, deleteProduct, updateProduct } from "../api/products";
 import { stockIn, stockOut, getStockHistoryByProduct } from "../api/stock";
 import { getCategories } from "../api/categories";
 import { getSuppliers } from "../api/suppliers";
+import { openAiCopilot } from "../api/ai";
+import { hapticMedium, hapticLight } from "../utils/haptics";
 import { useToast } from "../context/ToastContext";
 import Badge, { getProductStatus } from "../components/ui/Badge";
 import Button from "../components/ui/Button";
@@ -268,7 +270,21 @@ export default function ProductDetails() {
 
         <div className="flex items-center gap-1.5">
           <button
-            onClick={() => setShowLabelModal(true)}
+            onClick={() => {
+              hapticMedium();
+              openAiCopilot();
+            }}
+            className="flex items-center gap-1.5 px-3 py-2 rounded-xl bg-violet-50 hover:bg-violet-100 dark:bg-violet-950/40 dark:hover:bg-violet-900/40 text-violet-700 dark:text-violet-300 border border-violet-200/80 dark:border-violet-800/80 text-xs font-bold shadow-xs active:scale-95 transition"
+            title="Ask AI Copilot about this product"
+          >
+            <Sparkles size={13} className="text-violet-600 dark:text-violet-400" />
+            <span className="hidden xs:inline">Ask AI</span>
+          </button>
+          <button
+            onClick={() => {
+              hapticLight();
+              setShowLabelModal(true);
+            }}
             className="flex items-center gap-1 px-3 py-2 rounded-xl bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 text-xs font-semibold hover:bg-zinc-50 dark:hover:bg-zinc-800 shadow-xs active:scale-95 transition"
             title="Barcode"
           >
@@ -276,7 +292,10 @@ export default function ProductDetails() {
             <span className="hidden sm:inline">Barcode</span>
           </button>
           <button
-            onClick={() => setShowEditModal(true)}
+            onClick={() => {
+              hapticLight();
+              setShowEditModal(true);
+            }}
             className="flex items-center gap-1 px-3.5 py-2 rounded-xl bg-zinc-900 text-white dark:bg-white dark:text-zinc-900 text-xs font-bold shadow-xs active:scale-95 transition"
           >
             <Edit2 size={13} />
@@ -405,10 +424,23 @@ export default function ProductDetails() {
             </div>
           </div>
 
-          <div className="flex justify-end gap-2 mt-4 pt-3 border-t border-zinc-100 dark:border-zinc-800">
+          <div className="flex items-center justify-between gap-2 mt-4 pt-3 border-t border-zinc-100 dark:border-zinc-800 flex-wrap">
             <button
-              onClick={() => setShowDelete(true)}
-              className="text-xs font-bold text-red-600 hover:text-red-700 flex items-center gap-1 py-1 px-2.5 rounded-lg hover:bg-red-50 dark:hover:bg-red-500/10 transition"
+              onClick={() => {
+                hapticMedium();
+                openAiCopilot();
+              }}
+              className="inline-flex items-center gap-1.5 text-xs font-semibold text-violet-700 dark:text-violet-400 hover:text-violet-800 dark:hover:text-violet-300 py-1 px-2.5 rounded-lg hover:bg-violet-50 dark:hover:bg-violet-950/30 transition"
+            >
+              <Sparkles size={13} className="text-violet-600 dark:text-violet-400" />
+              <span>Ask AI Copilot for restock & safety analysis</span>
+            </button>
+            <button
+              onClick={() => {
+                hapticLight();
+                setShowDelete(true);
+              }}
+              className="text-xs font-bold text-red-600 hover:text-red-700 flex items-center gap-1 py-1 px-2.5 rounded-lg hover:bg-red-50 dark:hover:bg-red-500/10 transition ml-auto"
             >
               <Trash2 size={13} /> Delete Product
             </button>

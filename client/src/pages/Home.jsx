@@ -485,7 +485,10 @@ export default function Home() {
 
           <button
             type="button"
-            onClick={openAiCopilot}
+            onClick={() => {
+              hapticMedium();
+              openAiCopilot();
+            }}
             className="self-start sm:self-center px-3.5 py-2 rounded-xl bg-white text-violet-900 font-bold text-xs hover:bg-violet-50 active:scale-95 transition flex items-center gap-1.5 shadow-md shrink-0"
           >
             <Bot size={14} className="text-violet-700" />
