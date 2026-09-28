@@ -61,7 +61,8 @@ app.use(cors({
 }));
 
 app.use(compression());
-app.use(morgan(env?.isProd ? "combined" : "dev"));
+// Lighter access logs in prod — `combined` logs IP+UA+referrer per request.
+app.use(morgan(env?.isProd ? "tiny" : "dev"));
 app.use(express.json({ limit: "5mb" }));
 app.use(express.urlencoded({ extended: true }));
 // Express 5: req.query is getter-only, express-mongo-sanitize tries to set it and crashes.
@@ -167,12 +168,28 @@ for (const [subPath, router] of apiRoutes) {
   app.use(subPath, router);
 }
 
-// Serve client in production (single deployment)
+// Serve client in production (single deployment) with cache headers so
+// repeat visits don't re-download hashed assets. index.html itself is
+// served by the SPA fallback below with no-cache.
 const rootDist = path.join(__dirname, "../../dist");
 const clientSubDist = path.join(__dirname, "../../client/dist");
 const clientDist = path.join(__dirname, "../../dist");
-app.use(express.static(clientDist));
-app.use(express.static(clientSubDist));
+const staticOpts = {
+  maxAge: "1d",
+  index: false,
+  setHeaders: (res, filePath) => {
+    // Vite emits hashed filenames (name-HASH.js/css) — safe to mark
+    // immutable. Everything else (html, apk, icons) gets plain 1d cache.
+    if (/-[0-9A-Za-z]{6,}\.(js|css|woff2?|ttf|eot)$/.test(filePath)) {
+      res.set("Cache-Control", "public, max-age=31536000, immutable");
+    }
+    if (filePath.endsWith(".html")) {
+      res.set("Cache-Control", "no-cache");
+    }
+  },
+};
+app.use(express.static(clientDist, staticOpts));
+app.use(express.static(clientSubDist, staticOpts));
 // Explicit APK route: guarantees the real binary (not index.html) is served
 // with the correct Content-Type, even if static middleware order changes.
 app.get(["/stockly.apk", "/api/app/download-file"], (req, res, next) => {
@@ -193,6 +210,8 @@ app.get(["/stockly.apk", "/api/app/download-file"], (req, res, next) => {
 });
 app.get("/{*any}", (req,res,next)=>{
   if(req.path.startsWith("/api")) return next();
+  // Never cache the app shell — otherwise clients can stick on old bundles.
+  res.set("Cache-Control", "no-cache");
   res.sendFile(path.join(clientDist, "index.html"), (err)=>{
     if(err) {
       res.sendFile(path.join(clientSubDist, "index.html"), (err2) => {

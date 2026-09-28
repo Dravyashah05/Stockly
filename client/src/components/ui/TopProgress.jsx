@@ -10,8 +10,9 @@ export default function TopProgress(){
     setLoading(true);
     setProgress(30);
     const t1 = setTimeout(()=> setProgress(70), 150);
-    const t2 = setTimeout(()=> { setProgress(100); setTimeout(()=> setLoading(false), 200); }, 350);
-    return ()=> { clearTimeout(t1); clearTimeout(t2); };
+    const t2 = setTimeout(()=> setProgress(100), 350);
+    const t3 = setTimeout(()=> setLoading(false), 550);
+    return ()=> { clearTimeout(t1); clearTimeout(t2); clearTimeout(t3); };
   }, [loc.pathname]);
 
   if(!loading) return null;

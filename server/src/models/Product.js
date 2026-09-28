@@ -30,6 +30,7 @@ schema.pre("save", function(next){
 schema.index({ sku: 1 }, { unique: true, sparse: true });
 schema.index({ name: "text", sku: "text", description: "text" });
 schema.index({ category: 1 });
+schema.index({ quantity: 1 });
 
 schema.virtual("status").get(function(){
   if(this.quantity === 0) return "Out of Stock";

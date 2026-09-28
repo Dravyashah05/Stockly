@@ -94,6 +94,20 @@ export default function ProductFormModal({
     const file = e.target.files?.[0];
     if (!file) return;
 
+    // Reject oversized/non-image files before FileReader decodes them —
+    // large dataURIs previously bloated state and Mongo documents.
+    const MAX_IMAGE_BYTES = 5 * 1024 * 1024;
+    if (file.size > MAX_IMAGE_BYTES) {
+      push("Image must be under 5 MB", "error");
+      if (e.target) e.target.value = "";
+      return;
+    }
+    if (file.type && !file.type.startsWith("image/")) {
+      push("Only image files are allowed", "error");
+      if (e.target) e.target.value = "";
+      return;
+    }
+
     const reader = new FileReader();
     reader.onload = () => setImagePreview(reader.result);
     reader.readAsDataURL(file);

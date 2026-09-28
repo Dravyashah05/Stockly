@@ -18,7 +18,9 @@ export const uploadProductImage = async (file) => {
     headers: {
       "Content-Type": "multipart/form-data",
       ...(token ? { Authorization: `Bearer ${token}` } : {})
-    }
+    },
+    // Image uploads need headroom over the 15s default API timeout.
+    timeout: 60000,
   });
   return res.data;
 };

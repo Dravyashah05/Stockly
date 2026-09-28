@@ -25,84 +25,101 @@ const NotFound = lazy(()=> import("./pages/NotFound"));
 function useNativeMobileIntegration() {
   const navigate = useNavigate();
   const location = useLocation();
+  const pathnameRef = React.useRef(location.pathname);
+  pathnameRef.current = location.pathname;
+  const navigateRef = React.useRef(navigate);
+  navigateRef.current = navigate;
 
   useEffect(() => {
     window.__stocklyNavigate = (targetPath) => {
       if (targetPath) {
-        navigate(targetPath);
+        navigateRef.current(targetPath);
       }
     };
     return () => {
       delete window.__stocklyNavigate;
     };
-  }, [navigate]);
+  }, []);
 
+  // Register native listeners ONCE — re-registering on every route change
+  // stacked duplicate backButton/appUrlOpen handlers (multiple exitApp /
+  // navigate calls per press). Route-aware logic reads pathnameRef.
   useEffect(() => {
-    let mounted = true;
+    let cancelled = false;
+    const handles = [];
     async function initNative() {
       if (typeof window === "undefined" || !window.Capacitor?.isNativePlatform?.()) return;
 
       try {
         const { StatusBar, Style } = await import("@capacitor/status-bar");
+        if (cancelled) return;
         await StatusBar.setStyle({ style: Style.Dark });
         await StatusBar.setBackgroundColor({ color: "#09090b" });
       } catch {}
 
       try {
         const { SplashScreen } = await import("@capacitor/splash-screen");
-        await SplashScreen.hide();
+        if (!cancelled) await SplashScreen.hide();
       } catch {}
 
       try {
         const { App: CapApp } = await import("@capacitor/app");
-        CapApp.addListener("backButton", ({ canGoBack }) => {
-          if (location.pathname === "/home" || location.pathname === "/login") {
+        if (cancelled) return;
+        const backHandle = await CapApp.addListener("backButton", ({ canGoBack }) => {
+          const path = pathnameRef.current;
+          if (path === "/home" || path === "/login") {
             CapApp.exitApp();
           } else if (canGoBack || window.history.length > 1) {
-            navigate(-1);
+            navigateRef.current(-1);
           } else {
             CapApp.exitApp();
           }
         });
+        handles.push(backHandle);
 
         // Handle Android Home Screen Widget and Shortcut deep-links
-        CapApp.addListener("appUrlOpen", (event) => {
+        const urlHandle = await CapApp.addListener("appUrlOpen", (event) => {
           try {
             if (!event?.url) return;
             const rawUrl = event.url;
+            const nav = navigateRef.current;
             if (rawUrl.includes("scan")) {
-              navigate("/stock?action=scan");
+              nav("/stock?action=scan");
             } else if (rawUrl.includes("add-product")) {
-              navigate("/products?action=add");
+              nav("/products?action=add");
             } else if (rawUrl.includes("filter=low") || rawUrl.includes("low-stock")) {
-              navigate("/products?filter=low");
+              nav("/products?filter=low");
             } else if (rawUrl.includes("stock/history")) {
-              navigate("/stock/history");
+              nav("/stock/history");
             } else if (rawUrl.includes("stock?type=IN")) {
-              navigate("/stock?type=IN");
+              nav("/stock?type=IN");
             } else if (rawUrl.includes("stock?type=OUT")) {
-              navigate("/stock?type=OUT");
+              nav("/stock?type=OUT");
             } else if (rawUrl.includes("products")) {
-              navigate("/products");
+              nav("/products");
             } else if (rawUrl.includes("home")) {
-              navigate("/home");
+              nav("/home");
             } else {
               const parsed = new URL(rawUrl);
               const path = (parsed.pathname || "") + (parsed.search || "");
-              if (path && path !== "/") navigate(path);
+              if (path && path !== "/") nav(path);
             }
           } catch (e) {
             console.warn("Deep link handling error:", e);
           }
         });
+        handles.push(urlHandle);
       } catch {}
     }
 
     initNative();
     return () => {
-      mounted = false;
+      cancelled = true;
+      for (const h of handles) {
+        try { h.remove(); } catch {}
+      }
     };
-  }, [location.pathname, navigate]);
+  }, []);
 }
 
 function Protected({ children }){

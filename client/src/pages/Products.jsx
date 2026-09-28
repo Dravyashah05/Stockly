@@ -62,11 +62,18 @@ export default function Products() {
   const [deleteLoading, setDeleteLoading] = useState(false);
   const [copiedSku, setCopiedSku] = useState(null);
 
+  // Debounce catalog search so we don't fire a request per keystroke.
+  const [debouncedSearch, setDebouncedSearch] = useState(search);
+  useEffect(() => {
+    const t = setTimeout(() => setDebouncedSearch(search), 350);
+    return () => clearTimeout(t);
+  }, [search]);
+
   const fetchData = async () => {
     setLoading(true);
     try {
       const params = new URLSearchParams();
-      if (search) params.set("search", search);
+      if (debouncedSearch) params.set("search", debouncedSearch);
       if (selectedCategory) params.set("category", selectedCategory);
       if (stockStatusFilter) params.set("stockStatus", stockStatusFilter);
       params.set("sort", sortBy);
@@ -93,13 +100,13 @@ export default function Products() {
 
   useEffect(() => {
     fetchData();
-  }, [search, selectedCategory, stockStatusFilter, sortBy, sortOrder, page, limit]);
+  }, [debouncedSearch, selectedCategory, stockStatusFilter, sortBy, sortOrder, page, limit]);
 
   // Reset page to 1 when filters change
   useEffect(() => {
     setPage(1);
     setSelectedIds(new Set());
-  }, [search, selectedCategory, stockStatusFilter, sortBy, sortOrder]);
+  }, [debouncedSearch, selectedCategory, stockStatusFilter, sortBy, sortOrder]);
 
   // Selection handlers
   const toggleSelect = (id) => {

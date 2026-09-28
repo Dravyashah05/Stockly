@@ -82,6 +82,20 @@
   .page-header {
     @apply card p-4 sm:p-5 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between;
   }
+  /* Native large-title look on phones: borderless, flush with content */
+  @media (max-width: 639px) {
+    .page-header {
+      background: transparent;
+      border-color: transparent;
+      box-shadow: none;
+      padding-left: 2px;
+      padding-right: 2px;
+    }
+    html.dark .page-header {
+      background: transparent;
+      box-shadow: none;
+    }
+  }
   .page-title {
     @apply text-lg sm:text-xl font-bold tracking-tight text-zinc-900 dark:text-white;
   }

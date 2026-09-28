@@ -21,6 +21,9 @@ export default defineConfig({
           vendor: ['react', 'react-dom', 'react-router-dom'],
           ui: ['lucide-react'],
           http: ['axios'],
+          // Camera scanning lib is large and only needed when a scanner
+          // modal opens — keep it in its own chunk.
+          scanner: ['html5-qrcode'],
         }
       }
     }

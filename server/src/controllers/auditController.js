@@ -17,7 +17,7 @@ export async function getAuditLogs(req,res,next){
 export async function getEntityHistory(req,res,next){
   try{
     const { entity, id } = req.params;
-    const logs = await AuditLog.find({ entity, entityId: id }).sort({ createdAt:-1 }).lean();
+    const logs = await AuditLog.find({ entity, entityId: id }).sort({ createdAt:-1 }).limit(200).lean();
     res.json({ success:true, data: logs });
   }catch(e){ next(e); }
 }

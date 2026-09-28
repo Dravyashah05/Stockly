@@ -30,7 +30,7 @@ import {
 import AppLogo from "../components/ui/AppLogo";
 import { useToast } from "../context/ToastContext";
 import AppUpdateModal from "../components/app/AppUpdateModal";
-import { checkAppUpdate, APP_CURRENT_VERSION } from "../api/appUpdate";
+import { checkAppUpdate, APP_CURRENT_VERSION, dismissUpdateVersion, clearDismissedUpdateVersion } from "../api/appUpdate";
 import { sendLocalNotification, requestNotificationPermission } from "../utils/notifications";
 import { downloadAndAutoInstall, resolveApkUrl } from "../utils/nativeUpdater";
 import { hapticSuccess, hapticMedium } from "../utils/haptics";
@@ -69,8 +69,10 @@ export default function AppStore() {
   const handleCheckUpdate = async () => {
     setCheckingUpdate(true);
     try {
-      const res = await checkAppUpdate();
+      // Manual check bypasses the "Later" dismissal for this version.
+      const res = await checkAppUpdate(true);
       if (res?.hasUpdate) {
+        clearDismissedUpdateVersion();
         setUpdateInfo(res);
         setUpdateModalOpen(true);
         push?.(`Update v${res.latestVersion} available`, "info");
@@ -276,7 +278,7 @@ export default function AppStore() {
 
             <div className="flex flex-wrap items-center gap-3 text-[11px] text-zinc-400 pt-0.5">
               <span className="flex items-center gap-1.5">
-                <CheckCircle2 size={12} className="text-emerald-400" /> v1.0.0 Stable
+                <CheckCircle2 size={12} className="text-emerald-400" /> v{APP_CURRENT_VERSION} Stable
               </span>
               <span>•</span>
               <span className="flex items-center gap-1.5">
@@ -556,6 +558,10 @@ export default function AppStore() {
         open={updateModalOpen}
         onClose={() => setUpdateModalOpen(false)}
         updateInfo={updateInfo}
+        onRemindLater={(info) => {
+          if (info?.latestVersion) dismissUpdateVersion(info.latestVersion);
+          setUpdateModalOpen(false);
+        }}
       />
     </div>
   );

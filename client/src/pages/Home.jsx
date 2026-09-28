@@ -17,6 +17,8 @@ import {
   QrCode,
   TrendingUp,
   Bot,
+  FileText,
+  Smartphone,
 } from "lucide-react";
 import { getProducts, createProduct } from "../api/products";
 import { getCategories } from "../api/categories";
@@ -97,7 +99,7 @@ function ModuleTile({ to, label, icon: Icon }) {
   return (
     <Link
       to={to}
-      className="card card-hover p-3 flex flex-col items-center justify-center gap-2 text-center"
+      className="card card-hover p-3 min-h-[88px] flex flex-col items-center justify-center gap-2 text-center"
     >
       <span className={`w-9 h-9 rounded-xl grid place-items-center ${CHIPS.zinc}`}>
         <Icon size={16} />
@@ -360,11 +362,13 @@ export default function Home() {
       {/* Modules */}
       <div>
         <h3 className="section-title mb-2.5">Modules</h3>
-        <div className="grid grid-cols-4 gap-2.5">
+        <div className="grid grid-cols-3 gap-2.5">
           <ModuleTile to="/categories" label="Categories" icon={FolderKanban} />
           <ModuleTile to="/suppliers" label="Suppliers" icon={Building2} />
           <ModuleTile to="/dashboard" label="Insights" icon={BarChart3} />
+          <ModuleTile to="/reports" label="Reports" icon={FileText} />
           <ModuleTile to="/audit" label="Audit" icon={Shield} />
+          <ModuleTile to="/app-store" label="Mobile App" icon={Smartphone} />
         </div>
       </div>
 

@@ -3,7 +3,7 @@ import StockTransaction from "../models/StockTransaction.js";
 import Product from "../models/Product.js";
 import { changeStock } from "../services/inventoryService.js";
 import { logAudit } from "../utils/audit.js";
-import { buildDateRangeFilter, isSafeObjectId } from "../utils/security.js";
+import { buildDateRangeFilter, escapeRegex, isSafeObjectId } from "../utils/security.js";
 
 export async function stockIn(req, res, next) {
   try {
@@ -56,22 +56,49 @@ export async function getStockHistory(req, res, next) {
     if(productId && isSafeObjectId(productId)) filter.productId = productId;
     if(product && isSafeObjectId(product)) filter.productId = product;
     if(type && ["IN","OUT"].includes(type)) filter.type = type;
-    // search via product populate? we do post-filter if needed but try efficient
-    let query = StockTransaction.find(filter).populate({ path:"productId", select:"name sku unit image category supplier", populate:[{ path:"category", select:"name" }, { path:"supplier", select:"name" }] }).populate("supplier","name").sort({ createdAt:-1 });
+    // Resolve category/search to DB-level conditions FIRST so pagination
+    // totals stay honest (post-filtering after skip/limit returned wrong
+    // totals and hollow pages).
+    let categoryIds = null;
+    if (category && isSafeObjectId(category)) {
+      const ids = await Product.find({ category, isActive: true }).select("_id").lean();
+      categoryIds = ids.map((p) => p._id);
+      filter.productId = { $in: categoryIds };
+    }
+    if (search && typeof search === "string" && search.trim()) {
+      const escaped = escapeRegex(search.trim());
+      const matched = await Product.find({
+        $or: [
+          { name: { $regex: escaped, $options: "i" } },
+          { sku: { $regex: escaped, $options: "i" } },
+        ],
+      }).select("_id").lean();
+      let matchedIds = matched.map((p) => p._id);
+      // Honor product/category constraints already in the filter.
+      let scalarProductId = null;
+      if (filter.productId && filter.productId.$in) {
+        const allowed = new Set(filter.productId.$in.map(String));
+        matchedIds = matchedIds.filter((id) => allowed.has(String(id)));
+      } else if (filter.productId) {
+        scalarProductId = filter.productId;
+        matchedIds = matchedIds.filter((id) => String(id) === String(scalarProductId));
+      }
+      let reasonCond = { reason: { $regex: escaped, $options: "i" } };
+      if (scalarProductId) reasonCond = { $and: [reasonCond, { productId: scalarProductId }] };
+      // (product name/sku match) OR (reason match). When a category filter
+      // is active, reason-matched rows must still belong to that category.
+      delete filter.productId;
+      const productBranch = { productId: { $in: matchedIds } };
+      filter.$and = [...(filter.$and || []), categoryIds
+        ? { $or: [productBranch, { $and: [reasonCond, { productId: { $in: categoryIds } }] }] }
+        : { $or: [productBranch, reasonCond] }];
+    }
+    let query = StockTransaction.find(filter).populate({ path:"productId", select:"name sku unit image category supplier", populate:[{ path:"category", select:"name" }, { path:"supplier", select:"name" }] }).populate("supplier","name").sort({ createdAt:-1 }).lean();
     const pg = Math.max(1, parseInt(page));
     const lim = Math.min(100, Math.max(1, parseInt(limit)));
     const total = await StockTransaction.countDocuments(filter);
     query = query.skip((pg-1)*lim).limit(lim);
-    let transactions = await query;
-
-    // filter by category if requested (post)
-    if(category){
-      transactions = transactions.filter(t=> String(t.productId?.category?._id||t.productId?.category)===String(category));
-    }
-    if(search){
-      const s=search.toLowerCase();
-      transactions = transactions.filter(t=> t.productId?.name?.toLowerCase().includes(s) || t.productId?.sku?.toLowerCase().includes(s) || t.reason?.toLowerCase().includes(s));
-    }
+    const transactions = await query;
 
     res.json({ success: true, data: transactions, pagination:{ page:pg, limit:lim, total, pages: Math.ceil(total/lim) } });
   } catch (error) { next(error); }
@@ -80,7 +107,7 @@ export async function getStockHistory(req, res, next) {
 export async function getRecentTransactions(req,res,next){
   try{
     const { limit="10" } = req.query;
-    const tx = await StockTransaction.find().populate({ path:"productId", select:"name sku unit image supplier", populate:{ path:"supplier", select:"name" } }).populate("supplier","name").sort({ createdAt:-1 }).limit(Math.min(50,parseInt(limit)));
+    const tx = await StockTransaction.find().populate({ path:"productId", select:"name sku unit image supplier", populate:{ path:"supplier", select:"name" } }).populate("supplier","name").sort({ createdAt:-1 }).limit(Math.min(50,parseInt(limit))).lean();
     res.json({ success:true, data: tx });
   }catch(e){ next(e); }
 }

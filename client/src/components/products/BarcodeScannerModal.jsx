@@ -139,8 +139,12 @@ export default function BarcodeScannerModal({
     setMatchedProduct(null);
     setIsStarting(true);
 
+    // Guard against the async camera lookup resolving after close —
+    // without this the camera can start (and stay held) behind the modal.
+    let cancelled = false;
     Html5Qrcode.getCameras()
       .then((devices) => {
+        if (cancelled) return;
         if (devices && devices.length > 0) {
           setCameras(devices);
           const backCam = devices.find((d) =>
@@ -154,10 +158,11 @@ export default function BarcodeScannerModal({
         }
       })
       .catch(() => {
-        startScannerWithCamera(null);
+        if (!cancelled) startScannerWithCamera(null);
       });
 
     return () => {
+      cancelled = true;
       stopScanner();
     };
   }, [open, startScannerWithCamera, stopScanner]);

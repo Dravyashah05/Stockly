@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect, useRef, Suspense, lazy } from "react";
 import { useNavigate, useLocation, NavLink, Link } from "react-router-dom";
 import {
   House,
@@ -21,8 +21,6 @@ import {
   Sparkles,
   PanelLeftClose,
   PanelLeftOpen,
-  PanelLeft,
-  Menu,
   Smartphone,
   TrendingUp,
   TrendingDown,
@@ -37,7 +35,7 @@ import { useTheme } from "../context/ThemeContext";
 import { useSearch } from "../context/SearchContext";
 import { getProducts } from "../api/products";
 import { getRecentTransactions } from "../api/stock";
-import { checkAppUpdate } from "../api/appUpdate";
+import { checkAppUpdate, dismissUpdateVersion } from "../api/appUpdate";
 import {
   sendLowStockNotification,
   sendOutOfStockNotification,
@@ -45,7 +43,9 @@ import {
 } from "../utils/notifications";
 import BottomNav from "./BottomNav";
 import TopProgress from "../components/ui/TopProgress";
-import AiCopilotDrawer from "../components/ai/AiCopilotDrawer";
+// Code-split: the AI drawer is heavy and only used on demand — keep it out
+// of the initial bundle.
+const AiCopilotDrawer = lazy(() => import("../components/ai/AiCopilotDrawer"));
 import AppLogo from "../components/ui/AppLogo";
 import AppUpdateModal from "../components/app/AppUpdateModal";
 
@@ -58,7 +58,6 @@ export default function AppLayout({ children }) {
       return true;
     }
   });
-  const [mobileDrawerOpen, setMobileDrawerOpen] = useState(false);
   const [aiCopilotOpen, setAiCopilotOpen] = useState(false);
   const [searchOpen, setSearchOpen] = useState(false);
   const [notificationsOpen, setNotificationsOpen] = useState(false);
@@ -172,7 +171,6 @@ export default function AppLayout({ children }) {
   // Close menus on route change
   useEffect(() => {
     setSearchOpen(false);
-    setMobileDrawerOpen(false);
     setNotificationsOpen(false);
   }, [loc.pathname]);
 
@@ -189,7 +187,6 @@ export default function AppLayout({ children }) {
       }
       if (e.key === "Escape") {
         setSearchOpen(false);
-        setMobileDrawerOpen(false);
         setNotificationsOpen(false);
       }
     };
@@ -422,145 +419,6 @@ export default function AppLayout({ children }) {
         </div>
       </aside>
 
-      {/* 2. MOBILE / TABLET SLIDE-OVER DRAWER (< lg) */}
-      {mobileDrawerOpen && (
-        <div className="lg:hidden fixed inset-0 z-50 flex" role="dialog" aria-modal="true">
-          {/* Backdrop */}
-          <div
-            className="fixed inset-0 bg-zinc-950/60 backdrop-blur-sm animate-fade-in"
-            onClick={() => setMobileDrawerOpen(false)}
-          />
-
-          {/* Slide-in Menu Panel */}
-          <div className="relative w-4/5 max-w-xs bg-white dark:bg-zinc-900 h-full flex flex-col shadow-2xl border-r border-zinc-200/80 dark:border-zinc-800/80 animate-slide-in-left z-10">
-            {/* Drawer Header */}
-            <div className="p-4 border-b border-zinc-100 dark:border-zinc-800 flex items-center justify-between">
-              <Link
-                to="/home"
-                onClick={() => setMobileDrawerOpen(false)}
-                className="flex items-center gap-2.5"
-              >
-                <AppLogo size="sm" />
-                <div>
-                  <div className="font-extrabold text-sm text-zinc-900 dark:text-white">Stockly OS</div>
-                  <div className="text-[10px] text-zinc-400 font-medium">Inventory Workspace</div>
-                </div>
-              </Link>
-
-              <div className="flex items-center gap-1">
-                <button
-                  onClick={toggle}
-                  className="w-8 h-8 rounded-xl bg-zinc-100 dark:bg-zinc-800 text-zinc-600 dark:text-zinc-300 grid place-items-center"
-                >
-                  {isDark ? <Sun size={15} /> : <Moon size={15} />}
-                </button>
-                <button
-                  onClick={() => setMobileDrawerOpen(false)}
-                  className="w-8 h-8 rounded-xl bg-zinc-100 dark:bg-zinc-800 text-zinc-600 dark:text-zinc-300 grid place-items-center"
-                  aria-label="Close menu"
-                >
-                  <X size={16} />
-                </button>
-              </div>
-            </div>
-
-            {/* Drawer Links */}
-            <div className="flex-1 overflow-y-auto px-3 py-4 space-y-5">
-              {navGroups.map((g) => (
-                <div key={g.group} className="space-y-1">
-                  <div className="px-3 text-[10px] font-bold uppercase tracking-wider text-zinc-400">
-                    {g.group}
-                  </div>
-                  <div className="space-y-0.5">
-                    {g.items.map((item) => {
-                      const Icon = item.icon;
-                      if (item.isAi) {
-                        return (
-                          <button
-                            key={item.label}
-                            type="button"
-                            onClick={() => {
-                              setMobileDrawerOpen(false);
-                              setAiCopilotOpen(true);
-                            }}
-                            className="w-full flex items-center gap-3 px-3.5 py-2.5 rounded-2xl text-xs font-bold text-violet-700 dark:text-violet-300 bg-violet-50/70 dark:bg-violet-500/10 hover:bg-violet-100 active:scale-[0.98] transition-all"
-                          >
-                            <Icon size={16} className="text-violet-600 dark:text-violet-400" />
-                            <span className="flex-1 text-left truncate">{item.label}</span>
-                            <span className="px-1.5 py-0.5 rounded-full bg-violet-600 text-white text-[9px] font-extrabold">
-                              AI
-                            </span>
-                          </button>
-                        );
-                      }
-
-                      const active = isActive(item.to);
-                      return (
-                        <NavLink
-                          key={item.to}
-                          to={item.to}
-                          onClick={() => setMobileDrawerOpen(false)}
-                          className={`flex items-center gap-3 px-3.5 py-2.5 rounded-2xl text-xs font-bold transition-all ${
-                            active
-                              ? "bg-zinc-900 text-white dark:bg-white dark:text-zinc-900 shadow-sm"
-                              : "text-zinc-600 dark:text-zinc-400 hover:bg-zinc-100 dark:hover:bg-zinc-800/80"
-                          }`}
-                        >
-                          <Icon size={16} strokeWidth={active ? 2.4 : 1.8} />
-                          <span className="flex-1 truncate">{item.label}</span>
-                          {item.badge && (
-                            <span className="px-1.5 py-0.5 rounded-md bg-violet-100 dark:bg-violet-500/20 text-violet-700 dark:text-violet-300 text-[10px] font-extrabold uppercase">
-                              {item.badge}
-                            </span>
-                          )}
-                          {item.to === "/products" && lowStockItems.length > 0 && (
-                            <span className="px-1.5 py-0.5 rounded-full bg-amber-500 text-white text-[10px] font-bold">
-                              {lowStockItems.length}
-                            </span>
-                          )}
-                        </NavLink>
-                      );
-                    })}
-                  </div>
-                </div>
-              ))}
-            </div>
-
-            {/* Drawer User Card */}
-            <div className="p-3 border-t border-zinc-100 dark:border-zinc-800 bg-zinc-50/70 dark:bg-zinc-900/50">
-              <div className="p-2.5 rounded-2xl bg-white dark:bg-zinc-800/70 border border-zinc-200/70 dark:border-zinc-700/60 flex items-center justify-between gap-2">
-                <Link
-                  to="/settings"
-                  onClick={() => setMobileDrawerOpen(false)}
-                  className="flex items-center gap-2.5 min-w-0 flex-1"
-                >
-                  <div className="w-8 h-8 rounded-xl bg-zinc-900 text-white dark:bg-white dark:text-zinc-900 grid place-items-center font-bold text-xs shrink-0">
-                    {(user?.name?.[0] || "U").toUpperCase()}
-                  </div>
-                  <div className="min-w-0 flex-1">
-                    <div className="text-xs font-bold text-zinc-900 dark:text-white truncate">
-                      {user?.name || "Operations User"}
-                    </div>
-                    <div className="text-[10px] text-zinc-400 truncate">{user?.email || "Signed In"}</div>
-                  </div>
-                </Link>
-
-                <button
-                  onClick={() => {
-                    logout();
-                    navigate("/login");
-                  }}
-                  className="w-8 h-8 rounded-xl grid place-items-center text-zinc-400 hover:text-red-600 hover:bg-red-50"
-                  title="Sign Out"
-                >
-                  <LogOut size={14} />
-                </button>
-              </div>
-            </div>
-          </div>
-        </div>
-      )}
-
       {/* 3. MAIN APPLICATION CONTENT AREA */}
       <div className="flex-1 flex flex-col min-w-0 min-h-screen">
         {/* Top Native App Bar */}
@@ -570,25 +428,14 @@ export default function AppLayout({ children }) {
           style={{ paddingTop: "max(env(safe-area-inset-top), 10px)" }}
         >
           <div className="h-16 px-3 sm:px-4 flex items-center justify-between gap-2.5 sm:gap-3 rounded-2xl bg-white/75 dark:bg-zinc-900/75 backdrop-blur-2xl border border-white/50 dark:border-white/10 shadow-[0_8px_30px_-12px_rgba(0,0,0,0.25)]">
-            {/* Left: Mobile menu button & Brand */}
-            <div className="flex items-center gap-2 lg:hidden">
-              <button
-                type="button"
-                onClick={() => setMobileDrawerOpen(true)}
-                className="w-9 h-9 grid place-items-center rounded-xl bg-zinc-100 dark:bg-zinc-800 text-zinc-700 dark:text-zinc-200 hover:bg-zinc-200 dark:hover:bg-zinc-700 active:scale-95 transition"
-                aria-label="Open sidebar menu"
-              >
-                <Menu size={18} />
-              </button>
-
-              <Link to="/home" className="flex items-center gap-2">
-                <AppLogo size="sm" />
-                <div className="flex items-center gap-1.5">
-                  <span className="font-extrabold text-sm tracking-tight text-zinc-900 dark:text-white">Stockly</span>
-                  <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" />
-                </div>
-              </Link>
-            </div>
+            {/* Left: Compact mobile brand (no hamburger — bottom tabs own navigation) */}
+            <Link to="/home" className="flex items-center gap-2 lg:hidden min-w-0" aria-label="Stockly home">
+              <AppLogo size="sm" />
+              <span className="flex items-center gap-1.5 min-w-0">
+                <span className="font-extrabold text-[15px] tracking-tight text-zinc-900 dark:text-white truncate">Stockly</span>
+                <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse shrink-0" title="System live" />
+              </span>
+            </Link>
 
             {/* Desktop Left: Sidebar Show/Hide Toggle & Breadcrumb */}
             <div className="hidden lg:flex items-center gap-3">
@@ -640,11 +487,11 @@ export default function AppLayout({ children }) {
 
             {/* Right Action Icons */}
             <div className="flex items-center gap-1.5 sm:gap-2 ml-auto">
-              {/* AI Copilot Trigger Button */}
+              {/* AI Copilot Trigger Button — desktop only (bottom tab orb covers mobile) */}
               <button
                 type="button"
                 onClick={() => setAiCopilotOpen(true)}
-                className="flex items-center gap-1.5 px-3.5 py-2 rounded-full bg-primary-600 hover:bg-primary-700 text-white text-xs font-semibold shadow-sm shadow-primary-600/25 active:scale-95 transition"
+                className="hidden sm:flex items-center gap-1.5 px-3.5 py-2 rounded-full bg-primary-600 hover:bg-primary-700 text-white text-xs font-semibold shadow-sm shadow-primary-600/25 active:scale-95 transition"
                 title="Open Stockly AI (Ctrl+K)"
               >
                 <Sparkles size={14} />
@@ -826,14 +673,6 @@ export default function AppLayout({ children }) {
                   </div>
                 )}
               </div>
-
-              {/* Mobile Quick Avatar */}
-              <Link
-                to="/settings"
-                className="lg:hidden w-9 h-9 rounded-xl bg-zinc-900 text-white dark:bg-white dark:text-zinc-900 grid place-items-center font-bold text-xs shadow-2xs active:scale-95 transition"
-              >
-                {(user?.name?.[0] || "U").toUpperCase()}
-              </Link>
             </div>
           </div>
 
@@ -874,13 +713,21 @@ export default function AppLayout({ children }) {
         <BottomNav />
 
         {/* 6. AI COPILOT SLIDE-OVER DRAWER */}
-        <AiCopilotDrawer open={aiCopilotOpen} onClose={() => setAiCopilotOpen(false)} />
+        {aiCopilotOpen && (
+          <Suspense fallback={null}>
+            <AiCopilotDrawer open={aiCopilotOpen} onClose={() => setAiCopilotOpen(false)} />
+          </Suspense>
+        )}
 
         {/* 7. APP UPDATE MODAL */}
         <AppUpdateModal
           open={autoUpdateModalOpen}
           onClose={() => setAutoUpdateModalOpen(false)}
           updateInfo={autoUpdateInfo}
+          onRemindLater={(info) => {
+            if (info?.latestVersion) dismissUpdateVersion(info.latestVersion);
+            setAutoUpdateModalOpen(false);
+          }}
         />
       </div>
     </div>

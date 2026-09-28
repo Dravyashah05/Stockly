@@ -46,7 +46,7 @@ import { getProducts } from "../api/products";
 import { getCategories } from "../api/categories";
 import { getStockHistory } from "../api/stock";
 import { getStoredAiSettings, saveStoredAiSettings, chatCopilot } from "../api/ai";
-import { checkAppUpdate, APP_CURRENT_VERSION } from "../api/appUpdate";
+import { checkAppUpdate, APP_CURRENT_VERSION, dismissUpdateVersion, clearDismissedUpdateVersion } from "../api/appUpdate";
 import {
   sendLocalNotification,
   requestNotificationPermission,
@@ -313,8 +313,10 @@ export default function Settings() {
   const handleCheckUpdate = async () => {
     setCheckingUpdate(true);
     try {
-      const res = await checkAppUpdate();
+      // Manual check bypasses the "Later" dismissal for this version.
+      const res = await checkAppUpdate(true);
       if (res?.hasUpdate) {
+        clearDismissedUpdateVersion();
         setUpdateInfo(res);
         setUpdateModalOpen(true);
         push(`Update v${res.latestVersion} available`, "info");
@@ -590,7 +592,7 @@ export default function Settings() {
   const anyVisible = showAccount || showPrefs || showDevices || showAi || showData;
 
   return (
-    <div className="max-w-xl mx-auto space-y-5 pb-24 animate-fade-in">
+    <div className="max-w-xl mx-auto space-y-5 pb-28 animate-fade-in">
       {/* header + search */}
       <div className="space-y-3">
         <div>
@@ -927,7 +929,7 @@ export default function Settings() {
             <span className="flex items-center gap-2">
               <a
                 href="/stockly.apk"
-                download="stockly-v1.0.0.apk"
+                download={`stockly-v${APP_CURRENT_VERSION}.apk`}
                 className="text-xs font-semibold text-zinc-900 dark:text-white border border-zinc-200 dark:border-zinc-700 rounded-lg px-3 py-1.5 hover:bg-zinc-50 dark:hover:bg-zinc-800"
               >
                 APK
@@ -1130,7 +1132,15 @@ export default function Settings() {
         onClose={() => setShowAuthorizeModal(false)}
         onAuthorized={loadSessions}
       />
-      <AppUpdateModal open={updateModalOpen} onClose={() => setUpdateModalOpen(false)} updateInfo={updateInfo} />
+      <AppUpdateModal
+        open={updateModalOpen}
+        onClose={() => setUpdateModalOpen(false)}
+        updateInfo={updateInfo}
+        onRemindLater={(info) => {
+          if (info?.latestVersion) dismissUpdateVersion(info.latestVersion);
+          setUpdateModalOpen(false);
+        }}
+      />
     </div>
   );
 }

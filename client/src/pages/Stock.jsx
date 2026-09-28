@@ -313,7 +313,7 @@ export default function Stock() {
   return (
     <div className="space-y-5 animate-fade-in">
       {/* Header */}
-      <div className="flex items-center justify-between gap-3">
+      <div className="flex flex-wrap items-center justify-between gap-3">
         <div className="min-w-0">
           <h1 className="page-title">Ledger</h1>
           <p className="page-subtitle">Transaction history</p>
@@ -339,32 +339,32 @@ export default function Stock() {
         </div>
       </div>
 
-      {/* Summary cards */}
-      <div className="grid grid-cols-3 gap-3">
-        <div className="card p-3.5 flex items-center gap-3">
-          <span className="w-9 h-9 rounded-xl bg-emerald-100 dark:bg-emerald-500/15 text-emerald-600 dark:text-emerald-400 grid place-items-center shrink-0">
+      {/* Summary cards — stacked icon-over-value on phones, inline on sm+ */}
+      <div className="grid grid-cols-3 gap-2 sm:gap-3">
+        <div className="card p-2.5 sm:p-3.5 flex flex-col items-start gap-2 sm:flex-row sm:items-center sm:gap-3">
+          <span className="w-8 h-8 sm:w-9 sm:h-9 rounded-xl bg-emerald-100 dark:bg-emerald-500/15 text-emerald-600 dark:text-emerald-400 grid place-items-center shrink-0">
             <TrendingUp size={16} />
           </span>
           <span className="min-w-0">
-            <span className="block text-[11px] font-bold uppercase tracking-wider text-zinc-500">Inbound</span>
-            <span className="block text-lg font-bold tabular-nums text-emerald-600 dark:text-emerald-400 leading-tight">
+            <span className="block text-[10px] sm:text-[11px] font-bold uppercase tracking-wider text-zinc-500">Inbound</span>
+            <span className="block text-base sm:text-lg font-bold tabular-nums text-emerald-600 dark:text-emerald-400 leading-tight">
               +{totalIn}
             </span>
           </span>
         </div>
-        <div className="card p-3.5 flex items-center gap-3">
-          <span className="w-9 h-9 rounded-xl bg-red-100 dark:bg-red-500/15 text-red-600 dark:text-red-400 grid place-items-center shrink-0">
+        <div className="card p-2.5 sm:p-3.5 flex flex-col items-start gap-2 sm:flex-row sm:items-center sm:gap-3">
+          <span className="w-8 h-8 sm:w-9 sm:h-9 rounded-xl bg-red-100 dark:bg-red-500/15 text-red-600 dark:text-red-400 grid place-items-center shrink-0">
             <TrendingDown size={16} />
           </span>
           <span className="min-w-0">
-            <span className="block text-[11px] font-bold uppercase tracking-wider text-zinc-500">Outbound</span>
-            <span className="block text-lg font-bold tabular-nums text-red-600 dark:text-red-400 leading-tight">
+            <span className="block text-[10px] sm:text-[11px] font-bold uppercase tracking-wider text-zinc-500">Outbound</span>
+            <span className="block text-base sm:text-lg font-bold tabular-nums text-red-600 dark:text-red-400 leading-tight">
               −{totalOut}
             </span>
           </span>
         </div>
-        <div className="card p-3.5 flex items-center gap-3">
-          <span className={`w-9 h-9 rounded-xl grid place-items-center shrink-0 ${
+        <div className="card p-2.5 sm:p-3.5 flex flex-col items-start gap-2 sm:flex-row sm:items-center sm:gap-3">
+          <span className={`w-8 h-8 sm:w-9 sm:h-9 rounded-xl grid place-items-center shrink-0 ${
             totalIn - totalOut >= 0
               ? "bg-emerald-100 dark:bg-emerald-500/15 text-emerald-600 dark:text-emerald-400"
               : "bg-red-100 dark:bg-red-500/15 text-red-600 dark:text-red-400"
@@ -372,8 +372,8 @@ export default function Stock() {
             {totalIn - totalOut >= 0 ? <ArrowUp size={16} /> : <ArrowDown size={16} />}
           </span>
           <span className="min-w-0">
-            <span className="block text-[11px] font-bold uppercase tracking-wider text-zinc-500">Net</span>
-            <span className={`block text-lg font-bold tabular-nums leading-tight ${
+            <span className="block text-[10px] sm:text-[11px] font-bold uppercase tracking-wider text-zinc-500">Net</span>
+            <span className={`block text-base sm:text-lg font-bold tabular-nums leading-tight ${
               totalIn - totalOut >= 0
                 ? "text-emerald-600 dark:text-emerald-400"
                 : "text-red-600 dark:text-red-400"
@@ -384,14 +384,14 @@ export default function Stock() {
         </div>
       </div>
 
-      {/* Date presets */}
+      {/* Date presets — swipeable row on phones, even grid on sm+ */}
       <div className="card p-2.5">
-        <div className="segmented-control w-full grid grid-cols-5 gap-1">
+        <div className="segmented-control w-full flex overflow-x-auto no-scrollbar gap-1 sm:grid sm:grid-cols-5">
           {presets.map((p) => (
             <button
               key={p.id}
               onClick={() => applyPreset(p.id)}
-              className={`segmented-item ${filters.preset === p.id ? "segmented-item-active" : "segmented-item-inactive"}`}
+              className={`segmented-item shrink-0 flex-1 whitespace-nowrap ${filters.preset === p.id ? "segmented-item-active" : "segmented-item-inactive"}`}
             >
               {p.label}
             </button>
@@ -525,20 +525,28 @@ export default function Stock() {
                     {items.map((t) => {
                       const isIN = t.type === "IN";
                       return (
-                        <div key={t._id} className="px-3.5 py-3 flex items-center gap-3 hover:bg-zinc-50 dark:hover:bg-zinc-800/40 transition">
-                          <span className={`w-9 h-9 rounded-xl grid place-items-center shrink-0 border ${
+                        <div key={t._id} className="px-3.5 py-3 flex items-center gap-2.5 sm:gap-3 hover:bg-zinc-50 dark:hover:bg-zinc-800/40 transition">
+                          {/* Type icon — sm+ only (mobile uses the corner badge on the thumb) */}
+                          <span className={`hidden sm:grid w-9 h-9 rounded-xl place-items-center shrink-0 border ${
                             isIN
                               ? "bg-emerald-50 dark:bg-emerald-500/10 border-emerald-200 dark:border-emerald-500/20 text-emerald-600 dark:text-emerald-400"
                               : "bg-red-50 dark:bg-red-500/10 border-red-200 dark:border-red-500/20 text-red-600 dark:text-red-400"
                           }`}>
                             {isIN ? <ArrowUp size={14} /> : <ArrowDown size={14} />}
                           </span>
-                          <span className="w-9 h-9 rounded-xl bg-zinc-100 dark:bg-zinc-800 border border-zinc-200 dark:border-zinc-700 overflow-hidden grid place-items-center shrink-0">
-                            {t.productId?.image ? (
-                              <img src={t.productId.image} alt="" loading="lazy" className="w-full h-full object-cover" />
-                            ) : (
-                              <Package size={15} className="text-zinc-400" />
-                            )}
+                          <span className="relative w-9 h-9 rounded-xl bg-zinc-100 dark:bg-zinc-800 border border-zinc-200 dark:border-zinc-700 overflow-visible grid place-items-center shrink-0">
+                            <span className="w-full h-full rounded-[10px] overflow-hidden grid place-items-center">
+                              {t.productId?.image ? (
+                                <img src={t.productId.image} alt="" loading="lazy" className="w-full h-full object-cover" />
+                              ) : (
+                                <Package size={15} className="text-zinc-400" />
+                              )}
+                            </span>
+                            <span className={`sm:hidden absolute -bottom-1 -right-1 w-5 h-5 rounded-full grid place-items-center border-2 border-white dark:border-zinc-900 text-white ${
+                              isIN ? "bg-emerald-500" : "bg-red-500"
+                            }`}>
+                              {isIN ? <ArrowUp size={10} strokeWidth={3} /> : <ArrowDown size={10} strokeWidth={3} />}
+                            </span>
                           </span>
                           <div className="flex-1 min-w-0">
                             <div className="flex items-center justify-between gap-2">
@@ -592,9 +600,9 @@ export default function Stock() {
             );
           })}
 
-          {/* Pagination */}
+          {/* Pagination — wraps on phones so controls never overflow */}
           {pagination && pagination.pages > 1 && (
-            <div className="card p-3 flex items-center justify-between gap-3">
+            <div className="card p-3 flex flex-col gap-2.5 sm:flex-row sm:items-center sm:justify-between">
               <span className="text-xs text-zinc-500">
                 Page <span className="font-bold text-zinc-800 dark:text-zinc-200">{pagination.page}</span> of {pagination.pages}
                 <span className="hidden sm:inline"> • {pagination.total} items</span>
@@ -603,7 +611,7 @@ export default function Stock() {
                 <select
                   value={pageLimit}
                   onChange={(e) => { setPageLimit(Number(e.target.value)); setFilters(f => ({ ...f, page: 1 })); }}
-                  className="text-xs bg-zinc-100 dark:bg-zinc-800 border-0 rounded-lg px-2 py-1.5 text-zinc-600 dark:text-zinc-300 outline-none"
+                  className="flex-1 sm:flex-none min-h-[36px] text-xs bg-zinc-100 dark:bg-zinc-800 border-0 rounded-lg px-2 py-1.5 text-zinc-600 dark:text-zinc-300 outline-none"
                   aria-label="Items per page"
                 >
                   {PAGE_SIZES.map((n) => (
@@ -611,7 +619,7 @@ export default function Stock() {
                   ))}
                 </select>
                 <Button variant="secondary" size="sm" disabled={filters.page <= 1} onClick={() => setFilters({ ...filters, page: filters.page - 1 })}>
-                  <ChevronLeft size={14} /> Prev
+                  <ChevronLeft size={14} /> <span className="hidden min-[400px]:inline">Prev</span>
                 </Button>
                 <Button
                   variant="secondary"
@@ -619,7 +627,7 @@ export default function Stock() {
                   disabled={filters.page >= pagination.pages}
                   onClick={() => setFilters({ ...filters, page: filters.page + 1 })}
                 >
-                  Next <ChevronRight size={14} />
+                  <span className="hidden min-[400px]:inline">Next</span> <ChevronRight size={14} />
                 </Button>
               </div>
             </div>

@@ -22,31 +22,37 @@ export async function getProducts(req, res, next) {
       ];
     }
 
-    let query = Product.find(filter).populate("category", "name customFields").populate("supplier", "name");
-
     const sortOrder = order === "asc" ? 1 : -1;
     const allowedSort = ["name","quantity","createdAt","sku","price"];
+
+    const pg = Math.max(1, parseInt(page));
+    const lim = Math.min(100, Math.max(1, parseInt(limit)));
+    const skip = (pg-1)*lim;
+
+    // Stock-status filters run in the DB (not in memory after paginate) so
+    // `total`/`pages` stay honest and pages never come back half-empty.
+    // minimumStock may be missing on old docs — fall back to 5 like the UI.
+    const threshold = { $ifNull: ["$minimumStock", 5] };
+    if (lowStock === "true" || stockStatus === "low") {
+      filter.quantity = { $gt: 0 };
+      filter.$expr = { $lte: ["$quantity", threshold] };
+    } else if (stockStatus === "out") {
+      filter.quantity = 0;
+    } else if (stockStatus === "in") {
+      filter.$expr = { $gt: ["$quantity", threshold] };
+    }
+
+    // Build the query now that all filters (including stock status) are set.
+    let query = Product.find(filter).populate("category", "name customFields").populate("supplier", "name").lean();
     if(allowedSort.includes(sort)){
       query = query.sort({ [sort]: sortOrder });
     } else {
       query = query.sort({ createdAt: -1 });
     }
-
-    const pg = Math.max(1, parseInt(page));
-    const lim = Math.min(100, Math.max(1, parseInt(limit)));
-    const skip = (pg-1)*lim;
     const total = await Product.countDocuments(filter);
     query = query.skip(skip).limit(lim);
 
-    let products = await query;
-
-    if (lowStock === "true" || stockStatus === "low") {
-      products = products.filter((p) => p.quantity >0 && p.quantity <= (p.minimumStock ?? p.minimumQuantity ?? 5));
-    } else if (stockStatus === "out") {
-      products = products.filter(p=> p.quantity===0);
-    } else if (stockStatus === "in") {
-      products = products.filter(p=> p.quantity > (p.minimumStock ?? p.minimumQuantity ?? 5));
-    }
+    const products = await query;
 
     res.json({ success: true, data: products, pagination: { page: pg, limit: lim, total, pages: Math.ceil(total/lim) } });
   } catch (error) {

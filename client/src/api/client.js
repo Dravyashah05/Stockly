@@ -12,6 +12,8 @@ const API_URL = import.meta.env.VITE_API_URL || (isNativePlatform ? DEFAULT_REMO
 const client = axios.create({
   baseURL: API_URL,
   headers: { "Content-Type": "application/json" },
+  // Hung requests previously hung the UI forever — fail fast instead.
+  timeout: 15000,
 });
 
 client.interceptors.request.use((config)=>{
@@ -30,6 +32,15 @@ client.interceptors.response.use(
       err.config._retry=true;
       const retryAfter = parseInt(err.response.headers["retry-after"]||"2",10)*1000;
       await new Promise(r=> setTimeout(r, Math.min(retryAfter, 3000)));
+      return client(err.config);
+    }
+    // Transient network/server failures: one retry with backoff so a single
+    // blip doesn't surface as a hard error. Aborts are never retried.
+    const isAbort = err.code === "ECONNABORTED" || err.code === "ERR_CANCELED" || err.name === "CanceledError";
+    const shouldRetry = !isAbort && !err.config._netRetry && (!err.response || err.response.status >= 500);
+    if(shouldRetry){
+      err.config._netRetry = true;
+      await new Promise(r=> setTimeout(r, 800));
       return client(err.config);
     }
     if(status === 401 && localStorage.getItem("token")){
@@ -53,11 +64,11 @@ async function request(endpoint, options={}){
 }
 
 const api = {
-  get: (endpoint) => client.get(endpoint).then(r=>r.data),
-  post: (endpoint, body) => client.post(endpoint, body).then(r=>r.data),
-  put: (endpoint, body) => client.put(endpoint, body).then(r=>r.data),
-  patch: (endpoint, body) => client.patch(endpoint, body).then(r=>r.data),
-  delete: (endpoint) => client.delete(endpoint).then(r=>r.data),
+  get: (endpoint, config) => client.get(endpoint, config).then(r=>r.data),
+  post: (endpoint, body, config) => client.post(endpoint, body, config).then(r=>r.data),
+  put: (endpoint, body, config) => client.put(endpoint, body, config).then(r=>r.data),
+  patch: (endpoint, body, config) => client.patch(endpoint, body, config).then(r=>r.data),
+  delete: (endpoint, config) => client.delete(endpoint, config).then(r=>r.data),
   request
 };
 

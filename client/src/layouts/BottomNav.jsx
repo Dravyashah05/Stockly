@@ -9,8 +9,9 @@ function Tab({ to, label, icon: Icon }) {
     <NavLink
       to={to}
       onClick={() => hapticLight()}
+      aria-label={label}
       className={({ isActive }) =>
-        `flex flex-col items-center justify-center gap-1 py-2 px-1 min-h-[56px] rounded-full text-[10px] font-semibold transition-all duration-200 active:scale-90 ${
+        `flex flex-col items-center justify-center gap-1 py-2 px-1 min-w-[60px] min-h-[60px] rounded-2xl text-[10px] font-semibold transition-all duration-200 active:scale-90 ${
           isActive
             ? "text-zinc-900 dark:text-white"
             : "text-zinc-400 dark:text-zinc-500 hover:text-zinc-700 dark:hover:text-zinc-300"
@@ -41,16 +42,16 @@ export default function BottomNav() {
 
   return (
     <nav
-      className="lg:hidden fixed bottom-0 inset-x-0 z-40 px-4 select-none"
-      style={{ paddingBottom: "max(env(safe-area-inset-bottom), 12px)" }}
+      className="lg:hidden fixed bottom-0 inset-x-0 z-40 px-3 select-none"
+      style={{ paddingBottom: "max(env(safe-area-inset-bottom), 10px)" }}
       aria-label="Primary"
     >
-      <div className="grid grid-cols-5 gap-1 px-2 py-1.5 items-stretch rounded-[28px] bg-white/70 dark:bg-zinc-900/70 backdrop-blur-2xl border border-white/50 dark:border-white/10 shadow-[0_12px_40px_-8px_rgba(0,0,0,0.25)]">
+      <div className="flex items-stretch justify-between px-2 py-1.5 rounded-[28px] bg-white/80 dark:bg-zinc-900/80 backdrop-blur-2xl border border-white/50 dark:border-white/10 shadow-[0_12px_40px_-8px_rgba(0,0,0,0.28)]">
         <Tab to="/home" label="Home" icon={House} />
         <Tab to="/products" label="Catalog" icon={Package} />
 
         {/* Center AI orb */}
-        <div className="flex flex-col items-center justify-center gap-1 py-1">
+        <div className="flex flex-col items-center justify-center gap-1 py-1 min-w-[60px]">
           <button
             type="button"
             onClick={handleCopilotClick}

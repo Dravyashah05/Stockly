@@ -158,8 +158,12 @@ export default function QRScannerModal({ open, onClose, onScan, title = "Scan QR
     setScannedSuccess(false);
     setIsStarting(true);
 
+    // Guard against the async camera lookup resolving after close —
+    // without this the camera can start (and stay held) behind the modal.
+    let cancelled = false;
     Html5Qrcode.getCameras()
       .then((devices) => {
+        if (cancelled) return;
         if (devices && devices.length > 0) {
           setCameras(devices);
           // Prefer back camera if found
@@ -175,11 +179,14 @@ export default function QRScannerModal({ open, onClose, onScan, title = "Scan QR
         }
       })
       .catch((err) => {
-        console.warn("getCameras error, falling back to facingMode:", err);
-        startScannerWithCamera(null);
+        if (!cancelled) {
+          console.warn("getCameras error, falling back to facingMode:", err);
+          startScannerWithCamera(null);
+        }
       });
 
     return () => {
+      cancelled = true;
       stopScanner();
     };
   }, [open, startScannerWithCamera, stopScanner]);

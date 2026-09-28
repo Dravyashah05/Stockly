@@ -16,6 +16,7 @@ import Modal from "../ui/Modal";
 import Button from "../ui/Button";
 import { useToast } from "../../context/ToastContext";
 import { downloadAndAutoInstall, canInstallPackages, openInstallSettings } from "../../utils/nativeUpdater";
+import { dismissUpdateVersion } from "../../api/appUpdate";
 import { hapticSuccess, hapticWarning } from "../../utils/haptics";
 import { playSuccessSound, playErrorSound } from "../../utils/sound";
 
@@ -43,13 +44,21 @@ export default function AppUpdateModal({
   if (!open || !updateInfo || !updateInfo.hasUpdate) return null;
 
   const {
-    currentVersion = "1.0.0",
+    currentVersion = "1.1.0",
     latestVersion = "1.1.0",
     releaseNotes = [],
     apkUrl = "/stockly.apk",
     apkSize = "36 MB",
     mandatory = false,
   } = updateInfo;
+
+  const handleRemindLater = () => {
+    // Persist dismissal so auto-check stops nagging for this exact release.
+    // A newer release clears it automatically (see checkAppUpdate).
+    if (latestVersion) dismissUpdateVersion(latestVersion);
+    if (typeof onRemindLater === "function") onRemindLater(updateInfo);
+    else onClose?.();
+  };
 
   const handleStartUpdate = async () => {
     setDownloading(true);
@@ -67,6 +76,10 @@ export default function AppUpdateModal({
       setDownloadComplete(true);
       hapticSuccess();
       playSuccessSound();
+
+      // The user now has the latest build — remember it so the popup does
+      // not reappear on next launch/check for this same version.
+      if (latestVersion) dismissUpdateVersion(latestVersion);
 
       if (res?.native) {
         push?.(`Stockly v${latestVersion} installer launched! Tap 'Install' to apply update.`, "success");
@@ -188,7 +201,7 @@ export default function AppUpdateModal({
           {!mandatory && (
             <Button
               variant="secondary"
-              onClick={onClose}
+              onClick={handleRemindLater}
               disabled={downloading}
               className="flex-1 min-h-[44px]"
             >
