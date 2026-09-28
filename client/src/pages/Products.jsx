@@ -16,7 +16,6 @@ import {
   ChevronRight, ArrowRight
 } from "lucide-react";
 import { Link, useSearchParams } from "react-router-dom";
-import FAB from "../components/ui/FAB";
 import { TableSkeleton, EmptyState } from "../components/ui/Loader";
 import { Select } from "../components/ui/Input";
 
@@ -465,8 +464,6 @@ export default function Products() {
           </button>
         </div>
       )}
-
-      {!showModal && !deleteTarget && <FAB onClick={openCreate} label="Add product" />}
 
       <ConfirmModal
         open={!!deleteTarget}

@@ -13,7 +13,6 @@ import { useToast } from "../context/ToastContext";
 import Button from "../components/ui/Button";
 import ConfirmModal from "../components/ui/ConfirmModal";
 import Modal from "../components/ui/Modal";
-import FAB from "../components/ui/FAB";
 import { TableSkeleton, EmptyState } from "../components/ui/Loader";
 import { Input, Select } from "../components/ui/Input";
 import {
@@ -567,8 +566,6 @@ export default function Stock() {
           )}
         </div>
       )}
-
-      {!showForm && !editingTx && !deleteTarget && <FAB onClick={() => openForm("IN")} label="Record movement" />}
 
       {/* Record movement */}
       <Modal open={showForm} onClose={() => setShowForm(false)} title="Record movement" size="md">
