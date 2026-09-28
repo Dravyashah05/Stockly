@@ -32,14 +32,15 @@ export default function AppUpdateModal({
   const [installPermissionRequired, setInstallPermissionRequired] = useState(false);
 
   useEffect(() => {
-    if (open) {
+    if (open && updateInfo?.hasUpdate) {
       canInstallPackages().then((can) => {
         setInstallPermissionRequired(!can);
       });
     }
-  }, [open]);
+  }, [open, updateInfo]);
 
-  if (!updateInfo) return null;
+  // Strictly only show if open and update is actually available
+  if (!open || !updateInfo || !updateInfo.hasUpdate) return null;
 
   const {
     currentVersion = "1.0.0",

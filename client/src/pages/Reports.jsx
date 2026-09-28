@@ -591,10 +591,10 @@ export default function Reports() {
         <div>
           <h1 className="text-xl sm:text-2xl font-bold tracking-tight text-zinc-900 dark:text-white flex items-center gap-2">
             <BarChart3 size={20} className="text-violet-600 dark:text-violet-400" />
-            Executive Reports & Exports
+            Reports & Exports
           </h1>
           <p className="text-xs sm:text-sm text-zinc-500 dark:text-zinc-400 mt-0.5">
-            Export PDF, Excel, and CSV audits for tax, compliance, and stock reconciliation
+            Audit sheets & compliance exports
           </p>
         </div>
       </div>

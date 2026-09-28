@@ -119,7 +119,7 @@ export default function Suppliers() {
       <div className="flex items-center justify-between gap-3">
         <div className="min-w-0">
           <h1 className="page-title">Suppliers</h1>
-          <p className="page-subtitle">{list.length} vendors • purchase contacts</p>
+          <p className="page-subtitle">{list.length} active vendors</p>
         </div>
         <Button size="sm" onClick={openCreate} className="shrink-0">
           <Plus size={15} /> <span className="hidden sm:inline">New supplier</span>

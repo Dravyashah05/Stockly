@@ -245,8 +245,8 @@ export default function Home() {
             <ArrowUp size={18} />
           </span>
           <span className="min-w-0">
-            <span className="block text-sm font-bold leading-tight">Stock in</span>
-            <span className="block text-xs text-emerald-100">Receive goods</span>
+            <span className="block text-sm font-bold leading-tight">Stock In</span>
+            <span className="block text-xs text-emerald-100 font-medium">+ Receive</span>
           </span>
         </Link>
         <Link
@@ -257,8 +257,8 @@ export default function Home() {
             <ArrowDown size={18} />
           </span>
           <span className="min-w-0">
-            <span className="block text-sm font-bold leading-tight">Stock out</span>
-            <span className="block text-xs text-red-100">Dispatch goods</span>
+            <span className="block text-sm font-bold leading-tight">Stock Out</span>
+            <span className="block text-xs text-red-100 font-medium">− Dispatch</span>
           </span>
         </Link>
       </div>
@@ -272,14 +272,14 @@ export default function Home() {
             to="/products"
             label="Products"
             value={products.length}
-            sub={`${totalUnits.toLocaleString()} units on hand`}
+            sub={`${totalUnits.toLocaleString()} units`}
             icon={Package}
           />
           <StatTile
             to="/products?filter=low"
             label="Low stock"
             value={alertCount}
-            sub={outStock.length ? `${outStock.length} out of stock` : "All stocked"}
+            sub={outStock.length ? `${outStock.length} out of stock` : alertCount ? `${alertCount} low` : "All good"}
             icon={AlertTriangle}
             tone={alertCount ? "amber" : "zinc"}
             highlight={alertCount > 0}
@@ -288,14 +288,14 @@ export default function Home() {
             to="/categories"
             label="Categories"
             value={categories.length}
-            sub="Organized groups"
+            sub="Active groups"
             icon={FolderKanban}
           />
           <StatTile
             to="/dashboard"
             label="Valuation"
             value={formatValue(totalValuation)}
-            sub="Total stock value"
+            sub="Inventory value"
             icon={TrendingUp}
             tone="emerald"
           />
@@ -369,17 +369,15 @@ export default function Home() {
       </div>
 
       {/* AI Copilot */}
-      <div className="rounded-2xl bg-zinc-950 dark:bg-zinc-900 dark:border dark:border-zinc-800 text-white p-4 sm:p-5 flex flex-col sm:flex-row sm:items-center gap-3.5">
-        <div className="flex items-start gap-3 flex-1 min-w-0">
-          <span className="w-10 h-10 rounded-xl bg-white/10 grid place-items-center shrink-0">
+      <div className="rounded-2xl bg-zinc-950 dark:bg-zinc-900 dark:border dark:border-zinc-800 text-white p-3.5 sm:p-4 flex items-center justify-between gap-3">
+        <div className="flex items-center gap-3 min-w-0">
+          <span className="w-10 h-10 rounded-xl bg-violet-600/20 text-violet-400 grid place-items-center shrink-0 border border-violet-500/20">
             <Sparkles size={18} />
           </span>
-          <span>
-            <span className="block text-sm font-bold">Stockly AI</span>
-            <span className="block text-xs text-zinc-400 mt-0.5">
-              Ask about low stock, valuations, or catalog metrics.
-            </span>
-          </span>
+          <div className="min-w-0">
+            <div className="text-sm font-bold truncate">Stockly AI Assistant</div>
+            <div className="text-xs text-zinc-400 truncate">Inventory intelligence & forecasting</div>
+          </div>
         </div>
         <button
           type="button"
@@ -387,9 +385,9 @@ export default function Home() {
             hapticMedium();
             openAiCopilot();
           }}
-          className="inline-flex items-center justify-center gap-1.5 px-4 py-2.5 rounded-xl bg-white text-zinc-900 text-sm font-semibold hover:bg-zinc-100 active:scale-95 transition shrink-0"
+          className="inline-flex items-center justify-center gap-1.5 px-3.5 py-2 rounded-xl bg-white text-zinc-900 text-xs font-bold hover:bg-zinc-100 active:scale-95 transition shrink-0"
         >
-          <Bot size={15} /> Ask Stockly AI <ArrowRight size={13} />
+          <Bot size={14} /> <span>Ask AI</span> <ArrowRight size={12} />
         </button>
       </div>
 

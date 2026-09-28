@@ -175,16 +175,14 @@ export default function Dashboard() {
       <div className="page-header">
         <div>
           <h1 className="page-title">Insights</h1>
-          <p className="page-subtitle">
-            Analytics overview • {new Date().toLocaleDateString(undefined, { month: "short", day: "numeric", year: "numeric" })}
-          </p>
+          <p className="page-subtitle">Real-time inventory intelligence</p>
         </div>
         <div className="flex flex-wrap items-center gap-2">
           <Button size="sm" variant="success" onClick={() => navigate("/stock?type=IN")}>
-            <ArrowUpCircle size={14} /> Stock in
+            <ArrowUpCircle size={14} /> In
           </Button>
           <Button size="sm" variant="danger" onClick={() => navigate("/stock?type=OUT")}>
-            <ArrowDownCircle size={14} /> Stock out
+            <ArrowDownCircle size={14} /> Out
           </Button>
           <Button size="sm" variant="secondary" onClick={() => navigate("/products")}>
             <Package size={14} /> Catalog
@@ -258,7 +256,7 @@ export default function Dashboard() {
       {/* Charts */}
       <div className="grid lg:grid-cols-2 gap-4">
         <Card>
-          <CardHeader title="Valuation by category" subtitle="Share of total stock value" />
+          <CardHeader title="Category valuation" subtitle="Value distribution" />
           {loading ? (
             <div className="space-y-3">
               {[1, 2, 3, 4].map((i) => (
@@ -295,8 +293,8 @@ export default function Dashboard() {
 
         <Card>
           <CardHeader
-            title={`Monthly flow ${monthly.year || new Date().getFullYear()}`}
-            subtitle="Stock in vs out per month"
+            title="Monthly flow"
+            subtitle={`In vs Out • ${monthly.year || new Date().getFullYear()}`}
           />
           {loading ? (
             <div className="skeleton h-40" />

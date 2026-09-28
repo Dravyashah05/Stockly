@@ -85,10 +85,10 @@ export default function Audit() {
         <div>
           <h1 className="text-xl sm:text-2xl font-bold tracking-tight text-zinc-900 dark:text-white flex items-center gap-2">
             <Shield size={20} className="text-emerald-600 dark:text-emerald-400" />
-            Security & Audit Trail
+            Audit Trail
           </h1>
           <p className="text-xs sm:text-sm text-zinc-500 dark:text-zinc-400 mt-0.5">
-            Immutable log of all user actions, product mutations, and stock entries
+            System activity log & history
           </p>
         </div>
 
@@ -96,7 +96,7 @@ export default function Audit() {
           onClick={() => load(1)}
           className="inline-flex items-center justify-center gap-1.5 px-3.5 py-2 rounded-xl bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 text-xs font-semibold shadow-xs hover:bg-zinc-50 active:scale-95 transition min-h-[40px]"
         >
-          <RefreshCw size={13} /> Refresh Trail
+          <RefreshCw size={13} /> Refresh
         </button>
       </div>
 

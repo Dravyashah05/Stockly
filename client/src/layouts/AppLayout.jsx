@@ -217,15 +217,15 @@ export default function AppLayout({ children }) {
     {
       group: "Operations",
       items: [
-        { to: "/home", label: "Dashboard", icon: House },
-        { to: "/products", label: "Products Catalog", icon: Package },
-        { to: "/stock", label: "Stock Ledger", icon: ArrowLeftRight },
+        { to: "/home", label: "Home", icon: House },
+        { to: "/products", label: "Products", icon: Package },
+        { to: "/stock", label: "Ledger", icon: ArrowLeftRight },
         { to: "/categories", label: "Categories", icon: FolderKanban },
-        { to: "/suppliers", label: "Suppliers & Vendors", icon: Building2 },
+        { to: "/suppliers", label: "Suppliers", icon: Building2 },
       ],
     },
     {
-      group: "Intelligence & AI",
+      group: "Intelligence",
       items: [
         {
           to: "#ai",
@@ -234,16 +234,16 @@ export default function AppLayout({ children }) {
           isAi: true,
           badge: "AI",
         },
-        { to: "/dashboard", label: "Insights & KPIs", icon: BarChart3 },
-        { to: "/reports", label: "Reports & Export", icon: LayoutDashboard },
-        { to: "/audit", label: "Security & Audit", icon: Shield },
+        { to: "/dashboard", label: "Insights", icon: BarChart3 },
+        { to: "/reports", label: "Reports", icon: LayoutDashboard },
+        { to: "/audit", label: "Audit", icon: Shield },
       ],
     },
     {
-      group: "System & Apps",
+      group: "System",
       items: [
-        { to: "/settings", label: "App Settings & Sync", icon: Settings },
-        { to: "/app-store", label: "Download Mobile App", icon: Smartphone, badge: "APK" },
+        { to: "/settings", label: "Settings", icon: Settings },
+        { to: "/app-store", label: "Mobile App", icon: Smartphone, badge: "APK" },
       ],
     },
   ];

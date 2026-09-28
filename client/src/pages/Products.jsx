@@ -13,13 +13,20 @@ import { useSearch } from "../context/SearchContext";
 import {
   Plus, Trash2, Package, Layers,
   CheckSquare, Square, ArrowUpDown, ChevronLeft,
-  ChevronRight, ArrowRight
+  ChevronRight, ArrowRight, AlertTriangle, X,
 } from "lucide-react";
 import { Link, useSearchParams } from "react-router-dom";
 import { TableSkeleton, EmptyState } from "../components/ui/Loader";
 import { Select } from "../components/ui/Input";
 
 const PAGE_SIZES = [10, 25, 50, 100];
+
+const STOCK_FILTERS = [
+  { id: "", label: "All" },
+  { id: "low", label: "Low stock", color: "amber" },
+  { id: "out", label: "Out of stock", color: "red" },
+  { id: "in", label: "In stock", color: "emerald" },
+];
 
 export default function Products() {
   const { push } = useToast();
@@ -199,6 +206,9 @@ export default function Products() {
     setTimeout(() => setCopiedSku(null), 2000);
   };
 
+  const activeFilterCount =
+    (selectedCategory ? 1 : 0) + (stockStatusFilter ? 1 : 0) + (search ? 1 : 0);
+
   return (
     <div className="space-y-5 animate-fade-in">
       {/* Header */}
@@ -206,17 +216,23 @@ export default function Products() {
         <div className="min-w-0">
           <h1 className="page-title">Products</h1>
           <p className="page-subtitle">
-            {pagination.total || products.length} items in catalog
+            {pagination.total || products.length} items
+            {activeFilterCount > 0 && (
+              <span className="ml-2 inline-flex items-center gap-1 text-[11px] font-semibold px-1.5 py-0.5 rounded-full bg-amber-100 dark:bg-amber-500/15 text-amber-700 dark:text-amber-300">
+                <AlertTriangle size={10} /> {activeFilterCount} active
+              </span>
+            )}
           </p>
         </div>
         <Button size="sm" onClick={openCreate} className="shrink-0">
-          <Plus size={15} /> New product
+          <Plus size={15} /> <span className="hidden sm:inline">New product</span><span className="sm:hidden">New</span>
         </Button>
       </div>
 
-      {/* Category pills + sort */}
+      {/* Filters panel */}
       <div className="card p-3 space-y-3">
-        <div className="flex gap-1.5 overflow-x-auto no-scrollbar">
+        {/* Category pills */}
+        <div className="flex gap-1.5 overflow-x-auto no-scrollbar pb-0.5">
           <button
             onClick={() => setSelectedCategory("")}
             className={`shrink-0 inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-semibold transition ${
@@ -252,6 +268,36 @@ export default function Products() {
           })}
         </div>
 
+        {/* Stock status filter */}
+        <div className="flex items-center gap-2 pt-3 border-t border-zinc-100 dark:border-zinc-800">
+          <span className="text-[10px] font-bold uppercase tracking-wider text-zinc-400 shrink-0">Status</span>
+          <div className="flex gap-1.5 overflow-x-auto no-scrollbar">
+            {STOCK_FILTERS.map((f) => {
+              const isActive = stockStatusFilter === f.id;
+              const colorMap = {
+                amber: isActive ? "bg-amber-500 text-white" : "bg-amber-50 dark:bg-amber-500/10 text-amber-700 dark:text-amber-300 hover:bg-amber-100 dark:hover:bg-amber-500/20",
+                red: isActive ? "bg-red-500 text-white" : "bg-red-50 dark:bg-red-500/10 text-red-700 dark:text-red-300 hover:bg-red-100 dark:hover:bg-red-500/20",
+                emerald: isActive ? "bg-emerald-500 text-white" : "bg-emerald-50 dark:bg-emerald-500/10 text-emerald-700 dark:text-emerald-300 hover:bg-emerald-100 dark:hover:bg-emerald-500/20",
+              };
+              const cls = f.color
+                ? colorMap[f.color]
+                : isActive
+                ? "bg-zinc-900 dark:bg-white text-white dark:text-zinc-900"
+                : "bg-zinc-100 dark:bg-zinc-800 text-zinc-600 dark:text-zinc-300 hover:bg-zinc-200 dark:hover:bg-zinc-700";
+              return (
+                <button
+                  key={f.id}
+                  onClick={() => setStockStatusFilter(isActive && f.id !== "" ? "" : f.id)}
+                  className={`shrink-0 px-3 py-1.5 rounded-full text-xs font-semibold transition ${cls}`}
+                >
+                  {f.label}
+                </button>
+              );
+            })}
+          </div>
+        </div>
+
+        {/* Sort + select row */}
         <div className="flex items-center gap-2 pt-3 border-t border-zinc-100 dark:border-zinc-800">
           <span className="inline-flex items-center gap-1.5 text-xs text-zinc-500 shrink-0">
             <ArrowUpDown size={13} /> Sort
@@ -285,6 +331,15 @@ export default function Products() {
             )}
             {selectedIds.size > 0 ? `${selectedIds.size} selected` : "Select all"}
           </button>
+          {(selectedCategory || stockStatusFilter) && (
+            <button
+              onClick={() => { setSelectedCategory(""); setStockStatusFilter(""); }}
+              className="inline-flex items-center gap-1 text-xs font-semibold text-zinc-400 hover:text-zinc-700 dark:hover:text-zinc-200 transition shrink-0"
+              title="Clear all filters"
+            >
+              <X size={13} /> Clear
+            </button>
+          )}
         </div>
       </div>
 
@@ -301,9 +356,16 @@ export default function Products() {
               : "Your catalog is empty. Add your first product to get started."
           }
           action={
-            <Button onClick={openCreate}>
-              <Plus size={15} /> Create product
-            </Button>
+            <div className="flex gap-2">
+              {(selectedCategory || stockStatusFilter || search) && (
+                <Button variant="secondary" onClick={() => { setSelectedCategory(""); setStockStatusFilter(""); }}>
+                  <X size={14} /> Clear filters
+                </Button>
+              )}
+              <Button onClick={openCreate}>
+                <Plus size={15} /> Create product
+              </Button>
+            </div>
           }
         />
       ) : (
@@ -439,7 +501,7 @@ export default function Products() {
         </div>
       )}
 
-      {/* Bulk bar */}
+      {/* Bulk action bar */}
       {selectedIds.size > 0 && (
         <div className="fixed bottom-24 lg:bottom-8 left-1/2 -translate-x-1/2 z-40 bg-zinc-900 text-white dark:bg-white dark:text-zinc-900 pl-4 pr-2 py-2 rounded-2xl shadow-xl flex items-center gap-2 max-w-[95vw] animate-slide-up">
           <span className="text-xs font-bold shrink-0">{selectedIds.size} selected</span>

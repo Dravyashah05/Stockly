@@ -257,7 +257,7 @@ export default function Categories() {
       <div className="flex items-center justify-between gap-3">
         <div className="min-w-0">
           <h1 className="page-title">Categories</h1>
-          <p className="page-subtitle">{cats.length} groups • custom fields • valuation</p>
+          <p className="page-subtitle">{cats.length} groups</p>
         </div>
         <div className="flex items-center gap-2 shrink-0">
           <div className="segmented-control">

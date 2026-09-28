@@ -207,8 +207,8 @@ export default function BarcodeScannerModal({
         stopScanner();
         onClose?.();
       }}
-      title="Barcode & SKU Scanner"
-      description="Scan any product barcode, QR label, or warehouse tag"
+      title="Barcode Scanner"
+      description="Scan 1D/2D product barcodes or QR labels"
       size="sm"
     >
       <div className="flex flex-col items-center space-y-4">
@@ -260,7 +260,7 @@ export default function BarcodeScannerModal({
           {isStarting && !errorMsg && (
             <div className="absolute inset-0 bg-zinc-950 flex flex-col items-center justify-center gap-2 text-zinc-400 z-10">
               <div className="w-6 h-6 border-2 border-zinc-700 border-t-emerald-500 rounded-full animate-spin" />
-              <span className="text-xs">Accessing camera hardware…</span>
+              <span className="text-xs">Connecting camera…</span>
             </div>
           )}
         </div>
@@ -290,12 +290,12 @@ export default function BarcodeScannerModal({
                   </div>
                   <div className="text-right shrink-0">
                     <div className="text-sm font-extrabold text-zinc-900 dark:text-zinc-100">
-                      ${Number(matchedProduct.price || 0).toFixed(2)}
+                      ₹{Number(matchedProduct.price || 0).toLocaleString("en-IN")}
                     </div>
                   </div>
                 </div>
 
-                {/* 1-Tap Quick Action Suite */}
+                {/* Quick Actions */}
                 <div className="grid grid-cols-2 gap-2">
                   <button
                     type="button"
@@ -303,7 +303,7 @@ export default function BarcodeScannerModal({
                     className="p-2.5 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white font-extrabold text-xs shadow-md shadow-emerald-600/20 active:scale-95 transition flex items-center justify-center gap-1.5"
                   >
                     <ArrowDownRight size={15} />
-                    <span>Receive (IN)</span>
+                    <span>Stock In (+)</span>
                   </button>
 
                   <button
@@ -312,15 +312,15 @@ export default function BarcodeScannerModal({
                     className="p-2.5 rounded-xl bg-rose-600 hover:bg-rose-700 text-white font-extrabold text-xs shadow-md shadow-rose-600/20 active:scale-95 transition flex items-center justify-center gap-1.5"
                   >
                     <ArrowUpRight size={15} />
-                    <span>Dispatch (OUT)</span>
+                    <span>Stock Out (−)</span>
                   </button>
                 </div>
               </div>
             ) : (
               <div className="space-y-3">
-                <div className="p-3 rounded-xl bg-amber-500/10 border border-amber-500/20 text-xs text-amber-700 dark:text-amber-300 flex items-center gap-2">
-                  <AlertCircle size={16} className="shrink-0" />
-                  <span>No product matching code "{detectedCode}" in catalog.</span>
+                <div className="p-2.5 rounded-xl bg-amber-500/10 border border-amber-500/20 text-xs text-amber-700 dark:text-amber-300 flex items-center gap-2">
+                  <AlertCircle size={15} className="shrink-0" />
+                  <span>Unregistered barcode: {detectedCode}</span>
                 </div>
                 <button
                   type="button"
@@ -328,7 +328,7 @@ export default function BarcodeScannerModal({
                   className="w-full p-2.5 rounded-xl bg-violet-600 hover:bg-violet-700 text-white font-extrabold text-xs shadow-md shadow-violet-600/25 active:scale-95 transition flex items-center justify-center gap-1.5"
                 >
                   <Plus size={15} />
-                  <span>Add as New Product SKU</span>
+                  <span>Create Product</span>
                 </button>
               </div>
             )}
@@ -347,7 +347,7 @@ export default function BarcodeScannerModal({
               Switch Camera
             </button>
           ) : (
-            <span className="text-[11px] text-zinc-400">Scan 1D / 2D barcodes</span>
+            <span className="text-[11px] text-zinc-400">1D & 2D Barcodes</span>
           )}
 
           <Button
@@ -358,7 +358,7 @@ export default function BarcodeScannerModal({
               onClose?.();
             }}
           >
-            Close
+            Done
           </Button>
         </div>
       </div>

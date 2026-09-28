@@ -23,8 +23,13 @@ import {
   Package,
   Filter,
   ChevronDown,
+  ChevronLeft,
+  ChevronRight,
   ScanLine,
   Calendar,
+  TrendingUp,
+  TrendingDown,
+  X,
 } from "lucide-react";
 import { useSearchParams, useNavigate } from "react-router-dom";
 import { useSearch } from "../context/SearchContext";
@@ -32,6 +37,8 @@ import { playStockInSound, playStockOutSound, playErrorSound } from "../utils/so
 import { hapticSuccess, hapticLight, hapticWarning } from "../utils/haptics";
 import { syncInventoryToWidget } from "../utils/nativeWidget";
 import BarcodeScannerModal from "../components/products/BarcodeScannerModal";
+
+const QUICK_QTYS = [1, 5, 10, 25, 50, 100];
 
 function dateKeyFromISO(iso) {
   const d = new Date(iso);
@@ -55,6 +62,7 @@ function labelForDate(key) {
 }
 
 const REASONS = ["Purchase", "Sale", "Adjustment", "Return", "Damage", "Other"];
+const PAGE_SIZES = [20, 50, 100];
 
 export default function Stock() {
   const navigate = useNavigate();
@@ -77,6 +85,7 @@ export default function Stock() {
   const [tx, setTx] = useState([]);
   const [categories, setCategories] = useState([]);
   const [scannerOpen, setScannerOpen] = useState(urlAction === "scan");
+  const [pageLimit, setPageLimit] = useState(20);
   const [filters, setFilters] = useState({
     product: "",
     category: "",
@@ -166,7 +175,7 @@ export default function Stock() {
     if (filters.startDate) params.startDate = new Date(filters.startDate + "T00:00:00").toISOString();
     if (filters.endDate) params.endDate = new Date(filters.endDate + "T23:59:59.999").toISOString();
     params.page = filters.page;
-    params.limit = 20;
+    params.limit = pageLimit;
     getStockHistory(params)
       .then((r) => {
         setTx(r.data);
@@ -177,7 +186,7 @@ export default function Stock() {
 
   useEffect(() => {
     loadHistory();
-  }, [filters.product, filters.type, filters.category, filters.page, filters.startDate, filters.endDate]);
+  }, [filters.product, filters.type, filters.category, filters.page, filters.startDate, filters.endDate, pageLimit]);
 
   useEffect(() => {
     const t = setTimeout(loadHistory, 300);
@@ -306,8 +315,8 @@ export default function Stock() {
       {/* Header */}
       <div className="flex items-center justify-between gap-3">
         <div className="min-w-0">
-          <h1 className="page-title">Stock ledger</h1>
-          <p className="page-subtitle">Audit trail of every movement</p>
+          <h1 className="page-title">Ledger</h1>
+          <p className="page-subtitle">Transaction history</p>
         </div>
         <div className="flex items-center gap-2 shrink-0">
           <Button
@@ -322,40 +331,60 @@ export default function Stock() {
             <ScanLine size={15} /> <span className="hidden sm:inline">Scan</span>
           </Button>
           <Button size="sm" variant="success" onClick={() => openForm("IN")}>
-            <ArrowUp size={15} /> Stock in
+            <ArrowUp size={15} /> In
           </Button>
           <Button size="sm" variant="danger" onClick={() => openForm("OUT")}>
-            <ArrowDown size={15} /> Stock out
+            <ArrowDown size={15} /> Out
           </Button>
         </div>
       </div>
 
-      {/* Summary + presets */}
-      <div className="grid grid-cols-2 gap-3">
+      {/* Summary cards */}
+      <div className="grid grid-cols-3 gap-3">
         <div className="card p-3.5 flex items-center gap-3">
           <span className="w-9 h-9 rounded-xl bg-emerald-100 dark:bg-emerald-500/15 text-emerald-600 dark:text-emerald-400 grid place-items-center shrink-0">
-            <ArrowUp size={16} />
+            <TrendingUp size={16} />
           </span>
           <span className="min-w-0">
             <span className="block text-[11px] font-bold uppercase tracking-wider text-zinc-500">Inbound</span>
-            <span className="block text-lg font-bold tabular-nums text-zinc-900 dark:text-white leading-tight">
+            <span className="block text-lg font-bold tabular-nums text-emerald-600 dark:text-emerald-400 leading-tight">
               +{totalIn}
             </span>
           </span>
         </div>
         <div className="card p-3.5 flex items-center gap-3">
           <span className="w-9 h-9 rounded-xl bg-red-100 dark:bg-red-500/15 text-red-600 dark:text-red-400 grid place-items-center shrink-0">
-            <ArrowDown size={16} />
+            <TrendingDown size={16} />
           </span>
           <span className="min-w-0">
             <span className="block text-[11px] font-bold uppercase tracking-wider text-zinc-500">Outbound</span>
-            <span className="block text-lg font-bold tabular-nums text-zinc-900 dark:text-white leading-tight">
+            <span className="block text-lg font-bold tabular-nums text-red-600 dark:text-red-400 leading-tight">
               −{totalOut}
+            </span>
+          </span>
+        </div>
+        <div className="card p-3.5 flex items-center gap-3">
+          <span className={`w-9 h-9 rounded-xl grid place-items-center shrink-0 ${
+            totalIn - totalOut >= 0
+              ? "bg-emerald-100 dark:bg-emerald-500/15 text-emerald-600 dark:text-emerald-400"
+              : "bg-red-100 dark:bg-red-500/15 text-red-600 dark:text-red-400"
+          }`}>
+            {totalIn - totalOut >= 0 ? <ArrowUp size={16} /> : <ArrowDown size={16} />}
+          </span>
+          <span className="min-w-0">
+            <span className="block text-[11px] font-bold uppercase tracking-wider text-zinc-500">Net</span>
+            <span className={`block text-lg font-bold tabular-nums leading-tight ${
+              totalIn - totalOut >= 0
+                ? "text-emerald-600 dark:text-emerald-400"
+                : "text-red-600 dark:text-red-400"
+            }`}>
+              {totalIn - totalOut >= 0 ? "+" : ""}{totalIn - totalOut}
             </span>
           </span>
         </div>
       </div>
 
+      {/* Date presets */}
       <div className="card p-2.5">
         <div className="segmented-control w-full grid grid-cols-5 gap-1">
           {presets.map((p) => (
@@ -386,7 +415,7 @@ export default function Stock() {
         )}
       </div>
 
-      {/* Filter row */}
+      {/* Filter toggle row */}
       <div className="flex items-center justify-between gap-2">
         <button
           onClick={() => setShowFilters((v) => !v)}
@@ -397,9 +426,19 @@ export default function Stock() {
           {hasActiveFilters && <span className="w-1.5 h-1.5 rounded-full bg-emerald-500" />}
           <ChevronDown size={13} className={`text-zinc-400 transition-transform ${showFilters ? "rotate-180" : ""}`} />
         </button>
-        <span className="text-xs text-zinc-500 truncate">
-          {tx.length} movements{tx.length === 1 ? "" : "s"}
-        </span>
+        <div className="flex items-center gap-2">
+          {hasActiveFilters && (
+            <button
+              onClick={() => setFilters(f => ({ ...f, product: "", category: "", type: "", page: 1 }))}
+              className="inline-flex items-center gap-1 text-xs font-semibold text-zinc-400 hover:text-zinc-700 dark:hover:text-zinc-200 transition"
+            >
+              <X size={12} /> Clear
+            </button>
+          )}
+          <span className="text-xs text-zinc-500">
+            {pagination?.total ?? tx.length} movement{(pagination?.total ?? tx.length) !== 1 ? "s" : ""}
+          </span>
+        </div>
       </div>
 
       {showFilters && (
@@ -449,7 +488,7 @@ export default function Stock() {
         </div>
       )}
 
-      {/* Movements */}
+      {/* Movements list */}
       {loading && tx.length === 0 ? (
         <TableSkeleton rows={6} />
       ) : grouped.length === 0 ? (
@@ -487,11 +526,18 @@ export default function Stock() {
                       const isIN = t.type === "IN";
                       return (
                         <div key={t._id} className="px-3.5 py-3 flex items-center gap-3 hover:bg-zinc-50 dark:hover:bg-zinc-800/40 transition">
-                          <span className="w-11 h-11 rounded-xl bg-zinc-100 dark:bg-zinc-800 border border-zinc-200 dark:border-zinc-700 overflow-hidden grid place-items-center shrink-0">
+                          <span className={`w-9 h-9 rounded-xl grid place-items-center shrink-0 border ${
+                            isIN
+                              ? "bg-emerald-50 dark:bg-emerald-500/10 border-emerald-200 dark:border-emerald-500/20 text-emerald-600 dark:text-emerald-400"
+                              : "bg-red-50 dark:bg-red-500/10 border-red-200 dark:border-red-500/20 text-red-600 dark:text-red-400"
+                          }`}>
+                            {isIN ? <ArrowUp size={14} /> : <ArrowDown size={14} />}
+                          </span>
+                          <span className="w-9 h-9 rounded-xl bg-zinc-100 dark:bg-zinc-800 border border-zinc-200 dark:border-zinc-700 overflow-hidden grid place-items-center shrink-0">
                             {t.productId?.image ? (
                               <img src={t.productId.image} alt="" loading="lazy" className="w-full h-full object-cover" />
                             ) : (
-                              <Package size={17} className="text-zinc-400" />
+                              <Package size={15} className="text-zinc-400" />
                             )}
                           </span>
                           <div className="flex-1 min-w-0">
@@ -505,7 +551,7 @@ export default function Stock() {
                                 }`}
                               >
                                 {isIN ? "+" : "−"}
-                                {t.quantity} <span className="font-medium text-zinc-400">{t.productId?.unit || ""}</span>
+                                {t.quantity} <span className="font-medium text-zinc-400 text-[11px]">{t.productId?.unit || ""}</span>
                               </span>
                             </div>
                             <div className="flex items-center justify-between gap-2 text-xs text-zinc-500 mt-0.5">
@@ -546,28 +592,42 @@ export default function Stock() {
             );
           })}
 
+          {/* Pagination */}
           {pagination && pagination.pages > 1 && (
-            <div className="card p-3 flex items-center justify-between">
-              <Button variant="secondary" size="sm" disabled={filters.page <= 1} onClick={() => setFilters({ ...filters, page: filters.page - 1 })}>
-                Prev
-              </Button>
+            <div className="card p-3 flex items-center justify-between gap-3">
               <span className="text-xs text-zinc-500">
                 Page <span className="font-bold text-zinc-800 dark:text-zinc-200">{pagination.page}</span> of {pagination.pages}
+                <span className="hidden sm:inline"> • {pagination.total} items</span>
               </span>
-              <Button
-                variant="secondary"
-                size="sm"
-                disabled={filters.page >= pagination.pages}
-                onClick={() => setFilters({ ...filters, page: filters.page + 1 })}
-              >
-                Next
-              </Button>
+              <div className="flex items-center gap-2">
+                <select
+                  value={pageLimit}
+                  onChange={(e) => { setPageLimit(Number(e.target.value)); setFilters(f => ({ ...f, page: 1 })); }}
+                  className="text-xs bg-zinc-100 dark:bg-zinc-800 border-0 rounded-lg px-2 py-1.5 text-zinc-600 dark:text-zinc-300 outline-none"
+                  aria-label="Items per page"
+                >
+                  {PAGE_SIZES.map((n) => (
+                    <option key={n} value={n}>{n} / page</option>
+                  ))}
+                </select>
+                <Button variant="secondary" size="sm" disabled={filters.page <= 1} onClick={() => setFilters({ ...filters, page: filters.page - 1 })}>
+                  <ChevronLeft size={14} /> Prev
+                </Button>
+                <Button
+                  variant="secondary"
+                  size="sm"
+                  disabled={filters.page >= pagination.pages}
+                  onClick={() => setFilters({ ...filters, page: filters.page + 1 })}
+                >
+                  Next <ChevronRight size={14} />
+                </Button>
+              </div>
             </div>
           )}
         </div>
       )}
 
-      {/* Record movement */}
+      {/* Record movement modal */}
       <Modal open={showForm} onClose={() => setShowForm(false)} title="Record movement" size="md">
         <div className="space-y-4">
           <div className="grid grid-cols-2 gap-2 p-1 rounded-2xl bg-zinc-100 dark:bg-zinc-800">
@@ -616,11 +676,20 @@ export default function Stock() {
                   <Package size={16} className="text-zinc-400" />
                 )}
               </span>
-              <span className="min-w-0">
+              <span className="min-w-0 flex-1">
                 <span className="block text-[13px] font-semibold truncate text-zinc-900 dark:text-white">{selected.name}</span>
                 <span className="block text-xs text-zinc-500">
                   {selected.sku || "No SKU"} • {selected.quantity} {selected.unit} available
                 </span>
+              </span>
+              <span className={`text-xs font-bold px-2 py-1 rounded-lg ${
+                selected.quantity === 0
+                  ? "bg-red-100 dark:bg-red-500/15 text-red-700 dark:text-red-300"
+                  : selected.quantity <= (selected.minimumStock ?? 5)
+                  ? "bg-amber-100 dark:bg-amber-500/15 text-amber-700 dark:text-amber-300"
+                  : "bg-emerald-100 dark:bg-emerald-500/15 text-emerald-700 dark:text-emerald-300"
+              }`}>
+                {selected.quantity === 0 ? "Out" : selected.quantity <= (selected.minimumStock ?? 5) ? "Low" : "OK"}
               </span>
             </div>
           )}
@@ -651,6 +720,25 @@ export default function Stock() {
               >
                 +
               </button>
+            </div>
+            {/* Quick quantity presets */}
+            <div className="flex gap-1.5 mt-2 flex-wrap">
+              {QUICK_QTYS.map((q) => (
+                <button
+                  key={q}
+                  type="button"
+                  onClick={() => setQuantity(q)}
+                  className={`px-2.5 py-1 rounded-lg text-xs font-semibold transition ${
+                    quantity === q
+                      ? type === "IN"
+                        ? "bg-emerald-600 text-white"
+                        : "bg-red-600 text-white"
+                      : "bg-zinc-100 dark:bg-zinc-800 text-zinc-600 dark:text-zinc-300 hover:bg-zinc-200 dark:hover:bg-zinc-700"
+                  }`}
+                >
+                  {q}
+                </button>
+              ))}
             </div>
           </div>
 

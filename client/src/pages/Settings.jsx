@@ -28,6 +28,7 @@ import {
   Search,
   KeyRound,
   FileUp,
+  X,
 } from "lucide-react";
 import Modal from "../components/ui/Modal";
 import Button from "../components/ui/Button";
@@ -316,10 +317,15 @@ export default function Settings() {
       if (res?.hasUpdate) {
         setUpdateInfo(res);
         setUpdateModalOpen(true);
+        push(`Update v${res.latestVersion} available`, "info");
       } else {
+        setUpdateInfo(null);
+        setUpdateModalOpen(false);
         push(`v${APP_CURRENT_VERSION} is up to date`, "success");
       }
     } catch (e) {
+      setUpdateInfo(null);
+      setUpdateModalOpen(false);
       push("Update check failed: " + e.message, "error");
     } finally {
       setCheckingUpdate(false);
@@ -580,6 +586,8 @@ export default function Settings() {
   const showDevices = matches("device session sync link authorize qr pair phone tablet");
   const showAi = matches("ai opencode model api key intelligence copilot");
   const showData = matches("data backup export import json csv excel template");
+  const showAbout = matches("about android app version apk download mobile");
+  const anyVisible = showAccount || showPrefs || showDevices || showAi || showData;
 
   return (
     <div className="max-w-xl mx-auto space-y-5 pb-24 animate-fade-in">
@@ -597,18 +605,33 @@ export default function Settings() {
             placeholder="Search settings…"
             className="input-field pl-10"
           />
+          {query && (
+            <button
+              onClick={() => setQuery("")}
+              className="absolute right-3.5 top-1/2 -translate-y-1/2 text-zinc-400 hover:text-zinc-700 dark:hover:text-zinc-200 transition"
+              aria-label="Clear search"
+            >
+              <X size={14} />
+            </button>
+          )}
         </div>
+        {query && !anyVisible && !showAbout && (
+          <div className="text-center py-6 text-sm text-zinc-500">
+            No settings match "<span className="font-medium text-zinc-700 dark:text-zinc-200">{query}</span>"
+          </div>
+        )}
       </div>
 
       {/* profile */}
       {showAccount && (
         <div className="card p-4 flex items-center gap-3">
-          <div className="w-11 h-11 rounded-full bg-zinc-900 dark:bg-white text-white dark:text-zinc-900 grid place-items-center font-bold text-sm shrink-0">
+          <div className="w-12 h-12 rounded-full bg-gradient-to-br from-zinc-800 to-zinc-600 dark:from-white dark:to-zinc-200 text-white dark:text-zinc-900 grid place-items-center font-bold text-sm shrink-0 shadow-sm">
             {initials}
           </div>
           <div className="min-w-0 flex-1">
             <div className="text-sm font-bold text-zinc-900 dark:text-white truncate">{user?.name || "User"}</div>
             <div className="text-xs text-zinc-500 truncate">{user?.email}</div>
+            <div className="text-[11px] text-emerald-600 dark:text-emerald-400 font-medium mt-0.5">Active session</div>
           </div>
           <Button variant="secondary" size="sm" onClick={() => setShowEdit(true)}>
             Edit
@@ -894,12 +917,13 @@ export default function Settings() {
       )}
 
       {/* about */}
-      <Section title="About">
-        <Row
-          icon={Smartphone}
-          title="Android app"
-          sub="Offline sync · barcode scanner"
-          right={
+      {(showAbout || !query) && (
+        <Section title="About">
+          <Row
+            icon={Smartphone}
+            title="Android app"
+            sub="Offline sync · barcode scanner"
+            right={
             <span className="flex items-center gap-2">
               <a
                 href="/stockly.apk"
@@ -919,6 +943,7 @@ export default function Settings() {
         />
         <Row icon={KeyRound} title="Version" sub={`Stockly v${APP_CURRENT_VERSION} · encrypted sessions`} />
       </Section>
+      )}
 
       {/* sign out */}
       <button

@@ -451,14 +451,11 @@ export default function ProductDetails() {
       {/* 4. STOCK ADJUSTMENT DOCK */}
       <div className="card p-4 sm:p-5 border border-zinc-200/80 dark:border-zinc-800">
         <h3 className="font-bold text-sm text-zinc-900 dark:text-white flex items-center gap-2">
-          <Box size={16} /> Quick Stock Movement
+          <Box size={16} /> Quick Movement
         </h3>
-        <p className="text-xs text-zinc-500 mt-0.5">
-          Atomic inventory adjustment for this SKU
-        </p>
 
         {!action && (
-          <div className="grid grid-cols-2 gap-2.5 mt-3.5">
+          <div className="grid grid-cols-2 gap-2.5 mt-3">
             <button
               onClick={() => {
                 setAction("IN");
@@ -466,7 +463,7 @@ export default function ProductDetails() {
               }}
               className="py-3 px-4 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-xs sm:text-sm shadow-md shadow-emerald-600/10 flex items-center justify-center gap-2 transition active:scale-95"
             >
-              <ArrowUp size={16} /> Stock IN (+)
+              <ArrowUp size={16} /> Stock In (+)
             </button>
             <button
               onClick={() => {
@@ -475,7 +472,7 @@ export default function ProductDetails() {
               }}
               className="py-3 px-4 rounded-xl bg-zinc-900 dark:bg-white text-white dark:text-zinc-900 font-bold text-xs sm:text-sm shadow-md flex items-center justify-center gap-2 transition active:scale-95"
             >
-              <ArrowDown size={16} /> Stock OUT (-)
+              <ArrowDown size={16} /> Stock Out (−)
             </button>
           </div>
         )}
