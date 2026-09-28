@@ -38,7 +38,6 @@ export default function Modal({
       className="fixed inset-0 z-[70] flex items-end sm:items-center justify-center p-0 sm:p-4"
       role="dialog"
       aria-modal="true"
-      aria-labelledby="modal-title"
     >
       <div
         className="absolute inset-0 bg-zinc-950/60 backdrop-blur-md animate-fade-in will-change-[opacity]"
@@ -46,7 +45,7 @@ export default function Modal({
         aria-hidden="true"
       />
       <div
-        className={`relative w-full ${maxW} max-h-[92dvh] sm:max-h-[90vh] bg-white dark:bg-zinc-900 rounded-t-[30px] sm:rounded-3xl shadow-2xl border border-zinc-200/90 dark:border-zinc-800 flex flex-col overflow-hidden will-change-transform animate-slide-up sm:animate-scale-in`}
+        className={`relative w-full ${maxW} max-h-[92dvh] sm:max-h-[90vh] bg-white dark:bg-zinc-900 rounded-t-3xl sm:rounded-2xl shadow-2xl border border-zinc-200 dark:border-zinc-800 flex flex-col overflow-hidden will-change-transform animate-slide-up sm:animate-scale-in`}
         style={{
           transform: "translateZ(0)",
           paddingBottom: "max(env(safe-area-inset-bottom), 8px)",
@@ -74,7 +73,7 @@ export default function Modal({
           </div>
           <button
             onClick={onClose}
-            className="shrink-0 w-9 h-9 grid place-items-center rounded-xl bg-zinc-100 dark:bg-zinc-800 text-zinc-500 hover:text-zinc-900 dark:hover:text-white active:scale-95 transition"
+            className="icon-btn"
             aria-label="Close"
           >
             <X size={16} />

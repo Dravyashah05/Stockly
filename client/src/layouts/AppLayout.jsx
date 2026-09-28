@@ -229,7 +229,7 @@ export default function AppLayout({ children }) {
       items: [
         {
           to: "#ai",
-          label: "Stockly AI Copilot",
+          label: "Stockly AI",
           icon: Sparkles,
           isAi: true,
           badge: "AI",
@@ -249,18 +249,18 @@ export default function AppLayout({ children }) {
   ];
 
   return (
-    <div className="min-h-screen bg-zinc-100/70 dark:bg-zinc-950 flex flex-col lg:flex-row antialiased selection:bg-zinc-900 selection:text-white">
+    <div className="min-h-screen bg-zinc-100 dark:bg-zinc-950 flex flex-col lg:flex-row antialiased">
       <TopProgress />
 
-      {/* 1. DESKTOP NATIVE COLLAPSIBLE SIDEBAR (lg+) */}
+      {/* 1. DESKTOP FLOATING GLASS SIDEBAR (lg+) */}
       <aside
-        className={`hidden lg:flex flex-col bg-white dark:bg-zinc-900 border-r border-zinc-200/80 dark:border-zinc-800/80 shrink-0 sticky top-0 h-screen select-none z-30 transition-all duration-300 ease-in-out ${
+        className={`hidden lg:flex flex-col shrink-0 sticky top-0 h-screen select-none z-30 transition-all duration-300 ease-in-out ${
           sidebarOpen
-            ? "w-64 xl:w-72 opacity-100"
-            : "w-0 opacity-0 overflow-hidden border-r-0 pointer-events-none"
+            ? "w-[280px] xl:w-[312px] opacity-100 p-3"
+            : "w-0 opacity-0 overflow-hidden p-0 pointer-events-none"
         }`}
       >
-        <div className="w-64 xl:w-72 flex flex-col h-full">
+        <div className="w-[256px] xl:w-[288px] flex flex-col h-full rounded-3xl bg-white/75 dark:bg-zinc-900/75 backdrop-blur-2xl border border-white/50 dark:border-white/10 shadow-[0_12px_40px_-12px_rgba(0,0,0,0.25)] overflow-hidden">
           {/* Sidebar Workspace Brand / Header */}
           <div className="p-4 border-b border-zinc-100 dark:border-zinc-800/80 flex items-center justify-between">
             <Link to="/home" className="flex items-center gap-3 group">
@@ -432,7 +432,7 @@ export default function AppLayout({ children }) {
           />
 
           {/* Slide-in Menu Panel */}
-          <div className="relative w-4/5 max-w-xs bg-white dark:bg-zinc-900 h-full flex flex-col shadow-2xl border-r border-zinc-200/80 dark:border-zinc-800/80 animate-slide-up z-10">
+          <div className="relative w-4/5 max-w-xs bg-white dark:bg-zinc-900 h-full flex flex-col shadow-2xl border-r border-zinc-200/80 dark:border-zinc-800/80 animate-slide-in-left z-10">
             {/* Drawer Header */}
             <div className="p-4 border-b border-zinc-100 dark:border-zinc-800 flex items-center justify-between">
               <Link
@@ -564,11 +564,12 @@ export default function AppLayout({ children }) {
       {/* 3. MAIN APPLICATION CONTENT AREA */}
       <div className="flex-1 flex flex-col min-w-0 min-h-screen">
         {/* Top Native App Bar */}
+        {/* Floating glass navbar */}
         <header
-          className="sticky top-0 z-20 bg-white/85 dark:bg-zinc-950/85 backdrop-blur-xl border-b border-zinc-200/80 dark:border-zinc-800/80"
-          style={{ paddingTop: "env(safe-area-inset-top)" }}
+          className="sticky top-0 z-20 px-3 sm:px-6"
+          style={{ paddingTop: "max(env(safe-area-inset-top), 10px)" }}
         >
-          <div className="h-14 px-3 sm:px-6 flex items-center justify-between gap-2.5 sm:gap-3">
+          <div className="h-16 px-3 sm:px-4 flex items-center justify-between gap-2.5 sm:gap-3 rounded-2xl bg-white/75 dark:bg-zinc-900/75 backdrop-blur-2xl border border-white/50 dark:border-white/10 shadow-[0_8px_30px_-12px_rgba(0,0,0,0.25)]">
             {/* Left: Mobile menu button & Brand */}
             <div className="flex items-center gap-2 lg:hidden">
               <button
@@ -623,7 +624,7 @@ export default function AppLayout({ children }) {
                     value={search}
                     onChange={(e) => setSearch(e.target.value)}
                     placeholder={placeholder}
-                    className="w-full pl-9 pr-8 py-2 bg-zinc-100 dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 rounded-xl text-xs font-medium placeholder:text-zinc-400 focus:bg-white dark:focus:bg-zinc-900 focus:border-zinc-900 dark:focus:border-white focus:outline-none transition"
+                    className="w-full pl-9 pr-8 py-2.5 bg-zinc-100 dark:bg-zinc-900 border border-transparent rounded-full text-[13px] font-medium placeholder:text-zinc-400 focus:bg-white dark:focus:bg-zinc-900 focus:border-zinc-300 dark:focus:border-zinc-700 focus:outline-none transition"
                   />
                   {search && (
                     <button
@@ -643,11 +644,11 @@ export default function AppLayout({ children }) {
               <button
                 type="button"
                 onClick={() => setAiCopilotOpen(true)}
-                className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-gradient-to-r from-violet-600 to-indigo-600 hover:from-violet-700 hover:to-indigo-700 text-white text-xs font-bold shadow-sm shadow-violet-500/25 active:scale-95 transition"
-                title="Open AI Copilot (Ctrl+K)"
+                className="flex items-center gap-1.5 px-3.5 py-2 rounded-full bg-primary-600 hover:bg-primary-700 text-white text-xs font-semibold shadow-sm shadow-primary-600/25 active:scale-95 transition"
+                title="Open Stockly AI (Ctrl+K)"
               >
-                <Sparkles size={14} className="animate-pulse" />
-                <span className="hidden sm:inline">AI Copilot</span>
+                <Sparkles size={14} />
+                <span className="hidden sm:inline">Stockly AI</span>
               </button>
 
               {/* Mobile search trigger */}
@@ -836,9 +837,9 @@ export default function AppLayout({ children }) {
             </div>
           </div>
 
-          {/* Mobile drop search input */}
+          {/* Mobile drop-down search */}
           {showSearch && searchOpen && (
-            <div className="sm:hidden px-3 pb-3">
+            <div className="sm:hidden mt-2 p-2.5 rounded-2xl bg-white/75 dark:bg-zinc-900/75 backdrop-blur-2xl border border-white/50 dark:border-white/10 shadow-[0_8px_30px_-12px_rgba(0,0,0,0.25)]">
               <div className="relative">
                 <Search
                   size={14}
@@ -865,7 +866,7 @@ export default function AppLayout({ children }) {
         </header>
 
         {/* 4. SCROLLABLE APPLICATION VIEWPORT */}
-        <main className="flex-1 max-w-6xl w-full mx-auto p-3.5 sm:p-6 lg:p-8 pb-[calc(5.5rem+env(safe-area-inset-bottom))] lg:pb-10">
+        <main key={loc.pathname} className="flex-1 max-w-6xl w-full mx-auto p-4 sm:p-6 lg:p-8 pb-28 lg:pb-12 animate-fade-in">
           {children}
         </main>
 

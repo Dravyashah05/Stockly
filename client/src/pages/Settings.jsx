@@ -949,7 +949,7 @@ export default function Settings() {
         <div className="text-[11px] font-bold uppercase tracking-wider text-zinc-400 px-1 flex items-center justify-between">
           <span>Opencode & AI Intelligence</span>
           <span className="text-[10px] font-bold text-violet-600 dark:text-violet-400 bg-violet-50 dark:bg-violet-500/10 px-2 py-0.5 rounded-md">
-            Live Copilot & Auto-Write
+            Live Stockly AI & Auto-Write
           </span>
         </div>
 
@@ -965,7 +965,7 @@ export default function Settings() {
                     Opencode API Configuration
                   </div>
                   <div className="text-[11px] text-zinc-500">
-                    Powers Copilot chat, catalog auto-writing, and restock forecasting
+                    Powers Stockly AI chat, catalog auto-writing, and restock forecasting
                   </div>
                 </div>
               </div>

@@ -1,35 +1,22 @@
 import React, { useState, useEffect, useRef, useCallback } from "react";
 import {
-  Sparkles,
-  Send,
   X,
   Bot,
-  User,
   Trash2,
-  RefreshCw,
   Copy,
   Check,
-  Settings2,
   Volume2,
   VolumeX,
   Mic,
   MicOff,
   Download,
-  Share2,
-  ArrowRight,
-  TrendingDown,
-  Layers,
   CheckCircle2,
   AlertTriangle,
   Package,
-  ArrowUpRight,
-  Shield,
-  Zap,
-  ChevronDown,
-  Maximize2,
-  Minimize2,
-  RotateCcw,
-  Sparkle,
+  ArrowUp,
+  MoreHorizontal,
+  Sparkles,
+  Plus,
 } from "lucide-react";
 import { chatCopilot, getStoredAiSettings, saveStoredAiSettings, getRestockForecast } from "../../api/ai";
 import { useToast } from "../../context/ToastContext";
@@ -39,11 +26,11 @@ import Modal from "../ui/Modal";
 import Button from "../ui/Button";
 
 const PROMPT_CATEGORIES = [
-  { id: "all", label: "✨ All Prompts" },
-  { id: "alerts", label: "🚨 Urgent Alerts" },
-  { id: "valuation", label: "💰 Valuation & KPIs" },
-  { id: "movements", label: "⚡ Ledger Audit" },
-  { id: "forecast", label: "📈 Restock Forecast" },
+  { id: "all", label: "All" },
+  { id: "alerts", label: "Low stock" },
+  { id: "valuation", label: "Valuation" },
+  { id: "movements", label: "Ledger" },
+  { id: "forecast", label: "Forecast" },
 ];
 
 const CATEGORIZED_PROMPTS = {
@@ -92,7 +79,7 @@ function MarkdownContent({ content, onActionClick }) {
   const blocks = content.split(/\n\n+/);
 
   return (
-    <div className="space-y-3 text-xs sm:text-[13px] leading-relaxed break-words">
+    <div className="space-y-3 text-[14px] leading-relaxed break-words">
       {blocks.map((block, bIdx) => {
         const trimmed = block.trim();
 
@@ -207,7 +194,7 @@ function MarkdownContent({ content, onActionClick }) {
                   ? "bg-amber-500/10 border-amber-500/30 text-amber-900 dark:text-amber-200"
                   : isSuccess
                   ? "bg-emerald-500/10 border-emerald-500/30 text-emerald-900 dark:text-emerald-200"
-                  : "bg-violet-500/10 border-violet-500/30 text-violet-900 dark:text-violet-200"
+                  : "bg-zinc-500/10 border-zinc-500/25 text-zinc-700 dark:text-zinc-300"
               }`}
             >
               {isWarning ? (
@@ -215,7 +202,7 @@ function MarkdownContent({ content, onActionClick }) {
               ) : isSuccess ? (
                 <CheckCircle2 size={15} className="text-emerald-600 dark:text-emerald-400 shrink-0 mt-0.5" />
               ) : (
-                <Sparkles size={15} className="text-violet-600 dark:text-violet-400 shrink-0 mt-0.5" />
+                <Bot size={15} className="text-zinc-500 dark:text-zinc-400 shrink-0 mt-0.5" />
               )}
               <div className="text-xs font-medium leading-relaxed">{formatInline(quoteText, onActionClick)}</div>
             </div>
@@ -232,7 +219,7 @@ function MarkdownContent({ content, onActionClick }) {
                 const clean = line.replace(/^[-*•]\s+/, "").replace(/^\d+\.\s+/, "");
                 return (
                   <li key={lIdx} className="flex items-start gap-2 text-xs sm:text-[12.5px]">
-                    <span className="w-1.5 h-1.5 rounded-full bg-violet-500 shrink-0 mt-1.5" />
+                    <span className="w-1.5 h-1.5 rounded-full bg-zinc-400 dark:bg-zinc-500 shrink-0 mt-1.5" />
                     <span className="flex-1 text-zinc-700 dark:text-zinc-300">{formatInline(clean, onActionClick)}</span>
                   </li>
                 );
@@ -285,7 +272,7 @@ function formatInline(text, onActionClick) {
       parts.push(
         <code
           key={`c-${keyIdx++}`}
-          className="px-1.5 py-0.5 rounded-md bg-zinc-200/80 dark:bg-zinc-800 text-violet-700 dark:text-violet-300 font-mono text-[11px] font-bold"
+          className="px-1.5 py-0.5 rounded-md bg-zinc-200/70 dark:bg-zinc-800 text-zinc-800 dark:text-zinc-200 font-mono text-[11px] font-semibold"
         >
           {codeText}
         </code>
@@ -316,7 +303,7 @@ export default function AiCopilotDrawer({ open, onClose }) {
         id: "welcome",
         role: "assistant",
         content:
-          "👋 **Welcome to Stockly AI Copilot!**\n\nI am connected live to your warehouse inventory, catalog, valuation metrics, and transaction ledgers. How can I assist your operations today?\n\n*Choose a suggestion chip below or ask any question!*",
+          "Welcome to Stockly AI.\n\nI'm connected to your inventory, catalog, valuation metrics, and transaction ledger. Ask me anything, or try a suggestion below.",
         timestamp: new Date().toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" }),
         model: "DeepSeek V3",
       },
@@ -331,11 +318,23 @@ export default function AiCopilotDrawer({ open, onClose }) {
   const [activeCategory, setActiveCategory] = useState("all");
   const [speakingId, setSpeakingId] = useState(null);
   const [isListening, setIsListening] = useState(false);
-  const [isFullscreen, setIsFullscreen] = useState(false);
+  const [menuOpen, setMenuOpen] = useState(false);
+  const [showSuggestions, setShowSuggestions] = useState(true);
 
   const messagesEndRef = useRef(null);
   const inputRef = useRef(null);
+  const menuRef = useRef(null);
   const speechRecognitionRef = useRef(null);
+
+  // Close the header menu on outside tap
+  useEffect(() => {
+    if (!menuOpen) return;
+    const close = (e) => {
+      if (menuRef.current && !menuRef.current.contains(e.target)) setMenuOpen(false);
+    };
+    document.addEventListener("mousedown", close);
+    return () => document.removeEventListener("mousedown", close);
+  }, [menuOpen]);
 
   // Auto focus & scroll
   useEffect(() => {
@@ -348,6 +347,15 @@ export default function AiCopilotDrawer({ open, onClose }) {
   useEffect(() => {
     scrollToBottom();
   }, [messages, loading]);
+
+  // Autogrow the composer
+  useEffect(() => {
+    const el = inputRef.current;
+    if (el) {
+      el.style.height = "auto";
+      el.style.height = Math.min(el.scrollHeight, 140) + "px";
+    }
+  }, [input, open]);
 
   const scrollToBottom = () => {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
@@ -460,6 +468,8 @@ export default function AiCopilotDrawer({ open, onClose }) {
     setMessages((prev) => [...prev, userMsg]);
     setInput("");
     setLoading(true);
+    setShowSuggestions(false);
+    setMenuOpen(false);
 
     try {
       const history = messages.filter((m) => m.id !== "welcome");
@@ -484,8 +494,8 @@ export default function AiCopilotDrawer({ open, onClose }) {
       const errorMsg = {
         id: String(Date.now() + 1),
         role: "assistant",
-        content: `❌ **Error:** ${
-          err.message || "Failed to connect to AI service. Please check your Opencode API key in Settings."
+        content: `Something went wrong: ${
+          err.message || "Could not reach the AI service. Check your API key in Settings."
         }`,
         isError: true,
         timestamp: new Date().toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" }),
@@ -510,12 +520,13 @@ export default function AiCopilotDrawer({ open, onClose }) {
     if (window.speechSynthesis) window.speechSynthesis.cancel();
     setSpeakingId(null);
     hapticMedium();
+    setShowSuggestions(true);
     setMessages([
       {
         id: "welcome",
         role: "assistant",
         content:
-          "👋 **Conversation reset.** Ask me anything about stock movements, minimum threshold warnings, catalog valuation, or warehouse forecasts!",
+          "Conversation reset. Ask me about stock movements, low-stock warnings, valuation, or forecasts.",
         timestamp: new Date().toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" }),
         model: "DeepSeek V3",
       },
@@ -525,10 +536,10 @@ export default function AiCopilotDrawer({ open, onClose }) {
 
   const handleExportChat = () => {
     const transcript = messages
-      .map((m) => `### ${m.role === "assistant" ? "🤖 Stockly AI Copilot" : "👤 User"} (${m.timestamp || ""})\n${m.content}\n`)
+      .map((m) => `### ${m.role === "assistant" ? "Assistant" : "User"} (${m.timestamp || ""})\n${m.content}\n`)
       .join("\n---\n\n");
 
-    const blob = new Blob([`# Stockly AI Copilot Session Transcript\n*Exported on ${new Date().toLocaleString()}*\n\n${transcript}`], {
+    const blob = new Blob([`# Stockly AI Session Transcript\n*Exported on ${new Date().toLocaleString()}*\n\n${transcript}`], {
       type: "text/markdown",
     });
     const url = URL.createObjectURL(blob);
@@ -551,6 +562,7 @@ export default function AiCopilotDrawer({ open, onClose }) {
   if (!open) return null;
 
   const currentPrompts = CATEGORIZED_PROMPTS[activeCategory] || CATEGORIZED_PROMPTS.all;
+  const isFresh = messages.length <= 1;
 
   return (
     <div className="fixed inset-0 z-50 flex justify-end select-none" role="dialog" aria-modal="true">
@@ -560,332 +572,323 @@ export default function AiCopilotDrawer({ open, onClose }) {
         onClick={onClose}
       />
 
-      {/* Slide-over Full Height Sheet / Drawer */}
+      {/* Chat panel */}
       <div
-        className={`relative w-full ${
-          isFullscreen ? "sm:w-full" : "sm:w-[540px] xl:w-[580px]"
-        } bg-white dark:bg-zinc-950 h-full flex flex-col shadow-2xl border-l border-zinc-200/80 dark:border-zinc-800/90 z-10 animate-slide-up sm:animate-sheet-up transition-all duration-300`}
+        className="relative w-full sm:w-[560px] xl:w-[600px] bg-white dark:bg-zinc-950 h-full flex flex-col shadow-2xl border-l border-zinc-200 dark:border-zinc-800 z-10 animate-slide-in-right"
         style={{
           paddingTop: "env(safe-area-inset-top)",
           paddingBottom: "env(safe-area-inset-bottom)",
         }}
       >
-        {/* 1. TOP APP BAR / CHATBOT HEADER */}
-        <div className="p-3.5 sm:p-4 border-b border-zinc-100 dark:border-zinc-800/80 flex items-center justify-between gap-3 shrink-0 bg-white/95 dark:bg-zinc-950/95 backdrop-blur-xl">
-          {/* Brand & Live Status */}
-          <div className="flex items-center gap-2.5 min-w-0">
-            <div className="w-10 h-10 rounded-2xl bg-gradient-to-tr from-violet-600 via-indigo-600 to-purple-500 text-white grid place-items-center shadow-md shadow-violet-500/25 shrink-0 relative">
-              <Sparkles size={18} className="animate-pulse" />
-              <span className="absolute -bottom-0.5 -right-0.5 w-3 h-3 rounded-full bg-emerald-500 border-2 border-white dark:border-zinc-950" />
-            </div>
+        {/* Minimal header */}
+        <div className="px-2.5 py-2 flex items-center gap-1 shrink-0">
+          <button
+            onClick={() => {
+              if (window.speechSynthesis) window.speechSynthesis.cancel();
+              onClose();
+            }}
+            className="w-9 h-9 grid place-items-center rounded-full text-zinc-500 dark:text-zinc-400 hover:bg-zinc-100 dark:hover:bg-zinc-800 active:scale-95 transition shrink-0"
+            aria-label="Close Stockly AI"
+          >
+            <X size={19} />
+          </button>
 
-            <div className="min-w-0">
-              <div className="flex items-center gap-2">
-                <span className="font-extrabold text-sm sm:text-base text-zinc-900 dark:text-white tracking-tight truncate">
-                  Stockly AI Copilot
-                </span>
-                <span className="px-2 py-0.5 rounded-full bg-violet-100 dark:bg-violet-500/20 text-violet-700 dark:text-violet-300 text-[10px] font-extrabold uppercase tracking-wide shrink-0">
-                  Opencode Live
-                </span>
-              </div>
-              <div className="flex items-center gap-2 text-[11px] text-zinc-500 dark:text-zinc-400 truncate mt-0.5">
-                <span className="flex items-center gap-1">
-                  <span className="w-1.5 h-1.5 rounded-full bg-emerald-500" />
-                  Live Warehouse Sync
-                </span>
-                <span>•</span>
-                <span className="truncate font-mono">{aiSettings.model?.split("/")[1] || "deepseek-chat"}</span>
-              </div>
-            </div>
-          </div>
+          <button
+            onClick={() => {
+              setShowConfig(true);
+              hapticLight();
+            }}
+            className="flex-1 min-w-0 flex flex-col items-center px-2 py-0.5 rounded-xl hover:bg-zinc-100 dark:hover:bg-zinc-800/70 active:scale-[0.99] transition"
+            title="Model settings"
+          >
+            <span className="text-[15px] font-bold tracking-tight text-zinc-900 dark:text-white leading-tight">
+              Stockly AI
+            </span>
+            <span className="flex items-center gap-1 text-[11px] text-zinc-500 dark:text-zinc-400 leading-tight">
+              <span className="w-1.5 h-1.5 rounded-full bg-emerald-500" />
+              <span className="truncate">{aiSettings.model ? aiSettings.model.split("/").pop() : "Live"}</span>
+            </span>
+          </button>
 
-          {/* Header Action Controls */}
-          <div className="flex items-center gap-1 shrink-0">
-            {/* Fullscreen toggle on desktop */}
+          <button
+            onClick={handleClear}
+            className="w-9 h-9 grid place-items-center rounded-full text-zinc-500 dark:text-zinc-400 hover:bg-zinc-100 dark:hover:bg-zinc-800 active:scale-95 transition shrink-0"
+            title="New chat"
+            aria-label="New chat"
+          >
+            <Plus size={19} />
+          </button>
+
+          <div className="relative shrink-0" ref={menuRef}>
             <button
               onClick={() => {
-                setIsFullscreen((v) => !v);
+                setMenuOpen((v) => !v);
                 hapticLight();
               }}
-              className="hidden sm:grid w-8 h-8 rounded-xl bg-zinc-100 dark:bg-zinc-800 hover:bg-zinc-200 dark:hover:bg-zinc-700 text-zinc-600 dark:text-zinc-300 place-items-center active:scale-95 transition"
-              title={isFullscreen ? "Exit fullscreen" : "Expand to fullscreen"}
+              className="w-9 h-9 grid place-items-center rounded-full text-zinc-500 dark:text-zinc-400 hover:bg-zinc-100 dark:hover:bg-zinc-800 active:scale-95 transition"
+              title="More options"
+              aria-label="More options"
             >
-              {isFullscreen ? <Minimize2 size={15} /> : <Maximize2 size={15} />}
+              <MoreHorizontal size={18} />
             </button>
-
-            {/* Export Chat */}
-            <button
-              onClick={handleExportChat}
-              className="w-8 h-8 rounded-xl bg-zinc-100 dark:bg-zinc-800 hover:bg-zinc-200 dark:hover:bg-zinc-700 text-zinc-600 dark:text-zinc-300 grid place-items-center active:scale-95 transition"
-              title="Export Conversation (.md)"
-            >
-              <Download size={14} />
-            </button>
-
-            {/* Model & API Settings */}
-            <button
-              onClick={() => {
-                setShowConfig(true);
-                hapticLight();
-              }}
-              className="w-8 h-8 rounded-xl bg-zinc-100 dark:bg-zinc-800 hover:bg-zinc-200 dark:hover:bg-zinc-700 text-zinc-600 dark:text-zinc-300 grid place-items-center active:scale-95 transition"
-              title="Configure AI Models & Keys"
-            >
-              <Settings2 size={15} />
-            </button>
-
-            {/* Clear Chat */}
-            <button
-              onClick={handleClear}
-              className="w-8 h-8 rounded-xl bg-zinc-100 dark:bg-zinc-800 hover:bg-zinc-200 dark:hover:bg-zinc-700 text-zinc-600 dark:text-zinc-300 grid place-items-center active:scale-95 transition"
-              title="Clear Chat History"
-            >
-              <Trash2 size={14} />
-            </button>
-
-            {/* Close */}
-            <button
-              onClick={() => {
-                if (window.speechSynthesis) window.speechSynthesis.cancel();
-                onClose();
-              }}
-              className="w-8 h-8 rounded-xl bg-zinc-100 dark:bg-zinc-800 hover:bg-zinc-200 dark:hover:bg-zinc-700 text-zinc-600 dark:text-zinc-300 grid place-items-center active:scale-95 transition ml-0.5"
-              aria-label="Close Copilot"
-            >
-              <X size={16} />
-            </button>
-          </div>
-        </div>
-
-        {/* 2. LIVE DATA TICKER BANNER */}
-        <div className="px-4 py-2 bg-gradient-to-r from-violet-600/10 via-indigo-600/10 to-purple-600/10 border-b border-violet-500/15 flex items-center justify-between gap-2 shrink-0">
-          <div className="flex items-center gap-2 text-[11px] font-semibold text-violet-800 dark:text-violet-300 min-w-0">
-            <Zap size={13} className="text-violet-600 dark:text-violet-400 shrink-0" />
-            <span className="truncate">Active Knowledge: Products Catalog, Quantities, Min Alerts & Transactions</span>
-          </div>
-          <span className="text-[10px] font-bold px-1.5 py-0.5 rounded bg-violet-600 text-white shrink-0">
-            Realtime
-          </span>
-        </div>
-
-        {/* 3. MESSAGE STREAM VIEWPORT */}
-        <div className="flex-1 overflow-y-auto p-3.5 sm:p-5 space-y-4 sm:space-y-5 overscroll-contain selection:bg-violet-500/20">
-          {messages.map((m) => {
-            const isBot = m.role === "assistant";
-            const isSpeaking = speakingId === m.id;
-
-            return (
-              <div
-                key={m.id}
-                className={`flex gap-2.5 sm:gap-3 ${isBot ? "items-start" : "items-end flex-row-reverse"}`}
-              >
-                {/* Avatar Badge */}
-                <div
-                  className={`w-8 h-8 rounded-2xl grid place-items-center text-xs shrink-0 font-extrabold shadow-sm ${
-                    isBot
-                      ? "bg-gradient-to-tr from-violet-600 to-indigo-600 text-white shadow-violet-500/20"
-                      : "bg-zinc-900 dark:bg-white text-white dark:text-zinc-900"
-                  }`}
+            {menuOpen && (
+              <div className="absolute right-0 top-11 w-48 card p-1.5 shadow-xl z-30 animate-scale-in">
+                <button
+                  onClick={() => {
+                    setMenuOpen(false);
+                    handleExportChat();
+                  }}
+                  className="w-full flex items-center gap-2.5 px-3 py-2 rounded-xl text-[13px] font-medium text-zinc-700 dark:text-zinc-200 hover:bg-zinc-100 dark:hover:bg-zinc-800 transition text-left"
                 >
-                  {isBot ? <Bot size={15} /> : <User size={15} />}
-                </div>
+                  <Download size={15} className="text-zinc-400" /> Export chat
+                </button>
+                <button
+                  onClick={() => {
+                    setMenuOpen(false);
+                    handleClear();
+                  }}
+                  className="w-full flex items-center gap-2.5 px-3 py-2 rounded-xl text-[13px] font-medium text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-500/10 transition text-left"
+                >
+                  <Trash2 size={15} /> Clear chat
+                </button>
+              </div>
+            )}
+          </div>
+        </div>
 
-                {/* Message Bubble Container */}
-                <div className={`relative group max-w-[88%] sm:max-w-[82%] space-y-1`}>
-                  {/* Sender Meta Info */}
-                  <div className={`flex items-center gap-2 text-[10.5px] text-zinc-400 px-1 ${isBot ? "justify-start" : "justify-end"}`}>
-                    <span className="font-bold">{isBot ? "Stockly Copilot" : "You"}</span>
-                    <span>•</span>
-                    <span>{m.timestamp || ""}</span>
-                  </div>
+        {/* Conversation */}
+        <div className="flex-1 overflow-y-auto overscroll-contain">
+          {isFresh ? (
+            /* Hero empty state */
+            <div className="min-h-full flex flex-col items-center justify-center text-center px-6 py-8 w-full max-w-md mx-auto">
+              <span className="w-14 h-14 rounded-[18px] bg-zinc-900 dark:bg-white text-white dark:text-zinc-900 grid place-items-center shadow-sm">
+                <Bot size={26} />
+              </span>
+              <h2 className="mt-4 text-[22px] font-bold tracking-tight text-zinc-900 dark:text-white">
+                How can I help?
+              </h2>
+              <p className="mt-1 text-[13px] text-zinc-500 dark:text-zinc-400">
+                Live answers from your inventory, ledger and valuation.
+              </p>
 
-                  {/* Bubble Content */}
-                  <div
-                    className={`rounded-2xl sm:rounded-3xl p-3.5 sm:p-4 text-xs sm:text-[13px] select-text shadow-sm transition-all ${
-                      isBot
-                        ? m.isError
-                          ? "bg-red-50 dark:bg-red-500/10 text-red-700 dark:text-red-300 border border-red-200 dark:border-red-500/20"
-                          : "bg-zinc-50 dark:bg-zinc-900/90 text-zinc-800 dark:text-zinc-100 border border-zinc-200/90 dark:border-zinc-800"
-                        : "bg-gradient-to-br from-zinc-900 to-zinc-800 dark:from-white dark:to-zinc-100 text-white dark:text-zinc-900 font-medium border border-transparent shadow-md"
-                    }`}
-                  >
-                    {isBot ? (
-                      <MarkdownContent content={m.content} />
-                    ) : (
-                      <div className="whitespace-pre-wrap break-words">{m.content}</div>
-                    )}
-                  </div>
-
-                  {/* Assistant Message Tool Suite (Copy, Text-to-Speech, Model info) */}
-                  {isBot && !m.isError && (
-                    <div className="flex items-center gap-1 pt-0.5 px-1">
-                      {/* Copy */}
+              {showSuggestions && (
+                <div className="w-full mt-6 animate-fade-in">
+                  <div className="flex gap-1.5 justify-center overflow-x-auto no-scrollbar pb-2.5">
+                    {PROMPT_CATEGORIES.map((cat) => (
                       <button
-                        onClick={() => handleCopy(m.content, m.id)}
-                        className="inline-flex items-center gap-1 px-2 py-1 rounded-lg text-[10px] font-semibold text-zinc-500 hover:text-zinc-900 dark:hover:text-white hover:bg-zinc-100 dark:hover:bg-zinc-800 transition"
-                        title="Copy message text"
-                      >
-                        {copiedId === m.id ? (
-                          <>
-                            <Check size={11} className="text-emerald-500" />
-                            <span className="text-emerald-600 dark:text-emerald-400">Copied</span>
-                          </>
-                        ) : (
-                          <>
-                            <Copy size={11} />
-                            <span>Copy</span>
-                          </>
-                        )}
-                      </button>
-
-                      {/* Text-to-Speech (Read Aloud) */}
-                      <button
-                        onClick={() => handleSpeak(m.content, m.id)}
-                        className={`inline-flex items-center gap-1 px-2 py-1 rounded-lg text-[10px] font-semibold transition ${
-                          isSpeaking
-                            ? "bg-violet-100 dark:bg-violet-500/20 text-violet-700 dark:text-violet-300 animate-pulse"
-                            : "text-zinc-500 hover:text-zinc-900 dark:hover:text-white hover:bg-zinc-100 dark:hover:bg-zinc-800"
+                        key={cat.id}
+                        onClick={() => {
+                          setActiveCategory(cat.id);
+                          hapticLight();
+                        }}
+                        className={`whitespace-nowrap px-3 py-1 rounded-full text-xs font-semibold transition shrink-0 ${
+                          activeCategory === cat.id
+                            ? "bg-zinc-900 text-white dark:bg-white dark:text-zinc-900"
+                            : "text-zinc-500 dark:text-zinc-400 hover:text-zinc-900 dark:hover:text-white"
                         }`}
-                        title={isSpeaking ? "Stop speaking" : "Listen aloud"}
                       >
-                        {isSpeaking ? <VolumeX size={11} /> : <Volume2 size={11} />}
-                        <span>{isSpeaking ? "Speaking…" : "Read Aloud"}</span>
+                        {cat.label}
                       </button>
-
-                      {/* Model signature tag */}
-                      {m.model && (
-                        <span className="text-[10px] text-zinc-400 font-mono ml-auto">
-                          {m.model.includes("/") ? m.model.split("/")[1] : m.model}
-                        </span>
-                      )}
-                    </div>
-                  )}
+                    ))}
+                  </div>
+                  <div className="grid sm:grid-cols-2 gap-2">
+                    {currentPrompts.map((q, idx) => (
+                      <button
+                        key={idx}
+                        onClick={() => handleSend(q)}
+                        disabled={loading}
+                        className="text-left p-3.5 rounded-2xl bg-zinc-100/70 dark:bg-zinc-900 border border-zinc-200/70 dark:border-zinc-800 text-[13px] font-medium text-zinc-700 dark:text-zinc-200 hover:bg-zinc-100 dark:hover:bg-zinc-800 active:scale-[0.98] transition disabled:opacity-50 leading-snug"
+                      >
+                        {q}
+                      </button>
+                    ))}
+                  </div>
                 </div>
-              </div>
-            );
-          })}
+              )}
+            </div>
+          ) : (
+            /* Thread */
+            <div className="px-4 sm:px-6 py-5 space-y-6 w-full max-w-2xl mx-auto">
+              {messages
+                .filter((m) => m.id !== "welcome")
+                .map((m) => {
+                  const isBot = m.role === "assistant";
+                  const isSpeaking = speakingId === m.id;
 
-          {/* Typing / Thinking Indicator */}
-          {loading && (
-            <div className="flex gap-2.5 sm:gap-3 items-center animate-fadeIn">
-              <div className="w-8 h-8 rounded-2xl bg-gradient-to-tr from-violet-600 to-indigo-600 text-white grid place-items-center text-xs shrink-0 shadow-md shadow-violet-500/20">
-                <Bot size={15} />
-              </div>
-              <div className="px-4 py-3 rounded-2xl sm:rounded-3xl bg-zinc-50 dark:bg-zinc-900 border border-zinc-200/90 dark:border-zinc-800 flex items-center gap-2 shadow-sm">
-                <span className="w-2 h-2 rounded-full bg-violet-600 animate-bounce" />
-                <span className="w-2 h-2 rounded-full bg-indigo-500 animate-bounce [animation-delay:0.15s]" />
-                <span className="w-2 h-2 rounded-full bg-purple-500 animate-bounce [animation-delay:0.3s]" />
-                <span className="text-xs text-zinc-600 dark:text-zinc-300 font-semibold ml-1">
-                  Synthesizing warehouse intelligence…
-                </span>
-              </div>
+                  if (!isBot) {
+                    return (
+                      <div key={m.id} className="flex justify-end">
+                        <div className="max-w-[85%] px-4 py-2.5 rounded-[20px] bg-zinc-100 dark:bg-zinc-800 text-zinc-900 dark:text-zinc-100 text-[15px] leading-snug whitespace-pre-wrap break-words">
+                          {m.content}
+                        </div>
+                      </div>
+                    );
+                  }
+
+                  return (
+                    <div key={m.id} className="flex gap-2.5">
+                      <span className="w-7 h-7 rounded-full bg-zinc-900 dark:bg-white text-white dark:text-zinc-900 grid place-items-center shrink-0 mt-0.5">
+                        <Bot size={14} />
+                      </span>
+                      <div className="flex-1 min-w-0">
+                        {m.isError ? (
+                          <div className="px-4 py-3 rounded-2xl bg-red-50 dark:bg-red-500/10 border border-red-200 dark:border-red-500/20 text-red-700 dark:text-red-300 text-sm">
+                            {m.content}
+                          </div>
+                        ) : (
+                          <MarkdownContent content={m.content} />
+                        )}
+                        {!m.isError && (
+                          <div className="flex items-center gap-0.5 mt-1.5">
+                            <button
+                              onClick={() => handleCopy(m.content, m.id)}
+                              className="w-7 h-7 grid place-items-center rounded-full text-zinc-400 hover:text-zinc-700 dark:hover:text-zinc-200 hover:bg-zinc-100 dark:hover:bg-zinc-800 active:scale-95 transition"
+                              title="Copy"
+                              aria-label="Copy message"
+                            >
+                              {copiedId === m.id ? <Check size={13} className="text-emerald-500" /> : <Copy size={13} />}
+                            </button>
+                            <button
+                              onClick={() => handleSpeak(m.content, m.id)}
+                              className={`w-7 h-7 grid place-items-center rounded-full active:scale-95 transition ${
+                                isSpeaking
+                                  ? "text-zinc-900 dark:text-white animate-pulse"
+                                  : "text-zinc-400 hover:text-zinc-700 dark:hover:text-zinc-200 hover:bg-zinc-100 dark:hover:bg-zinc-800"
+                              }`}
+                              title={isSpeaking ? "Stop" : "Read aloud"}
+                              aria-label="Read aloud"
+                            >
+                              {isSpeaking ? <VolumeX size={13} /> : <Volume2 size={13} />}
+                            </button>
+                            {m.model && (
+                              <span className="text-[10px] text-zinc-400 ml-1.5">
+                                {m.model.includes("/") ? m.model.split("/")[1] : m.model}
+                              </span>
+                            )}
+                          </div>
+                        )}
+                      </div>
+                    </div>
+                  );
+                })}
+
+              {loading && (
+                <div className="flex gap-2.5">
+                  <span className="w-7 h-7 rounded-full bg-zinc-900 dark:bg-white text-white dark:text-zinc-900 grid place-items-center shrink-0">
+                    <Bot size={14} />
+                  </span>
+                  <div className="flex items-center gap-1.5 pt-2.5">
+                    <span className="w-2 h-2 rounded-full bg-zinc-400 animate-bounce" />
+                    <span className="w-2 h-2 rounded-full bg-zinc-400 animate-bounce [animation-delay:0.15s]" />
+                    <span className="w-2 h-2 rounded-full bg-zinc-400 animate-bounce [animation-delay:0.3s]" />
+                  </div>
+                </div>
+              )}
+
+              <div ref={messagesEndRef} />
             </div>
           )}
-
-          <div ref={messagesEndRef} />
         </div>
 
-        {/* 4. PROMPT SUGGESTION CATEGORIES & CHIPS */}
-        <div className="border-t border-zinc-100 dark:border-zinc-800/80 bg-zinc-50/90 dark:bg-zinc-900/60 p-2.5 sm:p-3 space-y-2 shrink-0">
-          {/* Category Tabs */}
-          <div className="flex gap-1.5 overflow-x-auto no-scrollbar pb-0.5">
-            {PROMPT_CATEGORIES.map((cat) => (
-              <button
-                key={cat.id}
-                onClick={() => {
-                  setActiveCategory(cat.id);
-                  hapticLight();
-                }}
-                className={`whitespace-nowrap px-2.5 py-1 rounded-xl text-[11px] font-bold transition-all duration-150 ${
-                  activeCategory === cat.id
-                    ? "bg-zinc-900 text-white dark:bg-white dark:text-zinc-900 shadow-xs scale-[1.02]"
-                    : "bg-white dark:bg-zinc-800/90 text-zinc-600 dark:text-zinc-400 border border-zinc-200/80 dark:border-zinc-700/80 hover:text-zinc-900 dark:hover:text-white"
-                }`}
-              >
-                {cat.label}
-              </button>
-            ))}
-          </div>
-
-          {/* Quick Prompts Horizontal Carousel */}
-          <div className="flex gap-1.5 overflow-x-auto no-scrollbar pb-1">
-            {currentPrompts.map((q, idx) => (
-              <button
-                key={idx}
-                onClick={() => handleSend(q)}
-                disabled={loading}
-                className="whitespace-nowrap px-3 py-1.5 rounded-xl bg-white dark:bg-zinc-800 border border-zinc-200/90 dark:border-zinc-700/80 text-[11px] font-semibold text-zinc-700 dark:text-zinc-300 hover:border-violet-500 hover:text-violet-600 dark:hover:text-violet-400 active:scale-95 transition shrink-0 shadow-2xs flex items-center gap-1.5 disabled:opacity-50"
-              >
-                <Sparkles size={11} className="text-violet-500 shrink-0" />
-                <span>{q}</span>
-              </button>
-            ))}
-          </div>
-        </div>
-
-        {/* 5. TACTILE INPUT SUITE & VOICE DICTATION */}
-        <div className="p-3 sm:p-4 border-t border-zinc-100 dark:border-zinc-800 bg-white dark:bg-zinc-950 shrink-0">
-          <form
-            onSubmit={(e) => {
-              e.preventDefault();
-              handleSend();
-            }}
-            className="flex items-center gap-2"
-          >
-            {/* Voice Input Mic Button */}
-            <button
-              type="button"
-              onClick={toggleVoiceInput}
-              className={`w-11 h-11 rounded-2xl grid place-items-center transition shrink-0 shadow-sm ${
-                isListening
-                  ? "bg-red-500 text-white animate-pulse ring-4 ring-red-500/25"
-                  : "bg-zinc-100 dark:bg-zinc-800 text-zinc-600 dark:text-zinc-300 hover:bg-zinc-200 dark:hover:bg-zinc-700 active:scale-95"
-              }`}
-              title={isListening ? "Listening… tap to stop" : "Voice dictation (Speak prompt)"}
-              aria-label="Voice input"
+        {/* Composer */}
+        <div className="shrink-0 px-3 sm:px-6 pt-1">
+          <div className="w-full max-w-2xl mx-auto">
+            {showSuggestions && !isFresh && (
+              <div className="flex gap-1.5 overflow-x-auto no-scrollbar pb-2">
+                {currentPrompts.map((q, idx) => (
+                  <button
+                    key={idx}
+                    onClick={() => handleSend(q)}
+                    disabled={loading}
+                    className="whitespace-nowrap px-3 py-1.5 rounded-full bg-zinc-100 dark:bg-zinc-800/80 text-xs text-zinc-600 dark:text-zinc-300 active:scale-95 transition shrink-0 disabled:opacity-50"
+                  >
+                    {q}
+                  </button>
+                ))}
+              </div>
+            )}
+            <form
+              onSubmit={(e) => {
+                e.preventDefault();
+                handleSend();
+              }}
             >
-              {isListening ? <MicOff size={18} /> : <Mic size={18} />}
-            </button>
-
-            {/* Prompt Text Input */}
-            <div className="relative flex-1">
-              <input
-                ref={inputRef}
-                value={input}
-                onChange={(e) => setInput(e.target.value)}
-                placeholder={isListening ? "Listening to your voice…" : "Ask Stockly Copilot anything about inventory…"}
-                className="w-full px-4 py-3 bg-zinc-100 dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 rounded-2xl text-xs sm:text-sm font-medium text-zinc-900 dark:text-white placeholder:text-zinc-400 focus:outline-none focus:border-violet-500 focus:ring-4 focus:ring-violet-500/10 transition shadow-inner min-h-[44px]"
-                disabled={loading}
-              />
-            </div>
-
-            {/* Send Button */}
-            <button
-              type="submit"
-              disabled={!input.trim() || loading}
-              className="w-11 h-11 rounded-2xl bg-gradient-to-tr from-violet-600 to-indigo-600 text-white grid place-items-center shadow-md shadow-violet-600/25 hover:from-violet-700 hover:to-indigo-700 disabled:opacity-40 disabled:pointer-events-none active:scale-95 transition shrink-0"
-              aria-label="Send message"
-            >
-              <Send size={16} />
-            </button>
-          </form>
+              <div className="rounded-[26px] border border-zinc-200 dark:border-zinc-700 bg-white dark:bg-zinc-900 shadow-sm focus-within:border-zinc-400 dark:focus-within:border-zinc-500 transition">
+                <textarea
+                  ref={inputRef}
+                  value={input}
+                  onChange={(e) => setInput(e.target.value)}
+                  onKeyDown={(e) => {
+                    if (e.key === "Enter" && !e.shiftKey) {
+                      e.preventDefault();
+                      handleSend();
+                    }
+                  }}
+                  rows={1}
+                  placeholder={isListening ? "Listening…" : "Ask anything"}
+                  className="w-full bg-transparent px-4 pt-3.5 pb-1 text-[15px] text-zinc-900 dark:text-white placeholder:text-zinc-400 focus:outline-none resize-none leading-snug"
+                  disabled={loading}
+                />
+                <div className="flex items-center gap-0.5 px-2.5 pb-2.5">
+                  <button
+                    type="button"
+                    onClick={toggleVoiceInput}
+                    className={`w-9 h-9 rounded-full grid place-items-center transition shrink-0 active:scale-95 ${
+                      isListening
+                        ? "bg-red-500 text-white animate-pulse"
+                        : "text-zinc-500 dark:text-zinc-400 hover:bg-zinc-100 dark:hover:bg-zinc-800"
+                    }`}
+                    title={isListening ? "Stop listening" : "Voice input"}
+                    aria-label="Voice input"
+                  >
+                    {isListening ? <MicOff size={17} /> : <Mic size={17} />}
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setShowSuggestions((v) => !v);
+                      hapticLight();
+                    }}
+                    className={`w-9 h-9 rounded-full grid place-items-center transition shrink-0 active:scale-95 ${
+                      showSuggestions
+                        ? "text-zinc-900 dark:text-white bg-zinc-100 dark:bg-zinc-800"
+                        : "text-zinc-400 hover:bg-zinc-100 dark:hover:bg-zinc-800"
+                    }`}
+                    title="Suggestions"
+                    aria-label="Toggle suggestions"
+                  >
+                    <Sparkles size={16} />
+                  </button>
+                  <span className="flex-1" />
+                  <button
+                    type="submit"
+                    disabled={!input.trim() || loading}
+                    className="w-9 h-9 rounded-full bg-zinc-900 dark:bg-white text-white dark:text-zinc-900 grid place-items-center shrink-0 active:scale-90 transition disabled:opacity-20"
+                    aria-label="Send message"
+                  >
+                    <ArrowUp size={17} strokeWidth={2.5} />
+                  </button>
+                </div>
+              </div>
+              <p className="text-center text-[10px] text-zinc-400 dark:text-zinc-500 py-2">
+                Stockly AI can make mistakes — verify stock before dispatch.
+              </p>
+            </form>
+          </div>
         </div>
       </div>
 
-      {/* 6. AI PROVIDER & MODEL CONFIGURATION MODAL */}
+      {/* 4. Model configuration */}
       <Modal
         open={showConfig}
         onClose={() => setShowConfig(false)}
-        title="AI Copilot Model & API Configuration"
+        title="AI model & API"
         description="Connect Opencode, OpenRouter, DeepSeek, or custom OpenAI-compatible endpoints"
         size="md"
       >
         <div className="space-y-4 pt-1">
-          {/* Preset Model Selector Grid */}
           <div>
-            <label className="block text-[11px] font-bold uppercase tracking-wider text-zinc-500 mb-2">
-              Select AI Model
-            </label>
+            <label className="input-label">Model</label>
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
               {POPULAR_MODELS.map((m) => {
                 const isSelected = aiSettings.model === m.id;
@@ -897,84 +900,80 @@ export default function AiCopilotDrawer({ open, onClose }) {
                       setAiSettings({ ...aiSettings, model: m.id });
                       hapticLight();
                     }}
-                    className={`p-3 rounded-2xl border text-left transition-all ${
+                    className={`p-3 rounded-2xl border text-left transition ${
                       isSelected
-                        ? "bg-violet-50 dark:bg-violet-500/15 border-violet-500 ring-2 ring-violet-500/20"
-                        : "bg-white dark:bg-zinc-900 border-zinc-200 dark:border-zinc-800 hover:border-zinc-300"
+                        ? "bg-zinc-900 dark:bg-white border-zinc-900 dark:border-white"
+                        : "bg-white dark:bg-zinc-900 border-zinc-200 dark:border-zinc-800"
                     }`}
                   >
-                    <div className="flex items-center justify-between">
-                      <span className="font-extrabold text-xs text-zinc-900 dark:text-white">{m.name}</span>
-                      <span className="text-[10px] font-bold px-1.5 py-0.5 rounded-md bg-zinc-100 dark:bg-zinc-800 text-zinc-600 dark:text-zinc-300">
+                    <div className="flex items-center justify-between gap-2">
+                      <span
+                        className={`font-bold text-xs ${isSelected ? "text-white dark:text-zinc-900" : "text-zinc-900 dark:text-white"}`}
+                      >
+                        {m.name}
+                      </span>
+                      <span
+                        className={`text-[10px] font-semibold px-1.5 py-0.5 rounded-md shrink-0 ${
+                          isSelected
+                            ? "bg-white/20 dark:bg-zinc-900/10 text-white dark:text-zinc-900"
+                            : "bg-zinc-100 dark:bg-zinc-800 text-zinc-500 dark:text-zinc-400"
+                        }`}
+                      >
                         {m.tag}
                       </span>
                     </div>
-                    <div className="text-[11px] text-zinc-400 font-mono mt-1">{m.id}</div>
+                    <div
+                      className={`text-[11px] font-mono mt-1 truncate ${isSelected ? "text-zinc-300 dark:text-zinc-600" : "text-zinc-400"}`}
+                    >
+                      {m.id}
+                    </div>
                   </button>
                 );
               })}
             </div>
           </div>
 
-          {/* API Key Input */}
           <div>
-            <label className="block text-[11px] font-bold uppercase tracking-wider text-zinc-500 mb-1">
-              API Key (Opencode / OpenRouter / Custom)
-            </label>
+            <label className="input-label">API key</label>
             <input
               type="password"
               value={aiSettings.apiKey || ""}
               onChange={(e) => setAiSettings({ ...aiSettings, apiKey: e.target.value })}
               placeholder="sk-or-v1-..."
-              className="input-field h-11 text-xs font-mono"
+              className="input-field font-mono text-xs"
             />
-            <p className="text-[10.5px] text-zinc-400 mt-1">
-              Leave blank to use default server-configured Opencode environment credentials.
+            <p className="text-xs text-zinc-400 mt-1.5">
+              Leave blank to use the server-configured credentials.
             </p>
           </div>
 
-          {/* Base URL */}
           <div>
-            <label className="block text-[11px] font-bold uppercase tracking-wider text-zinc-500 mb-1">
-              Custom API Base URL
-            </label>
+            <label className="input-label">Custom API base URL</label>
             <input
               value={aiSettings.baseURL || ""}
               onChange={(e) => setAiSettings({ ...aiSettings, baseURL: e.target.value })}
               placeholder="https://api.opencode.ai/v1"
-              className="input-field h-11 text-xs font-mono"
+              className="input-field font-mono text-xs"
             />
           </div>
 
-          {/* Custom Model String */}
           <div>
-            <label className="block text-[11px] font-bold uppercase tracking-wider text-zinc-500 mb-1">
-              Custom Model Identifier
-            </label>
+            <label className="input-label">Custom model identifier</label>
             <input
               value={aiSettings.model || ""}
               onChange={(e) => setAiSettings({ ...aiSettings, model: e.target.value })}
               placeholder="deepseek/deepseek-chat"
-              className="input-field h-11 text-xs font-mono"
+              className="input-field font-mono text-xs"
             />
           </div>
 
-          {/* Actions */}
-          <div className="flex gap-2 pt-2">
-            <Button
-              variant="secondary"
-              onClick={() => setShowConfig(false)}
-              className="flex-1 min-h-[44px]"
-            >
+          <div className="flex gap-2 pt-1">
+            <Button variant="secondary" onClick={() => setShowConfig(false)} className="flex-1">
               Cancel
             </Button>
-            <button
-              type="button"
-              onClick={handleSaveSettings}
-              className="flex-1 min-h-[44px] px-4 py-2.5 rounded-xl bg-violet-600 hover:bg-violet-700 text-white font-extrabold text-xs shadow-md shadow-violet-500/25 active:scale-95 transition flex items-center justify-center gap-1.5"
-            >
-              Save Configuration
-            </button>
+            <Button onClick={handleSaveSettings} className="flex-1">
+              Save
+            </Button>
           </div>
         </div>
       </Modal>

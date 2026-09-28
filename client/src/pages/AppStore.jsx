@@ -32,7 +32,7 @@ import { useToast } from "../context/ToastContext";
 import AppUpdateModal from "../components/app/AppUpdateModal";
 import { checkAppUpdate, APP_CURRENT_VERSION } from "../api/appUpdate";
 import { sendLocalNotification, requestNotificationPermission } from "../utils/notifications";
-import { downloadAndAutoInstall } from "../utils/nativeUpdater";
+import { downloadAndAutoInstall, resolveApkUrl } from "../utils/nativeUpdater";
 import { hapticSuccess, hapticMedium } from "../utils/haptics";
 import { playSuccessSound } from "../utils/sound";
 
@@ -101,9 +101,11 @@ export default function AppStore() {
   };
 
   useEffect(() => {
-    // Generate absolute download URL for the QR code
-    const origin = typeof window !== "undefined" ? window.location.origin : "https://stocklybydns.vercel.app";
-    const fullUrl = `${origin}/stockly.apk`;
+    // Generate absolute download URL for the QR code.
+    // resolveApkUrl() uses the remote API origin on Capacitor native
+    // (window.location.origin is capacitor://localhost there and unusable
+    // for QR codes scanned by other devices).
+    const fullUrl = resolveApkUrl("/stockly.apk");
     setDownloadUrl(fullUrl);
 
     QRCode.toDataURL(fullUrl, {
@@ -125,8 +127,8 @@ export default function AppStore() {
 
     try {
       const res = await downloadAndAutoInstall({
-        url: "/stockly.apk",
-        version: APP_CURRENT_VERSION,
+        url: updateInfo?.apkUrl || "/stockly.apk",
+        version: updateInfo?.latestVersion || APP_CURRENT_VERSION,
         onProgress: (p) => setDownloadPercent(p),
       });
 
@@ -252,7 +254,7 @@ export default function AppStore() {
                 ) : (
                   <>
                     <Download size={16} className="text-violet-600" />
-                    <span>Download APK (4.9 MB)</span>
+                    <span>Download APK (36 MB)</span>
                   </>
                 )}
               </button>
@@ -314,7 +316,7 @@ export default function AppStore() {
           </div>
           <div>
             <div className="text-[10px] uppercase font-bold text-zinc-400">Package Size</div>
-            <div className="text-xs sm:text-sm font-extrabold text-zinc-900 dark:text-white">4.9 MB (Ultra Light)</div>
+            <div className="text-xs sm:text-sm font-extrabold text-zinc-900 dark:text-white">36 MB (Ultra Light)</div>
           </div>
         </div>
 

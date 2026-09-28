@@ -5,6 +5,23 @@
   "outputDirectory": "dist",
   "headers": [
     {
+      "source": "/stockly.apk",
+      "headers": [
+        {
+          "key": "Content-Type",
+          "value": "application/vnd.android.package-archive"
+        },
+        {
+          "key": "Content-Disposition",
+          "value": "attachment; filename=\"stockly.apk\""
+        },
+        {
+          "key": "Cache-Control",
+          "value": "public, max-age=3600"
+        }
+      ]
+    },
+    {
       "source": "/assets/(.*)",
       "headers": [
         {
@@ -49,7 +66,7 @@
       "destination": "/api/index.js"
     },
     {
-      "source": "/((?!api/|health|assets/|favicon\\.svg|manifest\\.json|robots\\.txt|icon-.*).*)",
+      "source": "/((?!api/|health|assets/|favicon\\.svg|manifest\\.json|robots\\.txt|icon-.*|stockly\\.apk|.*\\.apk).*)",
       "destination": "/index.html"
     }
   ]

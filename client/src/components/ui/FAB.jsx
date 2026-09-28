@@ -9,8 +9,8 @@ export default function FAB({ onClick, label = "Add", className = "" }){
     <button
       type="button"
       onClick={onClick}
-      className={`fixed right-4 sm:right-6 w-14 h-14 rounded-[20px] bg-zinc-900 dark:bg-white text-white dark:text-zinc-900 shadow-[0_8px_24px_rgba(0,0,0,0.22)] dark:shadow-[0_8px_24px_rgba(0,0,0,0.5)] grid place-items-center active:scale-95 transition-all touch-manipulation will-change-transform border border-zinc-800 dark:border-zinc-200 ${className}`}
-      style={{ bottom: "calc(80px + env(safe-area-inset-bottom))", zIndex: 80 }}
+      className={`fixed right-4 sm:right-6 w-14 h-14 rounded-2xl bg-zinc-900 dark:bg-white text-white dark:text-zinc-900 shadow-lg grid place-items-center hover:scale-105 active:scale-95 transition-all touch-manipulation ${className}`}
+      style={{ bottom: "calc(88px + env(safe-area-inset-bottom))", zIndex: 80 }}
       aria-label={label}
     >
       <Plus size={26} strokeWidth={2.2} />

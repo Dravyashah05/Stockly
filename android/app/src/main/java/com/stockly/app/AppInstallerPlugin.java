@@ -92,6 +92,15 @@ public class AppInstallerPlugin extends Plugin {
                 connection.setRequestProperty("User-Agent", "Stockly-Android-Updater");
                 connection.connect();
 
+                int responseCode = connection.getResponseCode();
+                if (responseCode < 200 || responseCode >= 300) {
+                    throw new Exception("APK server returned HTTP " + responseCode + " for " + downloadUrl);
+                }
+                String contentType = connection.getContentType();
+                if (contentType != null && contentType.contains("text/html")) {
+                    throw new Exception("APK URL returned HTML instead of APK (got Content-Type: " + contentType + "). The file may be behind an SPA rewrite — see vercel.json.");
+                }
+
                 int fileLength = connection.getContentLength();
                 InputStream input = new BufferedInputStream(connection.getInputStream(), 8192);
                 OutputStream output = new FileOutputStream(apkFile);
@@ -123,6 +132,13 @@ public class AppInstallerPlugin extends Plugin {
                 output.close();
                 input.close();
                 connection.disconnect();
+
+                // Guard against SPA-fallback HTML (index.html ~3KB) being saved as .apk
+                if (!apkFile.exists() || apkFile.length() < 1_000_000) {
+                    long size = apkFile.exists() ? apkFile.length() : -1;
+                    dismissNotification(getContext());
+                    throw new Exception("Downloaded file is too small (" + size + " bytes) — expected APK binary. URL: " + downloadUrl);
+                }
 
                 // Notify complete
                 JSObject completeObj = new JSObject();

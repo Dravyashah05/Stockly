@@ -52,11 +52,12 @@ export default function ConfirmModal({
           <h3 className="text-[17px] sm:text-[15px] font-semibold tracking-tight text-zinc-900 dark:text-white">{title}</h3>
           {description && <p className="text-[14px] sm:text-sm text-zinc-500 dark:text-zinc-400 mt-2 leading-relaxed px-2 sm:px-0">{description}</p>}
           <div className="flex gap-3 mt-6">
-            <Button variant="secondary" onClick={onClose} className="flex-1 py-3.5 sm:py-2.5 text-[15px] sm:text-sm" disabled={loading}>{cancelLabel}</Button>
+            <Button variant="secondary" onClick={onClose} className="flex-1" disabled={loading}>{cancelLabel}</Button>
             <Button
+              variant={isDanger ? "danger" : "primary"}
               onClick={onConfirm}
               loading={loading}
-              className={`flex-1 py-3.5 sm:py-2.5 text-[15px] sm:text-sm ${isDanger ? "!bg-red-600 hover:!bg-red-700 !text-white border-red-600 shadow-lg shadow-red-500/20" : ""}`}
+              className="flex-1"
             >
               {confirmLabel}
             </Button>

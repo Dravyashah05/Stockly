@@ -18,15 +18,12 @@ import {
   Mail,
   Phone,
   MapPin,
-  Search,
   Package,
-  Layers,
-  Coins,
-  X,
-  ExternalLink,
 } from "lucide-react";
 import { Link } from "react-router-dom";
 import FAB from "../components/ui/FAB";
+import { Input, Textarea, SearchInput } from "../components/ui/Input";
+import { EmptyState } from "../components/ui/Loader";
 
 export default function Suppliers() {
   const { push } = useToast();
@@ -117,52 +114,25 @@ export default function Suppliers() {
     }).format(Number(n) || 0);
 
   return (
-    <div className="space-y-4 sm:space-y-6 pb-6 animate-fade-in">
-      {/* 1. HEADER & ACTIONS */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
-        <div>
-          <h1 className="text-xl sm:text-2xl font-bold tracking-tight text-zinc-900 dark:text-white">
-            Suppliers & Vendors
-          </h1>
-          <p className="text-xs sm:text-sm text-zinc-500 dark:text-zinc-400 mt-0.5">
-            Manage procurement contacts, purchase linkages, and supplier catalog
-          </p>
+    <div className="space-y-5 animate-fade-in">
+      {/* Header */}
+      <div className="flex items-center justify-between gap-3">
+        <div className="min-w-0">
+          <h1 className="page-title">Suppliers</h1>
+          <p className="page-subtitle">{list.length} vendors • purchase contacts</p>
         </div>
-
-        <button
-          onClick={openCreate}
-          className="flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl bg-zinc-900 text-white dark:bg-white dark:text-zinc-900 font-bold text-xs sm:text-sm shadow-sm hover:bg-zinc-800 active:scale-95 transition min-h-[42px]"
-        >
-          <Plus size={16} /> New Supplier
-        </button>
+        <Button size="sm" onClick={openCreate} className="shrink-0">
+          <Plus size={15} /> <span className="hidden sm:inline">New supplier</span>
+          <span className="sm:hidden">New</span>
+        </Button>
       </div>
 
-      {/* 2. SEARCH BAR */}
-      <div className="relative">
-        <Search
-          size={16}
-          className="absolute left-3.5 top-1/2 -translate-y-1/2 text-zinc-400 pointer-events-none"
-        />
-        <input
-          type="text"
-          value={search}
-          onChange={(e) => setSearch(e.target.value)}
-          placeholder="Search suppliers by name, phone, email or address..."
-          className="input-field pl-10 h-11 text-xs sm:text-sm"
-        />
-        {search && (
-          <button
-            onClick={() => setSearch("")}
-            className="absolute right-3.5 top-1/2 -translate-y-1/2 text-zinc-400 hover:text-zinc-600"
-          >
-            <X size={15} />
-          </button>
-        )}
-      </div>
+      {/* Search */}
+      <SearchInput value={search} onChange={(e) => setSearch(e.target.value)} placeholder="Search name, phone, email…" />
 
       {/* 3. SUPPLIER CARDS */}
       <div className="grid grid-cols-1 md:grid-cols-2 gap-3 sm:gap-4">
-        {list.map((s) => {
+        {list.map((s, idx) => {
           const sProducts = products.filter(
             (p) => String(p.supplier?._id || p.supplier || "") === String(s._id)
           );
@@ -176,7 +146,8 @@ export default function Suppliers() {
           return (
             <div
               key={s._id}
-              className="card p-0 overflow-hidden border border-zinc-200/80 dark:border-zinc-800 hover:shadow-md transition flex flex-col justify-between"
+              style={{ animationDelay: `${Math.min(idx * 30, 240)}ms` }}
+              className="stagger-item card overflow-hidden hover:shadow-md transition flex flex-col justify-between"
             >
               <div className="p-4 sm:p-5 space-y-3">
                 <div className="flex items-start justify-between gap-3">
@@ -276,108 +247,68 @@ export default function Suppliers() {
         })}
 
         {!list.length && !loading && (
-          <div className="col-span-full card py-16 text-center">
-            <div className="w-12 h-12 rounded-2xl bg-zinc-100 dark:bg-zinc-800 grid place-items-center mx-auto text-zinc-400">
-              <Building2 size={22} />
-            </div>
-            <h3 className="font-bold text-sm text-zinc-900 dark:text-white mt-3">
-              No suppliers found
-            </h3>
-            <p className="text-xs text-zinc-500 mt-1">
-              Add your vendors to link purchases and supplier analytics.
-            </p>
-            <button
-              onClick={openCreate}
-              className="mt-4 px-4 py-2 rounded-xl bg-zinc-900 text-white dark:bg-white dark:text-zinc-900 text-xs font-bold"
-            >
-              + Add First Supplier
-            </button>
-          </div>
+          <EmptyState
+            icon={Building2}
+            title="No suppliers found"
+            hint="Add vendors to link purchases and track supply."
+            action={
+              <Button onClick={openCreate}>
+                <Plus size={15} /> Add supplier
+              </Button>
+            }
+          />
         )}
       </div>
 
       {/* Floating Action Button */}
       {!showModal && !delTarget && <FAB onClick={openCreate} label="Add supplier" />}
 
-      {/* Create / Edit Modal */}
+      {/* Create / edit */}
       <Modal
         open={showModal}
         onClose={() => setShowModal(false)}
-        title={editing ? "Edit Supplier" : "Add New Supplier"}
-        size="md"
+        title={editing ? "Edit supplier" : "New supplier"}
+        description={editing ? "Update contact details" : "Just a name — the rest is optional"}
+        size="sm"
       >
         <div className="space-y-3.5">
-          <div>
-            <label className="block text-[11px] font-bold uppercase tracking-wider text-zinc-500 mb-1.5">
-              Supplier Name *
-            </label>
-            <input
-              value={form.name}
-              onChange={(e) => setForm({ ...form, name: e.target.value })}
-              className="input-field h-11 text-xs font-semibold"
-              placeholder="e.g. Apex Global Distributors"
+          <Input
+            label="Supplier name"
+            value={form.name}
+            onChange={(e) => setForm({ ...form, name: e.target.value })}
+            placeholder="e.g. Apex Distributors"
+            autoFocus
+          />
+          <div className="grid grid-cols-2 gap-3">
+            <Input
+              label="Phone"
+              type="tel"
+              inputMode="tel"
+              value={form.contact}
+              onChange={(e) => setForm({ ...form, contact: e.target.value })}
+              placeholder="+91…"
+            />
+            <Input
+              label="Email"
+              type="email"
+              inputMode="email"
+              value={form.email}
+              onChange={(e) => setForm({ ...form, email: e.target.value })}
+              placeholder="contact@…"
             />
           </div>
-
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-            <div>
-              <label className="block text-[11px] font-bold uppercase tracking-wider text-zinc-500 mb-1.5">
-                Contact Phone
-              </label>
-              <input
-                type="tel"
-                inputMode="tel"
-                value={form.contact}
-                onChange={(e) => setForm({ ...form, contact: e.target.value })}
-                className="input-field h-11 text-xs"
-                placeholder="+91 98765 43210"
-              />
-            </div>
-
-            <div>
-              <label className="block text-[11px] font-bold uppercase tracking-wider text-zinc-500 mb-1.5">
-                Email Address
-              </label>
-              <input
-                type="email"
-                inputMode="email"
-                value={form.email}
-                onChange={(e) => setForm({ ...form, email: e.target.value })}
-                className="input-field h-11 text-xs"
-                placeholder="contact@supplier.com"
-              />
-            </div>
-          </div>
-
-          <div>
-            <label className="block text-[11px] font-bold uppercase tracking-wider text-zinc-500 mb-1.5">
-              Office / Warehouse Address
-            </label>
-            <textarea
-              value={form.address}
-              onChange={(e) => setForm({ ...form, address: e.target.value })}
-              rows={2}
-              className="input-field text-xs resize-none"
-              placeholder="City, State, Country..."
-            />
-          </div>
-
-          <div className="pt-2 flex flex-col-reverse sm:flex-row gap-2 border-t border-zinc-100 dark:border-zinc-800">
-            <Button
-              type="button"
-              variant="secondary"
-              onClick={() => setShowModal(false)}
-              className="w-full sm:w-1/3 min-h-[44px]"
-            >
+          <Textarea
+            label="Address (optional)"
+            value={form.address}
+            onChange={(e) => setForm({ ...form, address: e.target.value })}
+            placeholder="City, State…"
+          />
+          <div className="flex gap-2 pt-1">
+            <Button variant="secondary" onClick={() => setShowModal(false)} className="flex-1">
               Cancel
             </Button>
-            <Button
-              type="button"
-              onClick={submit}
-              loading={submitting}
-              className="w-full sm:w-2/3 min-h-[44px]"
-            >
-              {editing ? "Save Changes" : "Create Supplier"}
+            <Button onClick={submit} loading={submitting} className="flex-1">
+              {editing ? "Save changes" : "Add supplier"}
             </Button>
           </div>
         </div>

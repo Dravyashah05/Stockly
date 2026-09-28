@@ -46,7 +46,7 @@ export default function AppUpdateModal({
     latestVersion = "1.1.0",
     releaseNotes = [],
     apkUrl = "/stockly.apk",
-    apkSize = "4.9 MB",
+    apkSize = "36 MB",
     mandatory = false,
   } = updateInfo;
 

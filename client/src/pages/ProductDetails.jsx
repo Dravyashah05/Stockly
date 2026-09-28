@@ -275,7 +275,7 @@ export default function ProductDetails() {
               openAiCopilot();
             }}
             className="flex items-center gap-1.5 px-3 py-2 rounded-xl bg-violet-50 hover:bg-violet-100 dark:bg-violet-950/40 dark:hover:bg-violet-900/40 text-violet-700 dark:text-violet-300 border border-violet-200/80 dark:border-violet-800/80 text-xs font-bold shadow-xs active:scale-95 transition"
-            title="Ask AI Copilot about this product"
+            title="Ask Stockly AI about this product"
           >
             <Sparkles size={13} className="text-violet-600 dark:text-violet-400" />
             <span className="hidden xs:inline">Ask AI</span>
@@ -433,7 +433,7 @@ export default function ProductDetails() {
               className="inline-flex items-center gap-1.5 text-xs font-semibold text-violet-700 dark:text-violet-400 hover:text-violet-800 dark:hover:text-violet-300 py-1 px-2.5 rounded-lg hover:bg-violet-50 dark:hover:bg-violet-950/30 transition"
             >
               <Sparkles size={13} className="text-violet-600 dark:text-violet-400" />
-              <span>Ask AI Copilot for restock & safety analysis</span>
+              <span>Ask Stockly AI for restock & safety analysis</span>
             </button>
             <button
               onClick={() => {

@@ -5,9 +5,7 @@ import { useTheme } from "../context/ThemeContext";
 import { useNavigate, useSearchParams } from "react-router-dom";
 import { useToast } from "../context/ToastContext";
 import {
-  Sparkles,
   ShieldCheck,
-  Zap,
   ArrowRight,
   Eye,
   EyeOff,
@@ -18,7 +16,6 @@ import {
   Copy,
   Check,
   Smartphone,
-  Laptop,
   CheckCircle2,
   AlertCircle,
   Mail,
@@ -26,9 +23,6 @@ import {
   User,
   Sun,
   Moon,
-  Layers,
-  Activity,
-  Download,
 } from "lucide-react";
 import OTPInput from "../components/ui/OTPInput";
 import QRScannerModal from "../components/auth/QRScannerModal";
@@ -243,173 +237,122 @@ export default function Login() {
   };
 
   return (
-    <div className="min-h-screen grid lg:grid-cols-[1.1fr_0.9fr] bg-[#fcfcf9] dark:bg-zinc-950 font-sans antialiased text-zinc-900 dark:text-zinc-100 selection:bg-violet-600 selection:text-white relative">
-      {/* Absolute Top Right Actions: Download App & Theme Toggle */}
+    <div className="min-h-screen grid lg:grid-cols-[1.05fr_1fr] bg-zinc-100 dark:bg-zinc-950 antialiased relative">
+      {/* Top-right actions */}
       <div className="absolute top-4 right-4 z-40 flex items-center gap-2">
         <a
           href="/stockly.apk"
           download="stockly-v1.0.0.apk"
-          className="px-3 py-1.5 rounded-xl bg-white/80 dark:bg-zinc-800/80 backdrop-blur border border-zinc-200/80 dark:border-zinc-700/80 text-zinc-700 dark:text-zinc-200 text-xs font-bold hover:bg-white dark:hover:bg-zinc-700 active:scale-95 transition shadow-xs flex items-center gap-1.5"
+          className="inline-flex items-center gap-1.5 h-9 px-3 rounded-xl bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 text-xs font-semibold text-zinc-600 dark:text-zinc-300 shadow-sm hover:bg-zinc-50 dark:hover:bg-zinc-800 active:scale-95 transition"
           title="Download Stockly Android App"
         >
-          <Smartphone size={14} className="text-violet-600 dark:text-violet-400" />
-          <span className="hidden sm:inline">Download APK</span>
+          <Smartphone size={14} />
+          <span className="hidden sm:inline">Android App</span>
         </a>
 
         <button
           type="button"
           onClick={toggleTheme}
           aria-label="Toggle theme"
-          className="w-9 h-9 rounded-xl bg-white/80 dark:bg-zinc-800/80 backdrop-blur border border-zinc-200/80 dark:border-zinc-700/80 text-zinc-600 dark:text-zinc-300 grid place-items-center hover:bg-white dark:hover:bg-zinc-700 active:scale-95 transition shadow-xs"
+          className="icon-btn"
           title={isDark ? "Switch to light mode" : "Switch to dark mode"}
         >
           {isDark ? <Sun size={16} /> : <Moon size={16} />}
         </button>
       </div>
 
-      {/* LEFT SIDE: Brand Showcase & Architecture Highlights (Desktop Only) */}
-      <div className="hidden lg:flex flex-col relative overflow-hidden bg-gradient-to-br from-zinc-950 via-slate-900 to-indigo-950 text-white p-12 xl:p-16 justify-between select-none">
-        {/* Ambient Glows */}
-        <div className="absolute top-[-10%] left-[-10%] w-[500px] h-[500px] rounded-full bg-violet-600/20 blur-[120px] pointer-events-none" />
-        <div className="absolute bottom-[-10%] right-[-10%] w-[600px] h-[600px] rounded-full bg-blue-600/15 blur-[140px] pointer-events-none" />
-        <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[800px] h-[800px] rounded-full border border-white/5 pointer-events-none" />
+      {/* LEFT: brand panel (desktop) */}
+      <div className="hidden lg:flex flex-col relative overflow-hidden bg-zinc-950 text-white p-12 xl:p-14 justify-between">
+        <div className="absolute -top-32 -left-32 w-[480px] h-[480px] rounded-full bg-primary-600/20 blur-[120px] pointer-events-none" />
 
-        {/* Brand Top Header */}
-        <div className="relative z-10 flex items-center justify-between">
-          <div className="flex items-center gap-3">
-            <AppLogo size="md" className="shadow-lg ring-1 ring-white/20" />
-            <div>
-              <div className="flex items-center gap-2">
-                <span className="text-lg font-black tracking-tight text-white">Stockly OS</span>
-                <span className="px-2 py-0.5 rounded-full bg-emerald-500/20 text-emerald-300 text-[10px] font-bold uppercase tracking-wider border border-emerald-500/30 flex items-center gap-1">
-                  <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse" /> Live
-                </span>
-              </div>
-              <p className="text-xs text-zinc-400 font-medium">Modern Inventory Management System</p>
-            </div>
+        <div className="relative flex items-center gap-3">
+          <AppLogo size="md" />
+          <div>
+            <div className="text-base font-bold tracking-tight">Stockly</div>
+            <p className="text-xs text-zinc-400">Inventory management</p>
           </div>
         </div>
 
-        {/* Center Hero Marketing */}
-        <div className="relative z-10 max-w-lg space-y-6 my-auto">
-          <div className="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full bg-white/10 backdrop-blur-md border border-white/15 text-xs font-semibold text-violet-200">
-            <Sparkles size={14} className="text-violet-300" /> Multi-Device Session Mesh & QR Auth
-          </div>
-
-          <h1 className="text-4xl xl:text-5xl font-extrabold tracking-tight leading-[1.05] text-white">
-            Precision stock control, <br />
-            <span className="text-transparent bg-clip-text bg-gradient-to-r from-violet-300 via-indigo-200 to-white">
-              without friction.
-            </span>
+        <div className="relative max-w-md space-y-5">
+          <h1 className="text-4xl xl:text-[2.75rem] font-bold tracking-tight leading-[1.1]">
+            Stock control,
+            <br />
+            without the chaos.
           </h1>
-
-          <p className="text-sm xl:text-base leading-relaxed text-zinc-300/90 font-normal">
-            Real-time stock ledger, instant device pairing, QR-based warehouse check-in, automated low-stock warnings, and full production traceability in one cohesive workspace.
+          <p className="text-sm leading-relaxed text-zinc-400">
+            Real-time ledger, instant device pairing, low-stock alerts and full audit
+            history — in one calm workspace.
           </p>
-
-          {/* Feature Grid */}
-          <div className="grid grid-cols-1 gap-3 pt-2">
-            {[
-              {
-                icon: Zap,
-                title: "Instant Device Sync",
-                desc: "Pair mobile scanners & warehouse tablets in 2 seconds without typing passwords.",
-              },
-              {
-                icon: ShieldCheck,
-                title: "Zero-Trust Sessions",
-                desc: "Ephemeral one-time tokens and granular device revocation per session.",
-              },
-              {
-                icon: Layers,
-                title: "Live Inventory Ledger",
-                desc: "Full audit trail for stock IN, OUT, adjustments, and supplier purchase batches.",
-              },
-            ].map((feat) => {
-              const Icon = feat.icon;
-              return (
-                <div
-                  key={feat.title}
-                  className="flex items-start gap-3.5 p-3.5 rounded-2xl bg-white/5 backdrop-blur-sm border border-white/10 hover:bg-white/10 transition-colors"
-                >
-                  <div className="w-9 h-9 rounded-xl bg-violet-600/30 border border-violet-400/20 text-violet-200 grid place-items-center shrink-0 mt-0.5">
-                    <Icon size={16} />
-                  </div>
-                  <div>
-                    <h3 className="text-xs font-bold text-white leading-snug">{feat.title}</h3>
-                    <p className="text-[11px] text-zinc-300 leading-relaxed mt-0.5">{feat.desc}</p>
-                  </div>
-                </div>
-              );
-            })}
-          </div>
+          <ul className="space-y-2.5 pt-1">
+            {["Real-time stock ledger", "QR device pairing in seconds", "Low-stock alerts & audit trail"].map(
+              (t) => (
+                <li key={t} className="flex items-center gap-2.5 text-sm text-zinc-300">
+                  <CheckCircle2 size={16} className="text-emerald-400 shrink-0" />
+                  {t}
+                </li>
+              )
+            )}
+          </ul>
         </div>
 
-        {/* Bottom Footer Note */}
-        <div className="relative z-10 flex items-center justify-between text-xs text-zinc-400 border-t border-white/10 pt-4">
-          <span>© 2026 Stockly Technologies</span>
-          <span className="flex items-center gap-1.5 text-zinc-300">
-            <Activity size={13} className="text-emerald-400" /> 99.99% Uptime SLA
-          </span>
+        <div className="relative flex items-center justify-between text-xs text-zinc-500 border-t border-white/10 pt-4">
+          <span>© 2026 Stockly</span>
+          <span>Secure session mesh</span>
         </div>
       </div>
 
       {/* RIGHT SIDE: Authentication Form Panel */}
       <div className="flex flex-col justify-center items-center p-4 sm:p-8 lg:p-12 overflow-y-auto min-h-screen">
         <div className="w-full max-w-[440px] space-y-5 my-auto">
-          {/* Card Container */}
-          <div className="bg-white dark:bg-zinc-900 border border-zinc-200/90 dark:border-zinc-800 rounded-3xl shadow-xl p-6 sm:p-8 space-y-5 relative animate-scale-in">
-            {/* Header / Brand on Mobile */}
-            <div className="flex flex-col items-center text-center space-y-2">
-              <AppLogo size="lg" className="shadow-md" />
+          {/* Card */}
+          <div className="card p-6 sm:p-8 space-y-5 animate-scale-in">
+            {/* Header */}
+            <div className="flex flex-col items-center text-center space-y-3">
+              <AppLogo size="md" />
               <div>
-                <h2 className="text-xl sm:text-2xl font-extrabold tracking-tight text-zinc-900 dark:text-white">
+                <h2 className="text-xl font-bold tracking-tight text-zinc-900 dark:text-white">
                   {urlClaiming
-                    ? "Connecting Device…"
+                    ? "Connecting device…"
                     : authMode === "pairing"
-                    ? "Device Pairing"
+                    ? "Device pairing"
                     : isRegister
-                    ? "Create Account"
-                    : "Welcome Back"}
+                    ? "Create account"
+                    : "Welcome back"}
                 </h2>
-                <p className="text-xs text-zinc-500 dark:text-zinc-400 mt-0.5 max-w-xs mx-auto">
+                <p className="text-[13px] text-zinc-500 dark:text-zinc-400 mt-1 max-w-xs mx-auto">
                   {urlClaiming
-                    ? "Validating QR pairing ticket from your scanner"
+                    ? "Validating the pairing ticket from your scanner"
                     : authMode === "pairing"
-                    ? "Sign in instantly via one-time device code or QR code"
+                    ? "Sign in with a one-time code or QR scan"
                     : isRegister
-                    ? "Register a new operator account for your workspace"
-                    : "Enter your credentials to access the Stockly workspace"}
+                    ? "Register an operator account for your workspace"
+                    : "Sign in to your Stockly workspace"}
                 </p>
               </div>
             </div>
 
-            {/* Primary Mode Switcher: Password vs Device Pairing */}
+            {/* Mode switcher */}
             {!urlClaiming && (
-              <div className="grid grid-cols-2 p-1 bg-zinc-100 dark:bg-zinc-800/80 rounded-2xl gap-1 border border-zinc-200/50 dark:border-zinc-700/40">
+              <div className="segmented-control w-full grid grid-cols-2 gap-1">
                 <button
                   type="button"
                   onClick={() => setAuthMode("password")}
-                  className={`py-2 px-2.5 text-xs font-bold rounded-xl transition-all flex items-center justify-center gap-2 truncate ${
-                    authMode === "password"
-                      ? "bg-white dark:bg-zinc-700 text-zinc-900 dark:text-white shadow-xs"
-                      : "text-zinc-500 dark:text-zinc-400 hover:text-zinc-800 dark:hover:text-zinc-200"
+                  className={`segmented-item ${
+                    authMode === "password" ? "segmented-item-active" : "segmented-item-inactive"
                   }`}
                 >
-                  <KeyRound size={14} className="shrink-0 text-violet-600 dark:text-violet-400" />
-                  <span className="truncate">Password</span>
+                  <KeyRound size={14} />
+                  Password
                 </button>
                 <button
                   type="button"
                   onClick={() => setAuthMode("pairing")}
-                  className={`py-2 px-2.5 text-xs font-bold rounded-xl transition-all flex items-center justify-center gap-2 truncate ${
-                    authMode === "pairing"
-                      ? "bg-white dark:bg-zinc-700 text-zinc-900 dark:text-white shadow-xs"
-                      : "text-zinc-500 dark:text-zinc-400 hover:text-zinc-800 dark:hover:text-zinc-200"
+                  className={`segmented-item ${
+                    authMode === "pairing" ? "segmented-item-active" : "segmented-item-inactive"
                   }`}
                 >
-                  <QrCode size={14} className="shrink-0 text-indigo-600 dark:text-indigo-400" />
-                  <span className="truncate">Device Sync / QR</span>
+                  <QrCode size={14} />
+                  Device
                 </button>
               </div>
             )}
@@ -417,35 +360,32 @@ export default function Login() {
             {/* AUTO URL CLAIMING STATE */}
             {urlClaiming ? (
               <div className="py-8 flex flex-col items-center justify-center text-center space-y-4">
-                <div className="w-12 h-12 rounded-full border-3 border-zinc-200 dark:border-zinc-800 border-t-violet-600 dark:border-t-violet-400 animate-spin" />
+                <div className="w-10 h-10 rounded-full border-[3px] border-zinc-200 dark:border-zinc-800 border-t-zinc-900 dark:border-t-white animate-spin" />
                 <div className="space-y-1">
                   <h3 className="text-sm font-bold text-zinc-900 dark:text-white">Connecting your device…</h3>
                   <p className="text-xs text-zinc-500 dark:text-zinc-400 max-w-xs">
-                    Completing cryptographic handshake with your primary session.
+                    Completing the handshake with your primary session.
                   </p>
                 </div>
               </div>
             ) : authMode === "password" ? (
               /* TAB 1: PASSWORD & REGISTRATION FORM */
               <form onSubmit={submitPassword} className="space-y-4">
-                {/* One-click Demo Account helper */}
+                {/* Demo helper */}
                 {!isRegister && (
                   <button
                     type="button"
                     onClick={fillDemoCredentials}
-                    className="w-full py-2 px-3 rounded-xl bg-violet-50 dark:bg-violet-500/10 border border-violet-200 dark:border-violet-500/20 text-violet-700 dark:text-violet-300 text-xs font-bold flex items-center justify-between hover:bg-violet-100 dark:hover:bg-violet-500/20 active:scale-[0.99] transition-all"
+                    className="w-full py-2.5 px-3.5 rounded-xl bg-zinc-100 dark:bg-zinc-800 text-xs font-semibold text-zinc-600 dark:text-zinc-300 hover:bg-zinc-200 dark:hover:bg-zinc-700 active:scale-[0.99] transition flex items-center justify-between"
                   >
-                    <span className="flex items-center gap-1.5">
-                      <Sparkles size={13} className="text-violet-600 dark:text-violet-400" />
-                      Try Demo Account
-                    </span>
-                    <span className="text-[10.5px] font-mono opacity-80 underline">admin@stockly.com</span>
+                    <span>Try the demo account</span>
+                    <span className="font-mono text-[11px] opacity-70">admin@stockly.com</span>
                   </button>
                 )}
 
                 {isRegister && (
                   <div>
-                    <label className="block text-[11px] font-bold uppercase tracking-wider text-zinc-500 dark:text-zinc-400 mb-1.5">
+                    <label className="input-label">
                       Full Name
                     </label>
                     <div className="relative">
@@ -463,7 +403,7 @@ export default function Login() {
                 )}
 
                 <div>
-                  <label className="block text-[11px] font-bold uppercase tracking-wider text-zinc-500 dark:text-zinc-400 mb-1.5">
+                  <label className="input-label">
                     Email Address
                   </label>
                   <div className="relative">
@@ -481,7 +421,7 @@ export default function Login() {
                 </div>
 
                 <div>
-                  <label className="block text-[11px] font-bold uppercase tracking-wider text-zinc-500 dark:text-zinc-400 mb-1.5">
+                  <label className="input-label">
                     Password
                   </label>
                   <div className="relative">
@@ -509,9 +449,9 @@ export default function Login() {
                 <Button
                   type="submit"
                   loading={loading}
-                  className="w-full py-3 sm:py-3.5 text-xs sm:text-sm font-bold shadow-md justify-center !bg-zinc-900 dark:!bg-white dark:!text-zinc-900 mt-2"
+                  className="w-full mt-2"
                 >
-                  <span>{isRegister ? "Create Stockly Account" : "Sign In to Workspace"}</span>
+                  <span>{isRegister ? "Create account" : "Sign in"}</span>
                   {!loading && <ArrowRight size={15} />}
                 </Button>
 
@@ -523,11 +463,11 @@ export default function Login() {
                       setIsRegister(!isRegister);
                       setForm({ name: "", email: "", password: "" });
                     }}
-                    className="text-xs font-semibold text-zinc-600 dark:text-zinc-400 hover:text-zinc-900 dark:hover:text-white transition"
+                    className="text-[13px] font-medium text-zinc-500 dark:text-zinc-400 hover:text-zinc-900 dark:hover:text-white transition"
                   >
                     {isRegister ? "Already registered? " : "Need an operator account? "}
-                    <span className="text-violet-600 dark:text-violet-400 underline underline-offset-4">
-                      {isRegister ? "Sign In" : "Create Account"}
+                    <span className="font-semibold text-zinc-900 dark:text-white underline underline-offset-4">
+                      {isRegister ? "Sign in" : "Create account"}
                     </span>
                   </button>
                 </div>
@@ -535,31 +475,27 @@ export default function Login() {
             ) : (
               /* TAB 2: DEVICE PAIRING / MULTI-DEVICE LOGIN */
               <div className="space-y-4">
-                {/* Sub-Tabs: 8-digit Code vs Quick QR Web Style */}
-                <div className="grid grid-cols-2 p-1 bg-zinc-100 dark:bg-zinc-800 rounded-xl gap-1">
+                {/* Pairing sub-tabs */}
+                <div className="segmented-control w-full grid grid-cols-2 gap-1">
                   <button
                     type="button"
                     onClick={() => setPairingTab("code")}
-                    className={`py-1.5 px-2 text-[11px] font-bold rounded-lg transition-all flex items-center justify-center gap-1.5 ${
-                      pairingTab === "code"
-                        ? "bg-white dark:bg-zinc-700 text-violet-700 dark:text-violet-300 shadow-xs"
-                        : "text-zinc-500 dark:text-zinc-400 hover:text-zinc-800 dark:hover:text-zinc-200"
+                    className={`segmented-item ${
+                      pairingTab === "code" ? "segmented-item-active" : "segmented-item-inactive"
                     }`}
                   >
-                    <KeyRound size={12} className="shrink-0" />
-                    <span className="truncate">Enter Code / Scan</span>
+                    <KeyRound size={12} />
+                    Code
                   </button>
                   <button
                     type="button"
                     onClick={() => setPairingTab("ticket_qr")}
-                    className={`py-1.5 px-2 text-[11px] font-bold rounded-lg transition-all flex items-center justify-center gap-1.5 ${
-                      pairingTab === "ticket_qr"
-                        ? "bg-white dark:bg-zinc-700 text-violet-700 dark:text-violet-300 shadow-xs"
-                        : "text-zinc-500 dark:text-zinc-400 hover:text-zinc-800 dark:hover:text-zinc-200"
+                    className={`segmented-item ${
+                      pairingTab === "ticket_qr" ? "segmented-item-active" : "segmented-item-inactive"
                     }`}
                   >
-                    <QrCode size={12} className="shrink-0" />
-                    <span className="truncate">Quick QR Ticket</span>
+                    <QrCode size={12} />
+                    QR ticket
                   </button>
                 </div>
 
@@ -597,9 +533,9 @@ export default function Login() {
                       onClick={() => submitPairingCode(pairingCode)}
                       loading={pairingLoading}
                       disabled={pairingCode.length < 8}
-                      className="w-full py-2.5 sm:py-3 justify-center text-xs sm:text-sm !bg-zinc-900 dark:!bg-white dark:!text-zinc-900"
+                      className="w-full"
                     >
-                      Pair and Sign In
+                      Pair and sign in
                     </Button>
 
                     <div className="flex items-center gap-2.5 py-0.5">
@@ -612,9 +548,9 @@ export default function Login() {
                       type="button"
                       variant="secondary"
                       onClick={() => setShowScanner(true)}
-                      className="w-full py-2.5 sm:py-3 justify-center gap-2 text-xs sm:text-sm font-semibold"
+                      className="w-full"
                     >
-                      <Camera size={15} /> Scan Pairing QR with Camera
+                      <Camera size={15} /> Scan pairing QR
                     </Button>
                   </div>
                 ) : (
@@ -622,7 +558,7 @@ export default function Login() {
                   <div className="flex flex-col items-center space-y-3.5 py-1">
                     {ticketLoading ? (
                       <div className="p-8 flex flex-col items-center gap-2">
-                        <div className="w-8 h-8 border-2 border-zinc-300 dark:border-zinc-700 border-t-violet-600 rounded-full animate-spin" />
+                        <div className="w-8 h-8 border-2 border-zinc-200 dark:border-zinc-800 border-t-zinc-900 dark:border-t-white rounded-full animate-spin" />
                         <span className="text-xs text-zinc-500">Generating secure QR ticket…</span>
                       </div>
                     ) : ticketData ? (
@@ -692,22 +628,11 @@ export default function Login() {
             )}
           </div>
 
-          {/* Bottom Security / Compliance & Mobile Download Link */}
-          <div className="text-center space-y-2 text-xs text-zinc-400 dark:text-zinc-500">
-            <div className="flex items-center justify-center gap-3 text-[11px]">
-              <a
-                href="/stockly.apk"
-                download="stockly-v1.0.0.apk"
-                className="text-violet-600 dark:text-violet-400 font-bold hover:underline flex items-center gap-1"
-              >
-                <Smartphone size={13} /> Stockly Android APK (4.9 MB)
-              </a>
-              <span>•</span>
-              <span className="flex items-center gap-1">
-                <ShieldCheck size={13} className="text-emerald-500" /> End-to-End Encrypted
-              </span>
-            </div>
-          </div>
+          {/* Footer */}
+          <p className="flex items-center justify-center gap-1.5 text-[11px] text-zinc-400 dark:text-zinc-500">
+            <ShieldCheck size={13} className="text-emerald-500" />
+            Protected with one-time device tokens
+          </p>
         </div>
       </div>
 

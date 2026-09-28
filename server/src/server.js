@@ -173,6 +173,24 @@ const clientSubDist = path.join(__dirname, "../../client/dist");
 const clientDist = path.join(__dirname, "../../dist");
 app.use(express.static(clientDist));
 app.use(express.static(clientSubDist));
+// Explicit APK route: guarantees the real binary (not index.html) is served
+// with the correct Content-Type, even if static middleware order changes.
+app.get(["/stockly.apk", "/api/app/download-file"], (req, res, next) => {
+  const candidates = [path.join(clientDist, "stockly.apk"), path.join(clientSubDist, "stockly.apk")];
+  // eslint-disable-next-line no-unused-vars
+  const tryNext = (i) => {
+    if (i >= candidates.length) return next();
+    res.sendFile(candidates[i], {
+      headers: {
+        "Content-Type": "application/vnd.android.package-archive",
+        "Content-Disposition": 'attachment; filename="stockly.apk"',
+      },
+    }, (err) => {
+      if (err && err.code !== "ECONNABORTED") tryNext(i + 1);
+    });
+  };
+  tryNext(0);
+});
 app.get("/{*any}", (req,res,next)=>{
   if(req.path.startsWith("/api")) return next();
   res.sendFile(path.join(clientDist, "index.html"), (err)=>{

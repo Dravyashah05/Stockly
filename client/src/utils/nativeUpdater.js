@@ -1,16 +1,62 @@
 import { Capacitor, registerPlugin } from "@capacitor/core";
 import { sendAppUpdateNotification } from "./notifications";
 
-const isNative = Capacitor.isNativePlatform();
-
 // Register AppInstaller plugin
 const AppInstaller = registerPlugin("AppInstaller");
+
+// Remote API origin — the host that actually serves /stockly.apk.
+// On a Capacitor device `window.location.origin` is `capacitor://localhost`
+// (or `https://localhost`), which does NOT host the APK, so relative URLs
+// must be resolved against the API origin instead.
+const DEFAULT_REMOTE_API = "https://stocklybydns.vercel.app/api";
+
+function getApiOrigin() {
+  const base =
+    import.meta.env?.VITE_API_URL || DEFAULT_REMOTE_API;
+  try {
+    const u = new URL(base, typeof window !== "undefined" ? window.location.href : "https://stocklybydns.vercel.app");
+    return u.origin;
+  } catch {
+    return "https://stocklybydns.vercel.app";
+  }
+}
+
+export function isNativePlatform() {
+  try {
+    if (typeof Capacitor !== "undefined" && Capacitor.isNativePlatform?.()) return true;
+  } catch {}
+  if (typeof window !== "undefined") {
+    if (window.location.protocol === "capacitor:") return true;
+    try {
+      if (window.Capacitor?.isNativePlatform?.()) return true;
+    } catch {}
+  }
+  return false;
+}
+
+/**
+ * Resolve an APK URL to an absolute https URL.
+ * - Absolute http(s) URLs pass through untouched.
+ * - On native, relative "/stockly.apk" resolves against the remote API
+ *   origin (NOT capacitor://localhost).
+ * - On web, relative URLs resolve against window.location.origin.
+ */
+export function resolveApkUrl(url = "/stockly.apk") {
+  if (!url) return `${getApiOrigin()}/stockly.apk`;
+  if (/^https?:\/\//i.test(url)) return url;
+  if (url.startsWith("/")) {
+    if (isNativePlatform()) return `${getApiOrigin()}${url}`;
+    if (typeof window !== "undefined") return window.location.origin + url;
+    return `${getApiOrigin()}${url}`;
+  }
+  return url;
+}
 
 /**
  * Check if the app can install packages (Android 8+)
  */
 export async function canInstallPackages() {
-  if (!isNative) return true;
+  if (!isNativePlatform()) return true;
   try {
     const res = await AppInstaller.canInstall();
     return res?.canInstall ?? true;
@@ -24,7 +70,7 @@ export async function canInstallPackages() {
  * Open Android Settings to grant unknown app install permissions
  */
 export async function openInstallSettings() {
-  if (!isNative) return;
+  if (!isNativePlatform()) return;
   try {
     await AppInstaller.openInstallPermissionSettings();
   } catch (err) {
@@ -35,7 +81,7 @@ export async function openInstallSettings() {
 /**
  * Automatically download and launch the native Android APK package installer
  * @param {Object} options
- * @param {string} options.url - Direct APK URL
+ * @param {string} options.url - Direct APK URL (relative or absolute)
  * @param {string} options.version - Target version string
  * @param {function} options.onProgress - Progress callback (0-100)
  */
@@ -44,14 +90,10 @@ export async function downloadAndAutoInstall({
   version = "1.1.0",
   onProgress = () => {},
 }) {
-  // Resolve full absolute URL if relative
-  let fullUrl = url;
-  if (typeof window !== "undefined" && url.startsWith("/")) {
-    fullUrl = window.location.origin + url;
-  }
+  const fullUrl = resolveApkUrl(url);
 
   // 1. Native Android Execution via AppInstaller Plugin
-  if (isNative) {
+  if (isNativePlatform()) {
     let progressListener = null;
     let completeListener = null;
     let errorListener = null;
