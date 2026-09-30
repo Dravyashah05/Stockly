@@ -9,7 +9,7 @@
   },
   "plugins": {
     "SplashScreen": {
-      "launchShowDuration": 1500,
+      "launchShowDuration": 800,
       "launchAutoHide": true,
       "backgroundColor": "#09090b",
       "androidSplashResourceName": "splash",
@@ -29,6 +29,6 @@
   "android": {
     "allowMixedContent": true,
     "captureInput": true,
-    "webContentsDebuggingEnabled": true
+    "webContentsDebuggingEnabled": false
   }
 }

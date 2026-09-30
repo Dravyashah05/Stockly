@@ -6,18 +6,18 @@ const router = express.Router();
 // NOTE: releaseDate is static — using `new Date()` here made every restart
 // look like a fresh release and broke client-side "what's new" caching.
 const APP_VERSION_INFO = {
-  version: "1.1.0",
-  versionCode: 2,
-  releaseDate: "2026-09-20T00:00:00.000Z",
+  version: "1.2.0",
+  versionCode: 3,
+  releaseDate: "2026-09-30T00:00:00.000Z",
   minSupportedVersion: "1.0.0",
   apkPath: "/stockly.apk",
-  apkSize: "36 MB",
+  apkSize: "34 MB",
   mandatory: false,
   releaseNotes: [
-    "Native Android push & local notifications for low stock alerts",
-    "Over-the-air App Update & Auto-Update system",
-    "Enhanced Stock In & Stock Out quick triggers in dashboard",
-    "Rebuilt real-time notification center with tabs and sidebar badges",
+    "Smaller, faster Android app (R8-optimized, home-screen widget removed)",
+    "Ledger: tap In/Out/Net cards to filter, tap any row for full details",
+    "Categories: tap any category to open its products instantly",
+    "Staged update notifications — progress, file check, then install",
     "General stability improvements and performance optimizations"
   ]
 };

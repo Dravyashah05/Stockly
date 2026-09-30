@@ -31,6 +31,12 @@ schema.index({ sku: 1 }, { unique: true, sparse: true });
 schema.index({ name: "text", sku: "text", description: "text" });
 schema.index({ category: 1 });
 schema.index({ quantity: 1 });
+// Every list query filters on isActive — index it alone and compounded
+// with the common sort / filter dimensions so counts + pages stay fast.
+schema.index({ isActive: 1 });
+schema.index({ isActive: 1, createdAt: -1 });
+schema.index({ isActive: 1, category: 1 });
+schema.index({ createdAt: -1 });
 
 schema.virtual("status").get(function(){
   if(this.quantity === 0) return "Out of Stock";

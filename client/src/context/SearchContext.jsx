@@ -1,4 +1,4 @@
-import React, { createContext, useContext, useState, useEffect } from "react";
+import React, { createContext, useContext, useState, useEffect, useMemo } from "react";
 import { useLocation } from "react-router-dom";
 
 const SearchContext = createContext(null);
@@ -15,8 +15,12 @@ export function SearchProvider({ children }){
     setSearch("");
   }, [mainSegment]);
 
+  // Stable context value so consumers don't re-render on unrelated
+  // provider re-renders (e.g. every route change).
+  const value = useMemo(() => ({ search, setSearch }), [search]);
+
   return (
-    <SearchContext.Provider value={{ search, setSearch }}>
+    <SearchContext.Provider value={value}>
       {children}
     </SearchContext.Provider>
   )

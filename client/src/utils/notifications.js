@@ -175,3 +175,48 @@ export async function sendAppUpdateNotification(latestVersion) {
     extra: { type: "APP_UPDATE", version: latestVersion }
   });
 }
+
+// Fixed ids so each stage updates its own notification slot.
+export const UPDATE_NOTIF_IDS = {
+  available: 99991,
+  progress: 99993,
+  downloaded: 99994,
+  ready: 99995,
+};
+
+/**
+ * Download progress notification (same id → updates in place).
+ */
+export async function sendUpdateProgressNotification(version, progress) {
+  return sendLocalNotification({
+    id: UPDATE_NOTIF_IDS.progress,
+    title: `⬇️ Downloading Stockly v${version} — ${progress}%`,
+    body: progress >= 100 ? "Download finishing…" : "Update package is downloading. Keep the app open.",
+    extra: { type: "APP_UPDATE_PROGRESS", version, progress }
+  });
+}
+
+/**
+ * Downloaded-file notification after the APK is verified on disk.
+ */
+export async function sendDownloadedFileNotification({ version, name, sizeLabel }) {
+  return sendLocalNotification({
+    id: UPDATE_NOTIF_IDS.downloaded,
+    title: `📦 Stockly v${version} downloaded`,
+    body: `${name || "stockly.apk"} (${sizeLabel || "unknown size"}) verified on device. Checking app version…`,
+    extra: { type: "APP_UPDATE_DOWNLOADED", version, name }
+  });
+}
+
+/**
+ * Final update-ready notification once the version check confirms the
+ * downloaded build is newer than the installed app.
+ */
+export async function sendUpdateReadyNotification(version) {
+  return sendLocalNotification({
+    id: UPDATE_NOTIF_IDS.ready,
+    title: `✅ Install Stockly v${version}`,
+    body: `Version check passed — tap the installer prompt to apply the update.`,
+    extra: { type: "APP_UPDATE_READY", version }
+  });
+}

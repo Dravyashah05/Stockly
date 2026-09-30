@@ -1,7 +1,8 @@
+import React, { memo } from "react";
 import { Link } from "react-router-dom";
 import Badge, { getProductStatus } from "./ui/Badge";
 
-export default function ProductRow({ product }) {
+function ProductRow({ product }) {
   const status = getProductStatus(product);
   return (
     <Link to={`/products/${product._id}`} className="flex items-center gap-3 py-3 px-3 hover:bg-zinc-50 dark:hover:bg-zinc-800/50 rounded-xl transition group">
@@ -19,3 +20,5 @@ export default function ProductRow({ product }) {
     </Link>
   );
 }
+
+export default memo(ProductRow);

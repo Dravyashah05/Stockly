@@ -242,7 +242,7 @@ export default function Login() {
       <div className="absolute top-4 right-4 z-40 flex items-center gap-2">
         <a
           href="/stockly.apk"
-          download="stockly-v1.1.0.apk"
+          download="stockly-v1.2.0.apk"
           className="inline-flex items-center gap-1.5 h-9 px-3 rounded-xl bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 text-xs font-semibold text-zinc-600 dark:text-zinc-300 shadow-sm hover:bg-zinc-50 dark:hover:bg-zinc-800 active:scale-95 transition"
           title="Download Stockly Android App"
         >

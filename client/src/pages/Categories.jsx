@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useState, memo } from "react";
 import {
   getCategories,
   getCategoryStats,
@@ -24,11 +24,11 @@ import {
   LayoutGrid,
   List,
 } from "lucide-react";
-import { Link } from "react-router-dom";
+import { Link, useNavigate } from "react-router-dom";
 import { useSearch } from "../context/SearchContext";
 import FAB from "../components/ui/FAB";
 
-function FieldRow({ field, onChange, onRemove }) {
+const FieldRow = memo(function FieldRow({ field, onChange, onRemove }) {
   return (
     <div className="p-3 rounded-xl border border-zinc-200 dark:border-zinc-700 bg-zinc-50 dark:bg-zinc-800/50 space-y-2.5">
       <div className="flex items-center gap-2">
@@ -86,17 +86,17 @@ function FieldRow({ field, onChange, onRemove }) {
       )}
     </div>
   );
-}
+});
 
-function Avatar({ name }) {
+const Avatar = memo(function Avatar({ name }) {
   return (
     <span className="w-10 h-10 rounded-xl bg-zinc-900 dark:bg-white text-white dark:text-zinc-900 grid place-items-center text-sm font-bold shrink-0">
       {(name?.[0] || "?").toUpperCase()}
     </span>
   );
-}
+});
 
-function Metrics({ productCount, totalStock, totalValue, categoryId }) {
+const Metrics = memo(function Metrics({ productCount, totalStock, totalValue, categoryId }) {
   return (
     <>
       <Link to={`/products?category=${categoryId}`} className="hover:underline" title="View products">
@@ -114,10 +114,11 @@ function Metrics({ productCount, totalStock, totalValue, categoryId }) {
       </span>
     </>
   );
-}
+});
 
 export default function Categories() {
   const { push } = useToast();
+  const navigate = useNavigate();
   const { search: globalSearch } = useSearch();
   const [localSearch, setLocalSearch] = useState("");
   const [cats, setCats] = useState([]);
@@ -251,6 +252,11 @@ export default function Categories() {
     };
   };
 
+  const openProducts = (c) => {
+    if (!c?._id) return;
+    navigate(`/products?category=${c._id}`);
+  };
+
   return (
     <div className="space-y-5 animate-fade-in">
       {/* Header */}
@@ -324,7 +330,13 @@ export default function Categories() {
           {cats.map((c, idx) => {
             const s = statFor(c);
             return (
-              <div key={c._id} style={{ animationDelay: `${Math.min(idx * 30, 240)}ms` }} className="stagger-item card card-hover p-4 flex flex-col gap-3">
+              <div
+                key={c._id}
+                style={{ animationDelay: `${Math.min(idx * 30, 240)}ms` }}
+                onClick={() => openProducts(c)}
+                title={`View products in ${c.name}`}
+                className="stagger-item card card-hover p-4 flex flex-col gap-3 cursor-pointer"
+              >
                 <div className="flex items-start gap-3">
                   <Avatar name={c.name} />
                   <div className="flex-1 min-w-0">
@@ -339,7 +351,10 @@ export default function Categories() {
                   </div>
                   <div className="flex items-center gap-0.5 shrink-0">
                     <button
-                      onClick={() => openEdit(c)}
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        openEdit(c);
+                      }}
                       className="w-8 h-8 grid place-items-center rounded-lg text-zinc-400 hover:text-zinc-900 dark:hover:text-white hover:bg-zinc-100 dark:hover:bg-zinc-800 active:scale-95 transition"
                       title="Edit"
                       aria-label="Edit category"
@@ -347,16 +362,25 @@ export default function Categories() {
                       <Pencil size={14} />
                     </button>
                     <button
-                      onClick={() => setDeleteTarget(c)}
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        setDeleteTarget(c);
+                      }}
                       className="w-8 h-8 grid place-items-center rounded-lg text-zinc-400 hover:text-red-600 hover:bg-red-50 dark:hover:bg-red-500/10 active:scale-95 transition"
                       title="Delete"
                       aria-label="Delete category"
                     >
                       <Trash2 size={14} />
                     </button>
+                    <span className="w-8 h-8 grid place-items-center rounded-lg text-zinc-300 dark:text-zinc-600">
+                      <ChevronRight size={15} />
+                    </span>
                   </div>
                 </div>
-                <div className="flex items-center gap-2 pt-3 border-t border-zinc-100 dark:border-zinc-800 text-xs">
+                <div
+                  className="flex items-center gap-2 pt-3 border-t border-zinc-100 dark:border-zinc-800 text-xs"
+                  onClick={(e) => e.stopPropagation()}
+                >
                   <Metrics productCount={s.productCount} totalStock={s.totalStock} totalValue={s.totalValue} categoryId={c._id} />
                 </div>
               </div>
@@ -369,14 +393,20 @@ export default function Categories() {
             {cats.map((c, idx) => {
               const s = statFor(c);
               return (
-                <div key={c._id} style={{ animationDelay: `${Math.min(idx * 20, 200)}ms` }} className="stagger-item px-3.5 py-3 flex items-center gap-3 hover:bg-zinc-50 dark:hover:bg-zinc-800/40 transition">
+                <div
+                  key={c._id}
+                  style={{ animationDelay: `${Math.min(idx * 20, 200)}ms` }}
+                  onClick={() => openProducts(c)}
+                  title={`View products in ${c.name}`}
+                  className="stagger-item px-3.5 py-3 flex items-center gap-3 hover:bg-zinc-50 dark:hover:bg-zinc-800/40 active:bg-zinc-100 dark:active:bg-zinc-800/60 transition cursor-pointer"
+                >
                   <Avatar name={c.name} />
                   <div className="flex-1 min-w-0">
                     <div className="flex items-center gap-2">
                       <span className="text-sm font-semibold truncate text-zinc-900 dark:text-white">{c.name}</span>
                       <Badge status={c.status || "active"} size="sm" />
                     </div>
-                    <div className="flex items-center gap-2 mt-1 text-xs min-w-0">
+                    <div className="flex items-center gap-2 mt-1 text-xs min-w-0" onClick={(e) => e.stopPropagation()}>
                       <Metrics productCount={s.productCount} totalStock={s.totalStock} totalValue={s.totalValue} categoryId={c._id} />
                     </div>
                     {c.customFields?.length > 0 && (
@@ -387,7 +417,10 @@ export default function Categories() {
                   </div>
                   <div className="flex items-center gap-0.5 shrink-0">
                     <button
-                      onClick={() => openEdit(c)}
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        openEdit(c);
+                      }}
                       className="w-8 h-8 grid place-items-center rounded-lg text-zinc-400 hover:text-zinc-900 dark:hover:text-white hover:bg-zinc-100 dark:hover:bg-zinc-800 active:scale-95 transition"
                       title="Edit"
                       aria-label="Edit category"
@@ -395,20 +428,19 @@ export default function Categories() {
                       <Pencil size={14} />
                     </button>
                     <button
-                      onClick={() => setDeleteTarget(c)}
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        setDeleteTarget(c);
+                      }}
                       className="w-8 h-8 grid place-items-center rounded-lg text-zinc-400 hover:text-red-600 hover:bg-red-50 dark:hover:bg-red-500/10 active:scale-95 transition"
                       title="Delete"
                       aria-label="Delete category"
                     >
                       <Trash2 size={14} />
                     </button>
-                    <Link
-                      to={`/products?category=${c._id}`}
-                      className="w-8 h-8 grid place-items-center rounded-lg text-zinc-400 hover:text-zinc-900 dark:hover:text-white hover:bg-zinc-100 dark:hover:bg-zinc-800 transition"
-                      title="View products"
-                    >
+                    <span className="w-8 h-8 grid place-items-center rounded-lg text-zinc-300 dark:text-zinc-600">
                       <ChevronRight size={15} />
-                    </Link>
+                    </span>
                   </div>
                 </div>
               );

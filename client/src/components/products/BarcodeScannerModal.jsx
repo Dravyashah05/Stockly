@@ -1,5 +1,11 @@
 import React, { useEffect, useRef, useState, useCallback } from "react";
-import { Html5Qrcode, Html5QrcodeSupportedFormats } from "html5-qrcode";
+// html5-qrcode is ~335KB — load it lazily on first scanner open so the
+// Ledger/Home bundles stay lean for users who never scan.
+let qrLibPromise = null;
+function loadQrLib() {
+  if (!qrLibPromise) qrLibPromise = import("html5-qrcode");
+  return qrLibPromise;
+}
 import {
   Camera,
   SwitchCamera,
@@ -81,6 +87,7 @@ export default function BarcodeScannerModal({
       try {
         await stopScanner();
 
+        const { Html5Qrcode, Html5QrcodeSupportedFormats } = await loadQrLib();
         const formatsToSupport = [
           Html5QrcodeSupportedFormats.QR_CODE,
           Html5QrcodeSupportedFormats.EAN_13,
@@ -142,7 +149,8 @@ export default function BarcodeScannerModal({
     // Guard against the async camera lookup resolving after close —
     // without this the camera can start (and stay held) behind the modal.
     let cancelled = false;
-    Html5Qrcode.getCameras()
+    loadQrLib()
+      .then(({ Html5Qrcode }) => Html5Qrcode.getCameras())
       .then((devices) => {
         if (cancelled) return;
         if (devices && devices.length > 0) {

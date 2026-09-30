@@ -43,16 +43,19 @@ export async function getProducts(req, res, next) {
     }
 
     // Build the query now that all filters (including stock status) are set.
+    // Count + page fetch run in parallel (one RTT instead of two).
     let query = Product.find(filter).populate("category", "name customFields").populate("supplier", "name").lean();
     if(allowedSort.includes(sort)){
       query = query.sort({ [sort]: sortOrder });
     } else {
       query = query.sort({ createdAt: -1 });
     }
-    const total = await Product.countDocuments(filter);
     query = query.skip(skip).limit(lim);
 
-    const products = await query;
+    const [total, products] = await Promise.all([
+      Product.countDocuments(filter),
+      query,
+    ]);
 
     res.json({ success: true, data: products, pagination: { page: pg, limit: lim, total, pages: Math.ceil(total/lim) } });
   } catch (error) {

@@ -1,8 +1,8 @@
 import api, { client } from "./client";
-export const getProducts = (params="") => {
-  if(typeof params==="string") return api.get(`/products${params}`);
+export const getProducts = (params="", config) => {
+  if(typeof params==="string") return api.get(`/products${params}`, config);
   const q = new URLSearchParams(params).toString();
-  return api.get(`/products${q?`?${q}`:""}`);
+  return api.get(`/products${q?`?${q}`:""}`, config);
 };
 export const getProduct = (id) => api.get(`/products/${id}`);
 export const createProduct = (data) => api.post("/products", data);

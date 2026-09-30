@@ -30,7 +30,6 @@ import Button from "../components/ui/Button";
 import { StatsSkeleton, EmptyState } from "../components/ui/Loader";
 import ProductFormModal from "../components/products/ProductFormModal";
 import { useToast } from "../context/ToastContext";
-import { syncInventoryToWidget } from "../utils/nativeWidget";
 import { hapticLight, hapticMedium } from "../utils/haptics";
 import BarcodeScannerModal from "../components/products/BarcodeScannerModal";
 
@@ -136,17 +135,6 @@ export default function Home() {
       setProducts(pList);
       setCategories(cList);
       setRecent(rList);
-
-      // Sync summary metrics to Android Home Widget
-      const lowCount = pList.filter((p) => p.quantity <= (p.minimumStock ?? 5)).length;
-      const inMoves = rList.filter((t) => t.type === "IN").reduce((acc, x) => acc + (x.quantity || 1), 0);
-      const outMoves = rList.filter((t) => t.type === "OUT").reduce((acc, x) => acc + (x.quantity || 1), 0);
-      syncInventoryToWidget({
-        totalProducts: pList.length,
-        lowStockCount: lowCount,
-        todayIn: inMoves,
-        todayOut: outMoves,
-      }).catch(() => {});
     } catch (e) {
       // ignore
     } finally {

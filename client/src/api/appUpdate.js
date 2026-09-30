@@ -4,8 +4,8 @@ import { resolveApkUrl } from "../utils/nativeUpdater";
 // Must match the latest released build (server APP_VERSION_INFO + android
 // versionCode/versionName). If these lag behind, the server keeps reporting
 // hasUpdate=true even right after the user installed the latest APK.
-export const APP_CURRENT_VERSION = "1.1.0";
-export const APP_CURRENT_VERSION_CODE = 2;
+export const APP_CURRENT_VERSION = "1.2.0";
+export const APP_CURRENT_VERSION_CODE = 3;
 
 const DISMISSED_KEY = "stockly_update_dismissed_version";
 

@@ -29,13 +29,13 @@ import {
   Calendar,
   TrendingUp,
   TrendingDown,
+  ExternalLink,
   X,
 } from "lucide-react";
 import { useSearchParams, useNavigate } from "react-router-dom";
 import { useSearch } from "../context/SearchContext";
 import { playStockInSound, playStockOutSound, playErrorSound } from "../utils/sound";
 import { hapticSuccess, hapticLight, hapticWarning } from "../utils/haptics";
-import { syncInventoryToWidget } from "../utils/nativeWidget";
 import BarcodeScannerModal from "../components/products/BarcodeScannerModal";
 
 const QUICK_QTYS = [1, 5, 10, 25, 50, 100];
@@ -106,6 +106,29 @@ export default function Stock() {
   const [deleteTarget, setDeleteTarget] = useState(null);
   const [deleteLoading, setDeleteLoading] = useState(false);
   const [showFilters, setShowFilters] = useState(false);
+  const [detailTx, setDetailTx] = useState(null);
+  const historySeq = React.useRef(0);
+
+  const txProductId = (t) =>
+    !t ? "" : typeof t.productId === "string" ? t.productId : t.productId?._id || "";
+  const txProduct = (t) =>
+    t && typeof t.productId === "object" ? t.productId : null;
+
+  const setTypeFilter = (next) => {
+    hapticLight();
+    setFilters((f) => ({ ...f, type: next, page: 1 }));
+  };
+
+  const openProductDetails = (t) => {
+    const id = txProductId(t);
+    if (!id) {
+      push("Product no longer available", "error");
+      return;
+    }
+    hapticLight();
+    setDetailTx(null);
+    navigate(`/products/${id}`);
+  };
 
   // sync navbar search -> filters.search
   useEffect(() => {
@@ -165,7 +188,7 @@ export default function Stock() {
     }
   };
 
-  const loadHistory = () => {
+  const loadHistory = (signal, requestId) => {
     setLoading(true);
     const params = {};
     if (filters.product) params.product = filters.product;
@@ -176,22 +199,35 @@ export default function Stock() {
     if (filters.endDate) params.endDate = new Date(filters.endDate + "T23:59:59.999").toISOString();
     params.page = filters.page;
     params.limit = pageLimit;
-    getStockHistory(params)
+    getStockHistory(params, signal ? { signal } : undefined)
       .then((r) => {
+        // Drop stale responses: only the latest request may write state.
+        if (requestId !== undefined && requestId !== historySeq.current) return;
         setTx(r.data);
         setPagination(r.pagination);
       })
-      .finally(() => setLoading(false));
+      .catch(() => {
+        // Aborts and transient failures are swallowed here; the retry
+        // policy in api/client already handled one retry. Loud toasts
+        // on every keystroke race would be noise.
+      })
+      .finally(() => {
+        if (requestId === undefined || requestId === historySeq.current) setLoading(false);
+      });
   };
 
+  // Single abortable + debounced effect for all history filters. Previously
+  // two effects (immediate + 300ms search debounce) double-fetched on mount
+  // and let slower stale responses overwrite newer ones.
   useEffect(() => {
-    loadHistory();
-  }, [filters.product, filters.type, filters.category, filters.page, filters.startDate, filters.endDate, pageLimit]);
-
-  useEffect(() => {
-    const t = setTimeout(loadHistory, 300);
-    return () => clearTimeout(t);
-  }, [filters.search]);
+    const seq = ++historySeq.current;
+    const controller = new AbortController();
+    const t = setTimeout(() => loadHistory(controller.signal, seq), 250);
+    return () => {
+      clearTimeout(t);
+      controller.abort();
+    };
+  }, [filters.product, filters.type, filters.category, filters.search, filters.page, filters.startDate, filters.endDate, pageLimit]);
 
   const selected = products.find((p) => p._id === productId);
 
@@ -239,13 +275,6 @@ export default function Stock() {
       setQuantity(0);
       loadHistory();
       setShowForm(false);
-
-      // Sync updated metrics to Android Home Widget
-      const lowCount = updatedProducts.filter((p) => p.quantity <= (p.minimumStock ?? 5)).length;
-      syncInventoryToWidget({
-        totalProducts: updatedProducts.length,
-        lowStockCount: lowCount,
-      }).catch(() => {});
     } catch (e) {
       hapticWarning();
       playErrorSound();
@@ -306,8 +335,15 @@ export default function Stock() {
     return Array.from(map.entries()).sort((a, b) => b[0].localeCompare(a[0]));
   }, [tx]);
 
-  const totalIn = tx.filter((t) => t.type === "IN").reduce((a, b) => a + b.quantity, 0);
-  const totalOut = tx.filter((t) => t.type === "OUT").reduce((a, b) => a + b.quantity, 0);
+  const { totalIn, totalOut } = useMemo(() => {
+    let tIn = 0;
+    let tOut = 0;
+    for (const t of tx) {
+      if (t.type === "IN") tIn += t.quantity;
+      else if (t.type === "OUT") tOut += t.quantity;
+    }
+    return { totalIn: tIn, totalOut: tOut };
+  }, [tx]);
   const hasActiveFilters = filters.product || filters.category || filters.type || globalSearch;
 
   return (
@@ -339,49 +375,85 @@ export default function Stock() {
         </div>
       </div>
 
-      {/* Summary cards — stacked icon-over-value on phones, inline on sm+ */}
+      {/* Summary cards — tap to filter: In / Out / All (Net). 3-up on all sizes; compact centered stack on phones, inline on sm+ */}
       <div className="grid grid-cols-3 gap-2 sm:gap-3">
-        <div className="card p-2.5 sm:p-3.5 flex flex-col items-start gap-2 sm:flex-row sm:items-center sm:gap-3">
-          <span className="w-8 h-8 sm:w-9 sm:h-9 rounded-xl bg-emerald-100 dark:bg-emerald-500/15 text-emerald-600 dark:text-emerald-400 grid place-items-center shrink-0">
-            <TrendingUp size={16} />
+        <button
+          type="button"
+          onClick={() => setTypeFilter(filters.type === "IN" ? "" : "IN")}
+          aria-pressed={filters.type === "IN"}
+          title={filters.type === "IN" ? "Clear IN filter — show all" : "Show inbound only"}
+          className={`card min-w-0 overflow-hidden p-2 min-[400px]:p-2.5 sm:p-3.5 flex flex-col items-center text-center gap-1.5 sm:flex-row sm:items-center sm:text-left sm:gap-3 cursor-pointer transition active:scale-[0.98] hover:border-emerald-300 dark:hover:border-emerald-500/40 ${
+            filters.type === "IN" ? "ring-2 ring-emerald-500 border-emerald-300 dark:border-emerald-500/50" : ""
+          }`}
+        >
+          <span className="w-7 h-7 min-[400px]:w-8 min-[400px]:h-8 sm:w-9 sm:h-9 rounded-xl bg-emerald-100 dark:bg-emerald-500/15 text-emerald-600 dark:text-emerald-400 grid place-items-center shrink-0">
+            <TrendingUp size={15} />
           </span>
-          <span className="min-w-0">
-            <span className="block text-[10px] sm:text-[11px] font-bold uppercase tracking-wider text-zinc-500">Inbound</span>
-            <span className="block text-base sm:text-lg font-bold tabular-nums text-emerald-600 dark:text-emerald-400 leading-tight">
-              +{totalIn}
+          <span className="min-w-0 w-full sm:w-auto sm:flex-1">
+            <span className="block text-[9px] min-[400px]:text-[10px] sm:text-[11px] font-bold uppercase tracking-wider text-zinc-500 truncate">
+              <span className="sm:hidden">In</span>
+              <span className="hidden sm:inline">Inbound</span>
+            </span>
+            <span
+              title={`+${totalIn.toLocaleString()}`}
+              className="block text-sm min-[400px]:text-base sm:text-lg font-bold tabular-nums text-emerald-600 dark:text-emerald-400 leading-tight truncate"
+            >
+              +{totalIn.toLocaleString()}
             </span>
           </span>
-        </div>
-        <div className="card p-2.5 sm:p-3.5 flex flex-col items-start gap-2 sm:flex-row sm:items-center sm:gap-3">
-          <span className="w-8 h-8 sm:w-9 sm:h-9 rounded-xl bg-red-100 dark:bg-red-500/15 text-red-600 dark:text-red-400 grid place-items-center shrink-0">
-            <TrendingDown size={16} />
+        </button>
+        <button
+          type="button"
+          onClick={() => setTypeFilter(filters.type === "OUT" ? "" : "OUT")}
+          aria-pressed={filters.type === "OUT"}
+          title={filters.type === "OUT" ? "Clear OUT filter — show all" : "Show outbound only"}
+          className={`card min-w-0 overflow-hidden p-2 min-[400px]:p-2.5 sm:p-3.5 flex flex-col items-center text-center gap-1.5 sm:flex-row sm:items-center sm:text-left sm:gap-3 cursor-pointer transition active:scale-[0.98] hover:border-red-300 dark:hover:border-red-500/40 ${
+            filters.type === "OUT" ? "ring-2 ring-red-500 border-red-300 dark:border-red-500/50" : ""
+          }`}
+        >
+          <span className="w-7 h-7 min-[400px]:w-8 min-[400px]:h-8 sm:w-9 sm:h-9 rounded-xl bg-red-100 dark:bg-red-500/15 text-red-600 dark:text-red-400 grid place-items-center shrink-0">
+            <TrendingDown size={15} />
           </span>
-          <span className="min-w-0">
-            <span className="block text-[10px] sm:text-[11px] font-bold uppercase tracking-wider text-zinc-500">Outbound</span>
-            <span className="block text-base sm:text-lg font-bold tabular-nums text-red-600 dark:text-red-400 leading-tight">
-              −{totalOut}
+          <span className="min-w-0 w-full sm:w-auto sm:flex-1">
+            <span className="block text-[9px] min-[400px]:text-[10px] sm:text-[11px] font-bold uppercase tracking-wider text-zinc-500 truncate">
+              <span className="sm:hidden">Out</span>
+              <span className="hidden sm:inline">Outbound</span>
+            </span>
+            <span
+              title={`−${totalOut.toLocaleString()}`}
+              className="block text-sm min-[400px]:text-base sm:text-lg font-bold tabular-nums text-red-600 dark:text-red-400 leading-tight truncate"
+            >
+              −{totalOut.toLocaleString()}
             </span>
           </span>
-        </div>
-        <div className="card p-2.5 sm:p-3.5 flex flex-col items-start gap-2 sm:flex-row sm:items-center sm:gap-3">
-          <span className={`w-8 h-8 sm:w-9 sm:h-9 rounded-xl grid place-items-center shrink-0 ${
+        </button>
+        <button
+          type="button"
+          onClick={() => setTypeFilter("")}
+          aria-pressed={!filters.type}
+          title="Show all movements"
+          className={`card min-w-0 overflow-hidden p-2 min-[400px]:p-2.5 sm:p-3.5 flex flex-col items-center text-center gap-1.5 sm:flex-row sm:items-center sm:text-left sm:gap-3 cursor-pointer transition active:scale-[0.98] ${
+            !filters.type ? "ring-2 ring-zinc-400 dark:ring-zinc-500" : ""
+          }`}
+        >
+          <span className={`w-7 h-7 min-[400px]:w-8 min-[400px]:h-8 sm:w-9 sm:h-9 rounded-xl grid place-items-center shrink-0 ${
             totalIn - totalOut >= 0
               ? "bg-emerald-100 dark:bg-emerald-500/15 text-emerald-600 dark:text-emerald-400"
               : "bg-red-100 dark:bg-red-500/15 text-red-600 dark:text-red-400"
           }`}>
-            {totalIn - totalOut >= 0 ? <ArrowUp size={16} /> : <ArrowDown size={16} />}
+            {totalIn - totalOut >= 0 ? <ArrowUp size={15} /> : <ArrowDown size={15} />}
           </span>
-          <span className="min-w-0">
-            <span className="block text-[10px] sm:text-[11px] font-bold uppercase tracking-wider text-zinc-500">Net</span>
-            <span className={`block text-base sm:text-lg font-bold tabular-nums leading-tight ${
+          <span className="min-w-0 w-full sm:w-auto sm:flex-1">
+            <span className="block text-[9px] min-[400px]:text-[10px] sm:text-[11px] font-bold uppercase tracking-wider text-zinc-500 truncate">Net</span>
+            <span title={String((totalIn - totalOut).toLocaleString())} className={`block text-sm min-[400px]:text-base sm:text-lg font-bold tabular-nums leading-tight truncate ${
               totalIn - totalOut >= 0
                 ? "text-emerald-600 dark:text-emerald-400"
                 : "text-red-600 dark:text-red-400"
             }`}>
-              {totalIn - totalOut >= 0 ? "+" : ""}{totalIn - totalOut}
+              {totalIn - totalOut >= 0 ? "+" : ""}{(totalIn - totalOut).toLocaleString()}
             </span>
           </span>
-        </div>
+        </button>
       </div>
 
       {/* Date presets — swipeable row on phones, even grid on sm+ */}
@@ -525,8 +597,15 @@ export default function Stock() {
                     {items.map((t) => {
                       const isIN = t.type === "IN";
                       return (
-                        <div key={t._id} className="px-3.5 py-3 flex items-center gap-2.5 sm:gap-3 hover:bg-zinc-50 dark:hover:bg-zinc-800/40 transition">
-                          {/* Type icon — sm+ only (mobile uses the corner badge on the thumb) */}
+                        <div
+                          key={t._id}
+                          onClick={() => {
+                            hapticLight();
+                            setDetailTx(t);
+                          }}
+                          title="View movement details"
+                          className="px-3.5 py-3 flex items-center gap-2.5 sm:gap-3 hover:bg-zinc-50 dark:hover:bg-zinc-800/40 active:bg-zinc-100 dark:active:bg-zinc-800/60 transition cursor-pointer"
+                        >                          {/* Type icon — sm+ only (mobile uses the corner badge on the thumb) */}
                           <span className={`hidden sm:grid w-9 h-9 rounded-xl place-items-center shrink-0 border ${
                             isIN
                               ? "bg-emerald-50 dark:bg-emerald-500/10 border-emerald-200 dark:border-emerald-500/20 text-emerald-600 dark:text-emerald-400"
@@ -575,7 +654,10 @@ export default function Stock() {
                           </div>
                           <div className="flex items-center gap-0.5 shrink-0">
                             <button
-                              onClick={() => openEdit(t)}
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                openEdit(t);
+                              }}
                               className="w-8 h-8 grid place-items-center rounded-lg text-zinc-400 hover:text-zinc-900 dark:hover:text-white hover:bg-zinc-100 dark:hover:bg-zinc-800 active:scale-95 transition"
                               title="Edit"
                               aria-label="Edit movement"
@@ -583,7 +665,10 @@ export default function Stock() {
                               <Pencil size={13} />
                             </button>
                             <button
-                              onClick={() => setDeleteTarget(t)}
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                setDeleteTarget(t);
+                              }}
                               className="w-8 h-8 grid place-items-center rounded-lg text-zinc-400 hover:text-red-600 hover:bg-red-50 dark:hover:bg-red-500/10 active:scale-95 transition"
                               title="Delete"
                               aria-label="Delete movement"
@@ -781,6 +866,116 @@ export default function Stock() {
         </div>
       </Modal>
 
+      <Modal
+        open={!!detailTx}
+        onClose={() => setDetailTx(null)}
+        title="Movement details"
+        size="sm"
+        description={
+          detailTx
+            ? `${new Date(detailTx.createdAt).toLocaleDateString(undefined, {
+                weekday: "short",
+                month: "short",
+                day: "numeric",
+                year: "numeric",
+              })} • ${new Date(detailTx.createdAt).toLocaleTimeString([], {
+                hour: "2-digit",
+                minute: "2-digit",
+              })}`
+            : ""
+        }
+      >
+        {detailTx && (() => {
+          const p = txProduct(detailTx);
+          const pid = txProductId(detailTx);
+          const isIN = detailTx.type === "IN";
+          return (
+            <div className="space-y-4">
+              <div className="p-3 rounded-xl bg-zinc-50 dark:bg-zinc-800/60 border border-zinc-100 dark:border-zinc-800 flex items-center gap-3">
+                <span className="w-11 h-11 rounded-xl bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-700 overflow-hidden grid place-items-center shrink-0">
+                  {p?.image ? (
+                    <img src={p.image} alt="" className="w-full h-full object-cover" />
+                  ) : (
+                    <Package size={17} className="text-zinc-400" />
+                  )}
+                </span>
+                <span className="min-w-0 flex-1">
+                  <span className="block text-sm font-bold truncate text-zinc-900 dark:text-white">
+                    {p?.name || "Product"}
+                  </span>
+                  <span className="block text-xs text-zinc-500 truncate">
+                    {[p?.sku, p?.unit].filter(Boolean).join(" • ") || (pid ? `ID: ${String(pid).slice(-6)}` : "")}
+                  </span>
+                </span>
+                <span className={`text-sm font-bold tabular-nums shrink-0 ${isIN ? "text-emerald-600 dark:text-emerald-400" : "text-red-600 dark:text-red-400"}`}>
+                  {isIN ? "+" : "−"}{Number(detailTx.quantity).toLocaleString()}
+                </span>
+              </div>
+
+              <div className="grid grid-cols-2 gap-2.5 text-xs">
+                <div className="p-2.5 rounded-xl bg-zinc-50 dark:bg-zinc-800/50 border border-zinc-100 dark:border-zinc-800">
+                  <div className="font-bold uppercase tracking-wider text-[10px] text-zinc-500">Type</div>
+                  <div className={`mt-0.5 font-bold inline-flex items-center gap-1 ${isIN ? "text-emerald-600 dark:text-emerald-400" : "text-red-600 dark:text-red-400"}`}>
+                    {isIN ? <ArrowUp size={12} /> : <ArrowDown size={12} />} {detailTx.type}
+                  </div>
+                </div>
+                <div className="p-2.5 rounded-xl bg-zinc-50 dark:bg-zinc-800/50 border border-zinc-100 dark:border-zinc-800">
+                  <div className="font-bold uppercase tracking-wider text-[10px] text-zinc-500">Reason</div>
+                  <div className="mt-0.5 font-semibold text-zinc-900 dark:text-white truncate">{detailTx.reason || (isIN ? "Purchase" : "Sale")}</div>
+                </div>
+                <div className="p-2.5 rounded-xl bg-zinc-50 dark:bg-zinc-800/50 border border-zinc-100 dark:border-zinc-800">
+                  <div className="font-bold uppercase tracking-wider text-[10px] text-zinc-500">Supplier</div>
+                  <div className="mt-0.5 font-semibold text-zinc-900 dark:text-white truncate">{detailTx.supplier?.name || "—"}</div>
+                </div>
+                <div className="p-2.5 rounded-xl bg-zinc-50 dark:bg-zinc-800/50 border border-zinc-100 dark:border-zinc-800">
+                  <div className="font-bold uppercase tracking-wider text-[10px] text-zinc-500">Stock change</div>
+                  <div className="mt-0.5 font-semibold font-mono text-zinc-900 dark:text-white">
+                    {detailTx.previousQuantity ?? "?"} → {detailTx.newQuantity ?? "?"}
+                  </div>
+                </div>
+              </div>
+
+              {detailTx.notes && (
+                <div className="p-2.5 rounded-xl bg-zinc-50 dark:bg-zinc-800/50 border border-zinc-100 dark:border-zinc-800 text-xs">
+                  <div className="font-bold uppercase tracking-wider text-[10px] text-zinc-500">Notes</div>
+                  <div className="mt-0.5 text-zinc-700 dark:text-zinc-200 break-words">{detailTx.notes}</div>
+                </div>
+              )}
+
+              <div className="flex flex-col gap-2 pt-1">
+                <Button variant="secondary" onClick={() => openProductDetails(detailTx)} className="w-full" disabled={!pid}>
+                  <ExternalLink size={14} /> Open in details
+                </Button>
+                <div className="flex gap-2">
+                  <Button
+                    variant="secondary"
+                    className="flex-1"
+                    onClick={() => {
+                      const t = detailTx;
+                      setDetailTx(null);
+                      openEdit(t);
+                    }}
+                  >
+                    <Pencil size={13} /> Edit
+                  </Button>
+                  <Button
+                    variant="danger"
+                    className="flex-1"
+                    onClick={() => {
+                      const t = detailTx;
+                      setDetailTx(null);
+                      setDeleteTarget(t);
+                    }}
+                  >
+                    <Trash2 size={13} /> Delete
+                  </Button>
+                </div>
+              </div>
+            </div>
+          );
+        })()}
+      </Modal>
+
       <ConfirmModal
         open={!!deleteTarget}
         onClose={() => !deleteLoading && setDeleteTarget(null)}
@@ -789,7 +984,9 @@ export default function Stock() {
         title="Delete movement?"
         description={
           deleteTarget
-            ? `${deleteTarget.type} of ${deleteTarget.quantity} units for "${deleteTarget.productId?.name}" will be removed and stock reverted.`
+            ? `${deleteTarget.type} of ${deleteTarget.quantity} units for "${
+                (typeof deleteTarget.productId === "object" ? deleteTarget.productId?.name : "") || "Product"
+              }" will be removed and stock reverted.`
             : ""
         }
         confirmLabel="Delete"

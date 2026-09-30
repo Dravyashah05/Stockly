@@ -77,7 +77,7 @@ function useNativeMobileIntegration() {
         });
         handles.push(backHandle);
 
-        // Handle Android Home Screen Widget and Shortcut deep-links
+        // Handle Android launcher Shortcut deep-links
         const urlHandle = await CapApp.addListener("appUrlOpen", (event) => {
           try {
             if (!event?.url) return;

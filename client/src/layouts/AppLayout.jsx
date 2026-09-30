@@ -513,8 +513,8 @@ export default function AppLayout({ children }) {
                 </button>
               )}
 
-              {/* Notification Center */}
-              <div className="relative" ref={notifRef}>
+              {/* Notification Center — desktop only (mobile shows profile instead) */}
+              <div className="relative hidden sm:block" ref={notifRef}>
                 <button
                   onClick={() => setNotificationsOpen((v) => !v)}
                   className={`w-9 h-9 grid place-items-center rounded-xl border transition relative ${
@@ -673,6 +673,16 @@ export default function AppLayout({ children }) {
                   </div>
                 )}
               </div>
+
+              {/* Mobile profile — replaces notification bell on mobile */}
+              <Link
+                to="/settings"
+                className="sm:hidden w-9 h-9 rounded-xl grid place-items-center bg-zinc-900 text-white dark:bg-white dark:text-zinc-900 font-bold text-sm border border-zinc-900 dark:border-white active:scale-95 transition shrink-0"
+                aria-label="Profile"
+                title={user?.name || "Profile"}
+              >
+                {(user?.name?.[0] || "U").toUpperCase()}
+              </Link>
             </div>
           </div>
 

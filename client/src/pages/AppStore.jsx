@@ -144,8 +144,20 @@ export default function AppStore() {
       hapticSuccess();
       playSuccessSound();
 
-      if (res?.native) {
-        push?.("Stockly APK installer launched! Tap Install to proceed.", "success");
+      if (res?.upToDate) {
+        push?.(
+          res?.file
+            ? `Downloaded ${res.file.name} (${res.file.sizeLabel}) — version check confirms you're already up to date.`
+            : "Version check confirms you're already up to date.",
+          "success"
+        );
+      } else if (res?.native) {
+        push?.(
+          res?.file
+            ? `Verified ${res.file.name} (${res.file.sizeLabel}). Installer launched! Tap Install to proceed.`
+            : "Stockly APK installer launched! Tap Install to proceed.",
+          "success"
+        );
       } else {
         push?.("Stockly APK download ready! Open downloaded file to install.", "success");
       }
@@ -187,8 +199,8 @@ export default function AppStore() {
     },
     {
       icon: Zap,
-      title: "Widgets & Shortcuts",
-      desc: "1-Tap operations from your Android Home Screen.",
+      title: "Shortcuts",
+      desc: "1-tap Stock IN/OUT, scan & add-product from long-press menu.",
       color: "text-emerald-600 dark:text-emerald-400 bg-emerald-50 dark:bg-emerald-500/10",
     },
     {
@@ -242,7 +254,7 @@ export default function AppStore() {
                 Stockly for Android
               </h1>
               <p className="text-zinc-300 text-xs sm:text-sm mt-1">
-                Hardware barcode scanner, home screen widgets, and offline ledger.
+                Hardware barcode scanner, launcher shortcuts, and offline ledger.
               </p>
             </div>
 

@@ -13,7 +13,7 @@ import { useSearch } from "../context/SearchContext";
 import {
   Plus, Trash2, Package, Layers,
   CheckSquare, Square, ArrowUpDown, ChevronLeft,
-  ChevronRight, ArrowRight, AlertTriangle, X,
+  ChevronRight, AlertTriangle, X,
 } from "lucide-react";
 import { Link, useSearchParams } from "react-router-dom";
 import { TableSkeleton, EmptyState } from "../components/ui/Loader";
@@ -41,7 +41,7 @@ export default function Products() {
   const [page, setPage] = useState(1);
   const [limit, setLimit] = useState(25);
   const [pagination, setPagination] = useState({ total: 0, pages: 1 });
-  const [selectedCategory, setSelectedCategory] = useState("");
+  const [selectedCategory, setSelectedCategory] = useState(() => searchParams.get("category") || "");
   const initialFilter = searchParams.get("filter") === "low" || searchParams.get("filter") === "low-stock" ? "low" : "";
   const [stockStatusFilter, setStockStatusFilter] = useState(initialFilter);
   const [sortBy, setSortBy] = useState("createdAt");
@@ -69,7 +69,9 @@ export default function Products() {
     return () => clearTimeout(t);
   }, [search]);
 
-  const fetchData = async () => {
+  const fetchSeq = React.useRef(0);
+
+  const fetchData = async (signal, requestId) => {
     setLoading(true);
     try {
       const params = new URLSearchParams();
@@ -81,15 +83,24 @@ export default function Products() {
       params.set("page", String(page));
       params.set("limit", String(limit));
 
-      const res = await getProducts(`?${params.toString()}`);
+      const res = await getProducts(`?${params.toString()}`, signal ? { signal } : undefined);
+      if (requestId !== undefined && requestId !== fetchSeq.current) return;
       setProducts(res.data || []);
       if (res.pagination) {
         setPagination(res.pagination);
       }
     } catch (e) {
-      push(e.message, "error");
+      const msg = String(e?.message || "").toLowerCase();
+      const cancelled =
+        e?.code === "ERR_CANCELED" ||
+        e?.code === "ECONNABORTED" ||
+        e?.name === "CanceledError" ||
+        msg === "canceled" ||
+        msg === "cancelled" ||
+        msg.includes("abort");
+      if (!cancelled) push(e.message, "error");
     } finally {
-      setLoading(false);
+      if (requestId === undefined || requestId === fetchSeq.current) setLoading(false);
     }
   };
 
@@ -98,8 +109,17 @@ export default function Products() {
     getSuppliers().then((r) => setSuppliers(r.data || [])).catch(() => {});
   }, []);
 
+  // Deep-link support: /products?category=<id> pre-selects that category pill
   useEffect(() => {
-    fetchData();
+    const catFromUrl = searchParams.get("category") || "";
+    if (catFromUrl) setSelectedCategory(catFromUrl);
+  }, [searchParams]);
+
+  useEffect(() => {
+    const seq = ++fetchSeq.current;
+    const controller = new AbortController();
+    fetchData(controller.signal, seq);
+    return () => controller.abort();
   }, [debouncedSearch, selectedCategory, stockStatusFilter, sortBy, sortOrder, page, limit]);
 
   // Reset page to 1 when filters change
@@ -452,13 +472,6 @@ export default function Products() {
                   </div>
 
                   <div className="flex items-center gap-1 shrink-0 self-center">
-                    <Link
-                      to={`/products/${p._id}`}
-                      className="w-9 h-9 hidden sm:grid place-items-center rounded-xl text-zinc-400 hover:text-zinc-900 dark:hover:text-white hover:bg-zinc-100 dark:hover:bg-zinc-800 transition"
-                      title="View details"
-                    >
-                      <ArrowRight size={15} />
-                    </Link>
                     <ProductActionMenu
                       product={p}
                       onEdit={openEdit}

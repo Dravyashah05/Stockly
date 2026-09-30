@@ -60,20 +60,29 @@ export async function getStockHistory(req, res, next) {
     // totals stay honest (post-filtering after skip/limit returned wrong
     // totals and hollow pages).
     let categoryIds = null;
-    if (category && isSafeObjectId(category)) {
-      const ids = await Product.find({ category, isActive: true }).select("_id").lean();
-      categoryIds = ids.map((p) => p._id);
+    // Category + search product-id lookups are independent — run together.
+    const needCategoryIds = category && isSafeObjectId(category);
+    const trimmedSearch = search && typeof search === "string" && search.trim() ? search.trim() : "";
+    const escaped = trimmedSearch ? escapeRegex(trimmedSearch) : null;
+    const [categoryRows, matchedRows] = await Promise.all([
+      needCategoryIds
+        ? Product.find({ category, isActive: true }).select("_id").lean()
+        : Promise.resolve(null),
+      escaped
+        ? Product.find({
+            $or: [
+              { name: { $regex: escaped, $options: "i" } },
+              { sku: { $regex: escaped, $options: "i" } },
+            ],
+          }).select("_id").lean()
+        : Promise.resolve(null),
+    ]);
+    if (categoryRows) {
+      categoryIds = categoryRows.map((p) => p._id);
       filter.productId = { $in: categoryIds };
     }
-    if (search && typeof search === "string" && search.trim()) {
-      const escaped = escapeRegex(search.trim());
-      const matched = await Product.find({
-        $or: [
-          { name: { $regex: escaped, $options: "i" } },
-          { sku: { $regex: escaped, $options: "i" } },
-        ],
-      }).select("_id").lean();
-      let matchedIds = matched.map((p) => p._id);
+    if (matchedRows) {
+      let matchedIds = matchedRows.map((p) => p._id);
       // Honor product/category constraints already in the filter.
       let scalarProductId = null;
       if (filter.productId && filter.productId.$in) {
@@ -93,12 +102,13 @@ export async function getStockHistory(req, res, next) {
         ? { $or: [productBranch, { $and: [reasonCond, { productId: { $in: categoryIds } }] }] }
         : { $or: [productBranch, reasonCond] }];
     }
-    let query = StockTransaction.find(filter).populate({ path:"productId", select:"name sku unit image category supplier", populate:[{ path:"category", select:"name" }, { path:"supplier", select:"name" }] }).populate("supplier","name").sort({ createdAt:-1 }).lean();
     const pg = Math.max(1, parseInt(page));
     const lim = Math.min(100, Math.max(1, parseInt(limit)));
-    const total = await StockTransaction.countDocuments(filter);
-    query = query.skip((pg-1)*lim).limit(lim);
-    const transactions = await query;
+    // Count + page fetch in parallel (one RTT instead of two).
+    const [total, transactions] = await Promise.all([
+      StockTransaction.countDocuments(filter),
+      StockTransaction.find(filter).populate({ path:"productId", select:"name sku unit image category supplier", populate:[{ path:"category", select:"name" }, { path:"supplier", select:"name" }] }).populate("supplier","name").sort({ createdAt:-1 }).skip((pg-1)*lim).limit(lim).lean(),
+    ]);
 
     res.json({ success: true, data: transactions, pagination:{ page:pg, limit:lim, total, pages: Math.ceil(total/lim) } });
   } catch (error) { next(error); }

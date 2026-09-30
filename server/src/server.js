@@ -68,19 +68,26 @@ app.use(express.urlencoded({ extended: true }));
 // Express 5: req.query is getter-only, express-mongo-sanitize tries to set it and crashes.
 // Use safe sanitizer that only touches body/params.
 app.use((req,res,next)=>{
-  const sanitize = (obj)=>{
-    if(!obj || typeof obj !== "object") return;
-    for(const k of Object.keys(obj)){
-      if(k.startsWith("$") || k.includes(".")){
-        const v = obj[k];
-        delete obj[k];
-        obj[k.replace(/^\$|\./g,"_")] = v;
+  try {
+    const seen = new Set();
+    const sanitize = (obj, depth = 0)=>{
+      if(!obj || typeof obj !== "object" || depth > 10 || seen.has(obj)) return;
+      seen.add(obj);
+      for(const k of Object.keys(obj)){
+        let v;
+        try { v = obj[k]; } catch { continue; }
+        if(k.startsWith("$") || k.includes(".")){
+          delete obj[k];
+          obj[String(k).replace(/^\$|\./g,"_")] = v;
+        }
+        if(v !== null && typeof v === "object") sanitize(v, depth + 1);
       }
-      if(typeof obj[k] === "object") sanitize(obj[k]);
-    }
-  };
-  if(req.body) sanitize(req.body);
-  if(req.params) sanitize(req.params);
+    };
+    if(req.body) sanitize(req.body);
+    if(req.params) sanitize(req.params);
+  } catch {
+    // Sanitizer must never break a request — fail open to validators.
+  }
   next();
 });
 app.use(hpp());

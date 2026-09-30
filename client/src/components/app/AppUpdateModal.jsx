@@ -29,6 +29,8 @@ export default function AppUpdateModal({
   const { push } = useToast();
   const [downloading, setDownloading] = useState(false);
   const [progress, setProgress] = useState(0);
+  const [stage, setStage] = useState("idle"); // idle|downloading|downloaded|verifying|ready|up-to-date
+  const [downloadedFile, setDownloadedFile] = useState(null);
   const [downloadComplete, setDownloadComplete] = useState(false);
   const [installPermissionRequired, setInstallPermissionRequired] = useState(false);
 
@@ -44,8 +46,8 @@ export default function AppUpdateModal({
   if (!open || !updateInfo || !updateInfo.hasUpdate) return null;
 
   const {
-    currentVersion = "1.1.0",
-    latestVersion = "1.1.0",
+    currentVersion = "1.2.0",
+    latestVersion = "1.2.0",
     releaseNotes = [],
     apkUrl = "/stockly.apk",
     apkSize = "36 MB",
@@ -63,6 +65,8 @@ export default function AppUpdateModal({
   const handleStartUpdate = async () => {
     setDownloading(true);
     setProgress(0);
+    setStage("downloading");
+    setDownloadedFile(null);
     setDownloadComplete(false);
 
     try {
@@ -70,24 +74,42 @@ export default function AppUpdateModal({
         url: apkUrl,
         version: latestVersion,
         onProgress: (p) => setProgress(p),
+        onStage: (s) => setStage(s),
       });
 
       setDownloading(false);
-      setDownloadComplete(true);
       hapticSuccess();
       playSuccessSound();
+
+      if (res?.upToDate) {
+        setStage("up-to-date");
+        setDownloadComplete(false);
+        if (res?.file) setDownloadedFile(res.file);
+        push?.(`v${latestVersion} is already installed — no update needed.`, "success");
+        return;
+      }
+
+      if (res?.file) setDownloadedFile(res.file);
+      setStage("ready");
+      setDownloadComplete(true);
 
       // The user now has the latest build — remember it so the popup does
       // not reappear on next launch/check for this same version.
       if (latestVersion) dismissUpdateVersion(latestVersion);
 
       if (res?.native) {
-        push?.(`Stockly v${latestVersion} installer launched! Tap 'Install' to apply update.`, "success");
+        push?.(
+          res.file
+            ? `Verified ${res.file.name} (${res.file.sizeLabel}). Installer launched — tap 'Install' to apply v${latestVersion}.`
+            : `Stockly v${latestVersion} installer launched! Tap 'Install' to apply update.`,
+          "success"
+        );
       } else {
         push?.(`Stockly v${latestVersion} downloaded. Open file to install.`, "success");
       }
     } catch (err) {
       setDownloading(false);
+      setStage("idle");
       hapticWarning();
       playErrorSound();
       push?.(err.message || "Failed to complete update download", "error");
@@ -183,6 +205,39 @@ export default function AppUpdateModal({
                 className="h-full bg-gradient-to-r from-violet-600 to-indigo-600 rounded-full transition-all duration-200"
                 style={{ width: `${progress}%` }}
               />
+            </div>
+          </div>
+        )}
+
+        {downloadedFile && (stage === "downloaded" || stage === "verifying" || stage === "ready" || stage === "up-to-date" || downloadComplete) && (
+          <div className="p-3.5 rounded-2xl bg-zinc-50 dark:bg-zinc-800/60 border border-zinc-200/80 dark:border-zinc-700/60 flex items-center gap-2.5 text-xs">
+            <Smartphone size={18} className="text-violet-600 dark:text-violet-400 shrink-0" />
+            <div className="min-w-0 flex-1">
+              <div className="font-bold truncate text-zinc-900 dark:text-white">{downloadedFile.name}</div>
+              <div className="text-zinc-500 dark:text-zinc-400">
+                {downloadedFile.sizeLabel} • verified on device
+              </div>
+            </div>
+            {stage === "verifying" ? (
+              <RefreshCw size={15} className="animate-spin text-violet-600 shrink-0" />
+            ) : (
+              <CheckCircle2 size={16} className="text-emerald-500 shrink-0" />
+            )}
+          </div>
+        )}
+
+        {stage === "verifying" && (
+          <div className="p-3.5 rounded-2xl bg-violet-50 dark:bg-violet-500/10 border border-violet-200 dark:border-violet-500/20 flex items-center gap-2.5 text-xs text-violet-700 dark:text-violet-300">
+            <RefreshCw size={15} className="animate-spin shrink-0" />
+            <span className="font-semibold">Checking installed app version against v{latestVersion}…</span>
+          </div>
+        )}
+
+        {stage === "up-to-date" && (
+          <div className="p-3.5 rounded-2xl bg-emerald-50 dark:bg-emerald-500/10 border border-emerald-200 dark:border-emerald-500/20 flex items-center gap-2.5 text-xs text-emerald-800 dark:text-emerald-300">
+            <CheckCircle2 size={18} className="text-emerald-600 dark:text-emerald-400 shrink-0" />
+            <div className="font-semibold leading-relaxed">
+              Version check passed — v{latestVersion} is already installed. No update needed.
             </div>
           </div>
         )}

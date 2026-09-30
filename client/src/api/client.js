@@ -35,8 +35,11 @@ client.interceptors.response.use(
       return client(err.config);
     }
     // Transient network/server failures: one retry with backoff so a single
-    // blip doesn't surface as a hard error. Aborts are never retried.
+    // blip doesn't surface as a hard error. Aborts are never retried and
+    // are re-thrown untouched so callers can detect cancellation via
+    // err.code === "ERR_CANCELED" instead of showing a "canceled" toast.
     const isAbort = err.code === "ECONNABORTED" || err.code === "ERR_CANCELED" || err.name === "CanceledError";
+    if (isAbort) return Promise.reject(err);
     const shouldRetry = !isAbort && !err.config._netRetry && (!err.response || err.response.status >= 500);
     if(shouldRetry){
       err.config._netRetry = true;
@@ -59,8 +62,44 @@ client.interceptors.response.use(
 
 async function request(endpoint, options={}){
   const method = (options.method||"GET").toLowerCase();
-  const res = await client({ url: endpoint, method, data: options.body ? JSON.parse(options.body) : undefined, headers: options.headers });
+  let body;
+  if (options.body !== undefined) {
+    try {
+      body = typeof options.body === "string" ? JSON.parse(options.body) : options.body;
+    } catch {
+      return Promise.reject(new Error("Invalid request body"));
+    }
+  }
+  const res = await client({ url: endpoint, method, data: body, headers: options.headers, signal: options.signal });
   return res.data;
+}
+
+// Lightweight in-memory GET cache for slow-changing reference data
+// (categories / suppliers / options). Keyed by URL, TTL-based, and only
+// used for exact endpoint matches the caller opts into — never for
+// paginated or search results.
+const refCache = new Map();
+
+function cachedGet(endpoint, ttlMs = 60000, config) {
+  const key = `GET ${endpoint}`;
+  const now = Date.now();
+  const hit = refCache.get(key);
+  if (hit && now - hit.at < ttlMs) return Promise.resolve(hit.data);
+  return client.get(endpoint, config).then((r) => {
+    refCache.set(key, { at: Date.now(), data: r.data });
+    // Bound memory: evict oldest entries past a small cap.
+    if (refCache.size > 50) {
+      const oldest = refCache.keys().next().value;
+      refCache.delete(oldest);
+    }
+    return r.data;
+  });
+}
+
+function invalidateReferenceCache(prefix) {
+  for (const key of refCache.keys()) {
+    if (!prefix || key.includes(prefix)) refCache.delete(key);
+  }
 }
 
 const api = {
@@ -73,4 +112,4 @@ const api = {
 };
 
 export default api;
-export { client };
+export { client, cachedGet, invalidateReferenceCache };

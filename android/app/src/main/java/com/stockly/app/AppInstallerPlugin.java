@@ -34,6 +34,17 @@ public class AppInstallerPlugin extends Plugin {
     private final Handler mainHandler = new Handler(Looper.getMainLooper());
     private static final String CHANNEL_ID = "stockly_app_updates";
     private static final int NOTIF_ID = 9991;
+    // Binder traffic is the main source of download jank — 500ms is plenty.
+    private static final long PROGRESS_THROTTLE_MS = 500;
+    private static final int IO_BUFFER_SIZE = 16384;
+
+    @Override
+    protected void handleOnDestroy() {
+        try {
+            executor.shutdownNow();
+        } catch (Exception ignored) {}
+        super.handleOnDestroy();
+    }
 
     @PluginMethod
     public void canInstall(PluginCall call) {
@@ -66,6 +77,10 @@ public class AppInstallerPlugin extends Plugin {
     public void downloadAndInstall(PluginCall call) {
         String downloadUrl = call.getString("url");
         String version = call.getString("version", "latest");
+        // When false, only download + verify (no installer, no ready
+        // notification) so the web layer can check the app version first
+        // and then show the update explicitly.
+        boolean autoInstall = call.getBoolean("autoInstall", true);
 
         if (downloadUrl == null || downloadUrl.isEmpty()) {
             call.reject("APK download URL is required");
@@ -73,9 +88,11 @@ public class AppInstallerPlugin extends Plugin {
         }
 
         executor.execute(() -> {
+            HttpURLConnection connection = null;
             try {
                 Context context = getContext();
                 createNotificationChannel(context);
+                dismissNotification(context);
 
                 // Prepare file in cache
                 File cacheDir = context.getExternalCacheDir() != null ? context.getExternalCacheDir() : context.getCacheDir();
@@ -86,7 +103,7 @@ public class AppInstallerPlugin extends Plugin {
 
                 // Connect and download
                 URL url = new URL(downloadUrl);
-                HttpURLConnection connection = (HttpURLConnection) url.openConnection();
+                connection = (HttpURLConnection) url.openConnection();
                 connection.setConnectTimeout(15000);
                 connection.setReadTimeout(30000);
                 connection.setRequestProperty("User-Agent", "Stockly-Android-Updater");
@@ -102,36 +119,35 @@ public class AppInstallerPlugin extends Plugin {
                 }
 
                 int fileLength = connection.getContentLength();
-                InputStream input = new BufferedInputStream(connection.getInputStream(), 8192);
-                OutputStream output = new FileOutputStream(apkFile);
-
-                byte[] data = new byte[8192];
                 long total = 0;
                 int count;
                 long lastNotifyTime = 0;
 
-                while ((count = input.read(data)) != -1) {
-                    total += count;
-                    output.write(data, 0, count);
+                try (
+                    InputStream input = new BufferedInputStream(connection.getInputStream(), IO_BUFFER_SIZE);
+                    OutputStream output = new FileOutputStream(apkFile)
+                ) {
+                    byte[] data = new byte[IO_BUFFER_SIZE];
 
-                    int progress = fileLength > 0 ? (int) ((total * 100) / fileLength) : -1;
-                    long now = System.currentTimeMillis();
-                    if (now - lastNotifyTime > 150 || progress == 100) {
-                        lastNotifyTime = now;
-                        updateProgressNotification(context, progress, version);
+                    while ((count = input.read(data)) != -1) {
+                        total += count;
+                        output.write(data, 0, count);
 
-                        JSObject progressObj = new JSObject();
-                        progressObj.put("progress", progress);
-                        progressObj.put("bytesDownloaded", total);
-                        progressObj.put("totalBytes", fileLength);
-                        notifyListeners("downloadProgress", progressObj);
+                        int progress = fileLength > 0 ? (int) ((total * 100) / fileLength) : -1;
+                        long now = System.currentTimeMillis();
+                        if (now - lastNotifyTime > PROGRESS_THROTTLE_MS || progress == 100) {
+                            lastNotifyTime = now;
+                            updateProgressNotification(context, progress, version);
+
+                            JSObject progressObj = new JSObject();
+                            progressObj.put("progress", progress);
+                            progressObj.put("bytesDownloaded", total);
+                            progressObj.put("totalBytes", fileLength);
+                            notifyListeners("downloadProgress", progressObj);
+                        }
                     }
+                    output.flush();
                 }
-
-                output.flush();
-                output.close();
-                input.close();
-                connection.disconnect();
 
                 // Guard against SPA-fallback HTML (index.html ~3KB) being saved as .apk
                 if (!apkFile.exists() || apkFile.length() < 1_000_000) {
@@ -140,15 +156,28 @@ public class AppInstallerPlugin extends Plugin {
                     throw new Exception("Downloaded file is too small (" + size + " bytes) — expected APK binary. URL: " + downloadUrl);
                 }
 
-                // Notify complete
+                // Notify complete (path + verified byte size so the web layer
+                // can show the downloaded file in the notification shade).
+                long finalSize = apkFile.length();
                 JSObject completeObj = new JSObject();
                 completeObj.put("success", true);
                 completeObj.put("path", apkFile.getAbsolutePath());
+                completeObj.put("name", apkFile.getName());
+                completeObj.put("sizeBytes", finalSize);
+                completeObj.put("version", version);
                 notifyListeners("downloadComplete", completeObj);
 
-                // Launch package installer immediately
+                // Launch package installer immediately (unless the caller wants
+                // to verify + version-check first, then show the update).
+                final boolean launchInstaller = autoInstall;
                 mainHandler.post(() -> {
-                    triggerInstall(context, apkFile, version);
+                    if (launchInstaller) {
+                        triggerInstall(context, apkFile, version);
+                    } else {
+                        // Clear the ongoing progress notification — the web
+                        // layer posts its own downloaded-file notification.
+                        dismissNotification(context);
+                    }
                     call.resolve(completeObj);
                 });
 
@@ -160,6 +189,10 @@ public class AppInstallerPlugin extends Plugin {
                     notifyListeners("downloadError", err);
                     call.reject("Download and install failed: " + e.getMessage());
                 });
+            } finally {
+                if (connection != null) {
+                    try { connection.disconnect(); } catch (Exception ignored) {}
+                }
             }
         });
     }
@@ -176,8 +209,53 @@ public class AppInstallerPlugin extends Plugin {
             call.reject("APK file not found");
             return;
         }
-        triggerInstall(getContext(), apkFile, "update");
+        triggerInstall(getContext(), apkFile, call.getString("version", "update"));
         call.resolve();
+    }
+
+    /**
+     * Verify a previously downloaded APK still exists and report its size.
+     * Lets the web layer show the downloaded file + run the version check
+     * before prompting the install, even if the app restarted mid-flow.
+     */
+    @PluginMethod
+    public void getDownloadedFileInfo(PluginCall call) {
+        try {
+            String filePath = call.getString("path");
+            String version = call.getString("version", "");
+            File apkFile = null;
+            if (filePath != null && !filePath.isEmpty()) {
+                apkFile = new File(filePath);
+            } else {
+                Context context = getContext();
+                File cacheDir = context.getExternalCacheDir() != null
+                        ? context.getExternalCacheDir() : context.getCacheDir();
+                File byVersion = (version != null && !version.isEmpty())
+                        ? new File(cacheDir, "stockly-v" + version + ".apk") : null;
+                if (byVersion != null && byVersion.exists()) {
+                    apkFile = byVersion;
+                } else if (cacheDir != null && cacheDir.exists()) {
+                    File[] matches = cacheDir.listFiles((dir, name) ->
+                            name.startsWith("stockly-v") && name.endsWith(".apk"));
+                    if (matches != null) {
+                        long newest = -1;
+                        for (File f : matches) {
+                            if (f.lastModified() > newest) { newest = f.lastModified(); apkFile = f; }
+                        }
+                    }
+                }
+            }
+            JSObject ret = new JSObject();
+            boolean exists = apkFile != null && apkFile.exists();
+            ret.put("exists", exists);
+            ret.put("path", (apkFile != null) ? apkFile.getAbsolutePath() : "");
+            ret.put("name", (apkFile != null) ? apkFile.getName() : "");
+            ret.put("sizeBytes", exists ? apkFile.length() : 0);
+            ret.put("validApk", exists && apkFile.length() >= 1_000_000);
+            call.resolve(ret);
+        } catch (Exception e) {
+            call.reject("File check failed: " + e.getMessage());
+        }
     }
 
     private void triggerInstall(Context context, File apkFile, String version) {

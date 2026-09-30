@@ -1,5 +1,10 @@
 import { useEffect, useRef, useState, useCallback } from "react";
-import { Html5Qrcode } from "html5-qrcode";
+// html5-qrcode is heavy — lazy-load on first open so Login stays lean.
+let qrLibPromise = null;
+function loadQrLib() {
+  if (!qrLibPromise) qrLibPromise = import("html5-qrcode");
+  return qrLibPromise;
+}
 import { Camera, SwitchCamera, AlertCircle, X, Check, Sparkles } from "lucide-react";
 import Modal from "../ui/Modal";
 import Button from "../ui/Button";
@@ -117,6 +122,7 @@ export default function QRScannerModal({ open, onClose, onScan, title = "Scan QR
     try {
       await stopScanner();
 
+      const { Html5Qrcode } = await loadQrLib();
       const html5QrCode = new Html5Qrcode(containerId);
       scannerRef.current = html5QrCode;
 
@@ -161,7 +167,8 @@ export default function QRScannerModal({ open, onClose, onScan, title = "Scan QR
     // Guard against the async camera lookup resolving after close —
     // without this the camera can start (and stay held) behind the modal.
     let cancelled = false;
-    Html5Qrcode.getCameras()
+    loadQrLib()
+      .then(({ Html5Qrcode }) => Html5Qrcode.getCameras())
       .then((devices) => {
         if (cancelled) return;
         if (devices && devices.length > 0) {
