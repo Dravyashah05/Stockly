@@ -1,0 +1,90 @@
+/* Stockly shared domain types — mirrors Google Sheets columns. */
+
+export interface Product {
+  id: string;
+  name: string;
+  sku: string;
+  categoryId: string;
+  /** Denormalised for display (backend joins it) */
+  categoryName?: string;
+  description: string;
+  image: string;
+  costPrice: number;
+  sellingPrice: number;
+  currentStock: number;
+  minimumStock: number;
+  supplierId: string;
+  supplierName?: string;
+  status: 'active' | 'inactive';
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface Category {
+  id: string;
+  name: string;
+  createdAt: string;
+}
+
+export interface Supplier {
+  id: string;
+  name: string;
+  phone: string;
+  email: string;
+  address: string;
+  notes: string;
+  createdAt: string;
+}
+
+export type StockType = 'IN' | 'OUT';
+export type StockOutReason = 'Sale' | 'Damaged' | 'Lost' | 'Return' | 'Other';
+
+export interface StockTransaction {
+  id: string;
+  productId: string;
+  productName: string;
+  type: StockType;
+  quantity: number;
+  price: number;
+  reason: string;
+  supplierId: string;
+  supplierName?: string;
+  note: string;
+  idempotencyKey: string;
+  createdAt: string;
+}
+
+export interface DashboardStats {
+  totalProducts: number;
+  totalUnits: number;
+  lowStockCount: number;
+  outOfStockCount: number;
+  inventoryCostValue: number;
+  inventoryRetailValue: number;
+  recentMovements: StockTransaction[];
+  lowStockItems: Product[];
+}
+
+/** Everything the app needs in one round trip (see `sync` Apps Script action). */
+export interface SyncData {
+  products: Product[];
+  categories: Category[];
+  suppliers: Supplier[];
+  transactions: StockTransaction[];
+  dashboard: DashboardStats;
+}
+
+export interface ApiResponse<T = unknown> {
+  success: boolean;
+  data?: T;
+  error?: string;
+  message?: string;
+}
+
+export type ThemeMode = 'light' | 'dark' | 'system';
+
+export interface ToastMsg {
+  id: number;
+  kind: 'success' | 'error' | 'info';
+  text: string;
+}

@@ -1,0 +1,416 @@
+@import "./brand.css";
+@import "tailwindcss";
+
+@custom-variant dark (&:where(.dark, .dark *));
+
+@theme {
+  --font-sans: "Inter", ui-sans-serif, system-ui, -apple-system, "Segoe UI",
+    Roboto, sans-serif;
+}
+
+/* ---------------- Editorial design tokens (Stockly store theme) ---------------- */
+:root {
+  --bg: var(--st-bg);
+  --bg-elev: #ffffff;
+  --ink: var(--st-ink);
+  --ink-2: #5f5f58;
+  --ink-3: #8e8e86;
+  --glass: #ffffff;
+  --glass-strong: #ffffff;
+  --glass-soft: var(--st-grey);
+  --stroke: var(--st-line);
+  --stroke-dim: rgba(21, 21, 21, 0.1);
+  --accent: #151515;
+  --accent-soft: color-mix(in srgb, var(--st-lime) 24%, transparent);
+  --accent-ink: #151515;
+  --brand-lime: var(--st-lime);
+  --primary: #151515;
+  --primary-foreground: #ffffff;
+  --success: #1e7b3c;
+  --warning: #9a5b00;
+  --destructive: #c2332d;
+  --input: #ffffff;
+  --ring: #151515;
+  --card-shadow: 0 14px 30px -18px rgba(21, 21, 21, 0.32);
+  --nav-shadow: 0 14px 30px -18px rgba(21, 21, 21, 0.35);
+  --glow-a: rgba(199, 255, 77, 0.14);
+  --glow-b: rgba(21, 21, 21, 0.05);
+  --field: #ffffff;
+  /* Consistent corner radii used across the app */
+  --radius-card: 26px;
+  --radius-row: 20px;
+  --radius-control: 16px;
+  /* Minimum touch target (WCAG / iOS HIG) */
+  --touch-min: 44px;
+}
+
+.dark {
+  --bg: var(--st-dark);
+  --bg-elev: #1c1d1a;
+  --ink: #f4f4ec;
+  --ink-2: #a9a9a1;
+  --ink-3: #6c6c66;
+  --glass: #1c1d1a;
+  --glass-strong: #1c1d1a;
+  --glass-soft: rgba(255, 255, 255, 0.06);
+  --stroke: rgba(255, 255, 255, 0.13);
+  --stroke-dim: rgba(255, 255, 255, 0.09);
+  --accent: var(--st-lime);
+  --accent-soft: color-mix(in srgb, var(--st-lime) 13%, transparent);
+  --accent-ink: var(--st-ink);
+  --primary: var(--st-lime);
+  --primary-foreground: var(--st-ink);
+  --success: #77d99a;
+  --warning: #f1c36b;
+  --destructive: #ff8a82;
+  --input: rgba(255, 255, 255, 0.06);
+  --ring: var(--st-lime);
+  --card-shadow: 0 14px 30px -18px rgba(0, 0, 0, 0.7);
+  --nav-shadow: 0 14px 34px -14px rgba(0, 0, 0, 0.8);
+  --glow-a: rgba(199, 255, 77, 0.07);
+  --glow-b: rgba(0, 0, 0, 0);
+  --field: rgba(255, 255, 255, 0.06);
+}
+
+html,
+body,
+#root {
+  height: 100%;
+}
+
+body {
+  font-family: var(--font-sans);
+  background: var(--bg);
+  color: var(--ink);
+  -webkit-tap-highlight-color: transparent;
+  overscroll-behavior: none;
+  transition: background 0.25s ease, color 0.25s ease;
+}
+
+::selection {
+  background: #c7ff4d;
+  color: #151515;
+}
+
+/* Kill the 300ms tap delay / double-tap-zoom wait on mobile buttons:
+ * taps feel instant, no visual change. */
+button, a {
+  touch-action: manipulation;
+}
+
+/* Swipe-to-switch zone: vertical panning stays native (page + list scroll),
+ * horizontal moves are left to the tab gesture. Descendant scrollers
+ * (category chips) keep their own horizontal panning. */
+.swipe-zone {
+  touch-action: pan-y;
+}
+
+/* Safe-area helpers for Android (edge-to-edge + notch/gesture bar) */
+.safe-top {
+  padding-top: env(safe-area-inset-top, 0px);
+}
+.safe-bottom {
+  padding-bottom: env(safe-area-inset-bottom, 0px);
+}
+.nav-bottom-offset {
+  bottom: calc(0.9rem + env(safe-area-inset-bottom, 0px));
+}
+.app-page-viewport {
+  height: calc(100dvh - 5.15rem - env(safe-area-inset-bottom, 0px));
+  overflow-y: auto;
+  overscroll-behavior-y: contain;
+  -webkit-overflow-scrolling: touch;
+  scrollbar-width: none;
+  padding-bottom: 1rem;
+}
+.app-page-viewport::-webkit-scrollbar { display: none; }
+
+/* ---------------- Solid surfaces ----------------
+ * Perf: no backdrop-filter anywhere (the #1 mobile GPU killer). Cards and
+ * fixed chrome use plain opaque backgrounds, each on its own layer. */
+.glass {
+  background: var(--glass);
+  border: 1px solid var(--stroke);
+  box-shadow: var(--card-shadow);
+  /* Promote to its own layer so scroll stays on the compositor. */
+  contain: layout style;
+}
+/* Solid editorial surfaces — no backdrop blur. */
+.glass-strong {
+  background: var(--glass-strong);
+  border: 1px solid var(--stroke);
+  box-shadow: var(--nav-shadow);
+  contain: layout style;
+}
+.dark .glass-strong {
+  box-shadow: var(--nav-shadow);
+}
+.glass-soft {
+  background: var(--glass-soft);
+  border: 1px solid var(--stroke-dim);
+}
+
+/* Graceful fallback where backdrop-filter is unsupported */
+@supports not ((backdrop-filter: blur(1px)) or (-webkit-backdrop-filter: blur(1px))) {
+  .glass {
+    background: var(--bg-elev);
+  }
+  .glass-strong {
+    background: var(--bg-elev);
+  }
+  .glass-soft {
+    background: var(--bg-elev);
+  }
+}
+
+/* Ambient gradient wash behind the app (very restrained) */
+.ambient {
+  position: fixed;
+  inset: 0;
+  pointer-events: none;
+  z-index: 0;
+  /* Static layer: rasterized once, never repainted on scroll. */
+  contain: strict;
+  transform: translateZ(0);
+  background:
+    radial-gradient(52% 30% at 12% 0%, var(--glow-a), transparent 70%),
+    radial-gradient(48% 28% at 88% 6%, var(--glow-b), transparent 70%);
+}
+/* On phones the ambient wash costs a fullscreen overdraw per frame — hide it. */
+@media (pointer: coarse) and (max-width: 640px) {
+  .ambient {
+    display: none;
+  }
+}
+
+/* Long lists: skip off-screen rows entirely (huge scroll win at 90Hz). */
+.cv-row {
+  content-visibility: auto;
+  contain-intrinsic-size: auto 76px;
+  contain: layout style paint;
+}
+
+/* Fixed chrome lives on the compositor — no repaint on scroll. */
+.safe-top.sticky,
+.nav-bottom-offset {
+  transform: translateZ(0);
+  will-change: transform;
+}
+
+/* ---------------- Motion ---------------- */
+@keyframes sheet-up {
+  from {
+    transform: translateY(28px) scale(0.99);
+    opacity: 0;
+  }
+  to {
+    transform: translateY(0) scale(1);
+    opacity: 1;
+  }
+}
+@keyframes fade-in {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+@keyframes toast-in {
+  from {
+    transform: translateY(12px) scale(0.97);
+    opacity: 0;
+  }
+  to {
+    transform: translateY(0) scale(1);
+    opacity: 1;
+  }
+}
+@keyframes page-in {
+  from {
+    transform: translateY(8px);
+    opacity: 0;
+  }
+  to {
+    transform: translateY(0);
+    opacity: 1;
+  }
+}
+@keyframes shimmer {
+  0% {
+    background-position: -400px 0;
+  }
+  100% {
+    background-position: 400px 0;
+  }
+}
+@keyframes pop-in {
+  0% {
+    transform: scale(0.92);
+    opacity: 0;
+  }
+  100% {
+    transform: scale(1);
+    opacity: 1;
+  }
+}
+/* Startup loader: indeterminate bar gliding across its track. */
+@keyframes loader-slide {
+  0% {
+    transform: translateX(-110%);
+  }
+  100% {
+    transform: translateX(270%);
+  }
+}
+.loader-bar {
+  animation: loader-slide 1.1s ease-in-out infinite;
+  will-change: transform;
+}
+@keyframes detail-in {
+  from {
+    transform: translateY(5%);
+    opacity: 0.3;
+  }
+  to {
+    transform: translateY(0);
+    opacity: 1;
+  }
+}
+.animate-sheet-up {
+  animation: sheet-up 0.22s cubic-bezier(0.32, 0.9, 0.35, 1);
+  will-change: transform, opacity;
+}
+.animate-fade-in {
+  animation: fade-in 0.15s ease-out;
+  will-change: opacity;
+}
+.animate-toast-in {
+  animation: toast-in 0.2s cubic-bezier(0.32, 0.9, 0.35, 1);
+  will-change: transform, opacity;
+}
+.animate-page-in {
+  animation: page-in 0.12s ease-out;
+}
+.animate-pop-in {
+  animation: pop-in 0.15s cubic-bezier(0.32, 0.9, 0.35, 1);
+  will-change: transform, opacity;
+}
+.animate-detail-in {
+  animation: detail-in 0.2s cubic-bezier(0.32, 0.9, 0.35, 1);
+  will-change: transform, opacity;
+}
+
+.press {
+  transition: transform 0.12s ease, background 0.15s ease;
+}
+.press:active {
+  transform: scale(0.96);
+}
+
+.shimmer {
+  background: linear-gradient(
+    90deg,
+    var(--glass-soft) 25%,
+    var(--stroke-dim) 50%,
+    var(--glass-soft) 75%
+  );
+  background-size: 800px 100%;
+  animation: shimmer 1.4s linear infinite;
+  will-change: background-position;
+}
+/* Shimmer keeps the GPU awake — pause it on phones / reduced motion. */
+@media (pointer: coarse) {
+  .shimmer {
+    animation-duration: 2.2s;
+  }
+}
+
+/* Nav active pill glide */
+.nav-pill {
+  transition: background 0.22s ease, color 0.22s ease, transform 0.12s ease;
+}
+.nav-pill:active {
+  transform: scale(0.93);
+}
+
+/* Sliding active-tab pill: transform/width only (compositor-cheap). */
+.nav-slide-pill {
+  transition: transform 0.28s cubic-bezier(0.32, 0.9, 0.35, 1), width 0.28s cubic-bezier(0.32, 0.9, 0.35, 1);
+  will-change: transform;
+}
+
+/* Filter chips */
+.chip-glass {
+  transition: background 0.18s ease, color 0.18s ease, border-color 0.18s ease,
+    transform 0.12s ease;
+}
+.chip-glass:active {
+  transform: scale(0.94);
+}
+
+/* Respect users who prefer reduced motion */
+@media (prefers-reduced-motion: reduce) {
+  .animate-sheet-up,
+  .animate-fade-in,
+  .animate-toast-in,
+  .animate-page-in,
+  .animate-pop-in,
+  .animate-detail-in,
+  .loader-bar,
+  .shimmer {
+    animation: none;
+  }
+  .loader-bar {
+    width: 100%;
+  }
+  .press,
+  .nav-pill,
+  .nav-slide-pill,
+  .chip-glass {
+    transition: none;
+  }
+}
+
+/* Hide scrollbars for horizontal chip rows but keep scroll */
+.no-scrollbar::-webkit-scrollbar {
+  display: none;
+}
+.no-scrollbar {
+  -ms-overflow-style: none;
+  scrollbar-width: none;
+}
+
+/* Scrollable sheet / list regions: contained scroll, no chain to body */
+.sheet-scroll {
+  overscroll-behavior: contain;
+  -webkit-overflow-scrolling: touch;
+  scrollbar-width: thin;
+  scrollbar-color: var(--ink-3) transparent;
+}
+.sheet-scroll::-webkit-scrollbar {
+  width: 6px;
+}
+.sheet-scroll::-webkit-scrollbar-thumb {
+  background: color-mix(in srgb, var(--ink-3) 55%, transparent);
+  border-radius: 999px;
+}
+
+/* Consistent visible keyboard focus (a11y) without changing the look */
+:where(button, a, input, select, textarea, [tabindex]):focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+  border-radius: 12px;
+}
+
+/* Prevent zoom on field focus (mobile) + readable defaults */
+input,
+select,
+textarea {
+  font-size: 16px;
+}
+
+/* Tabular numbers for scannable inventory figures */
+.tnum {
+  font-variant-numeric: tabular-nums;
+}
