@@ -16,11 +16,43 @@ const IN_FLIGHT = new Map<string, Promise<unknown>>();
 /** In Vite dev, call the same-origin server proxy to avoid Apps Script's
  * ContentService redirect failing the browser's CORS check. Production and
  * Capacitor keep their configured backend URL unchanged. */
-function requestUrl(base: string): URL {
-  if (import.meta.env.DEV) {
-    const url = new URL('/__stockly_api', window.location.origin);
-    url.searchParams.set('target', base);
-    return url;
+function devProxyUrl(base: string): URL {
+  const url = new URL('/__stockly_api', window.location.origin);
+  url.searchParams.set('target', base);
+  return url;
+}
+
+/** Hosted web (Vercel) goes through the same-origin serverless proxy for
+ * the same CORS reason. Probed once per session; anything without the
+ * route (Capacitor native, plain static hosts, file://) calls Google
+ * directly instead. */
+function serverProxyUrl(base: string): URL {
+  const url = new URL('/api/stockly', window.location.origin);
+  url.searchParams.set('target', base);
+  return url;
+}
+
+let proxyDecision: 'unknown' | 'yes' | 'no' = 'unknown';
+async function shouldUseSameOriginProxy(): Promise<boolean> {
+  if (import.meta.env.DEV) return true;
+  if (proxyDecision !== 'unknown') return proxyDecision === 'yes';
+  try {
+    const w = window as unknown as { Capacitor?: unknown };
+    if (typeof window === 'undefined' || w.Capacitor || !window.location.origin.startsWith('http')) {
+      proxyDecision = 'no';
+    } else {
+      const probe = await fetch(new URL('/api/stockly?probe=1', window.location.origin), { method: 'GET' });
+      proxyDecision = probe.ok ? 'yes' : 'no';
+    }
+  } catch {
+    proxyDecision = 'no';
+  }
+  return proxyDecision === 'yes';
+}
+
+async function requestUrl(base: string): Promise<URL> {
+  if (await shouldUseSameOriginProxy()) {
+    return import.meta.env.DEV ? devProxyUrl(base) : serverProxyUrl(base);
   }
   return new URL(base);
 }
@@ -122,7 +154,7 @@ export async function apiGet<T>(action: string, params: Record<string, string> =
   const base = getApiUrl();
   if (!base) throw new ApiError('Backend not connected. Open Settings and paste your Apps Script Web-App URL.');
 
-  const url = requestUrl(base);
+  const url = await requestUrl(base);
   url.searchParams.set('action', action);
   for (const [k, v] of Object.entries(params)) url.searchParams.set(k, v);
 
@@ -173,7 +205,7 @@ export async function apiPost<T>(
     let res: Response;
     try {
       res = await withTimeout(
-        fetch(requestUrl(base).toString(), {
+        fetch((await requestUrl(base)).toString(), {
           method: 'POST',
           headers: { 'Content-Type': 'text/plain;charset=utf-8' },
           body: JSON.stringify({ action, ...payload }),
