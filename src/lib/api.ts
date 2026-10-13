@@ -87,6 +87,28 @@ async function parseBody(res: Response): Promise<ApiResponse> {
   }
 }
 
+/** Non-2xx responses still carry information: the dev proxy and Apps Script
+ *  both return `{ success: false, error }` JSON on failures they understand.
+ *  Surface that message instead of a bare status code — but ALWAYS keep
+ *  unknownOutcome=true: a failed response never proves a mutation didn't
+ *  apply, so callers must verify (idempotency key / SKU / id), never assume. */
+async function serverError(res: Response): Promise<ApiError> {
+  try {
+    const text = await res.text();
+    try {
+      const body = JSON.parse(text) as ApiResponse;
+      if (body && typeof body.error === 'string' && body.error.trim() !== '') {
+        return new ApiError(body.error, res.status, true);
+      }
+    } catch {
+      /* Not JSON (e.g. a Google error page) — fall through to generic. */
+    }
+  } catch {
+    /* Unreadable body — fall through to generic. */
+  }
+  return new ApiError(`Server error (${res.status}). Try again in a moment.`, res.status, true);
+}
+
 export async function apiGet<T>(action: string, params: Record<string, string> = {}): Promise<T> {
   const base = getApiUrl();
   if (!base) throw new ApiError('Backend not connected. Open Settings and paste your Apps Script Web-App URL.');
@@ -111,7 +133,7 @@ export async function apiGet<T>(action: string, params: Record<string, string> =
       if (e instanceof ApiError) throw e;
       throw new ApiError('Network error. Check your internet connection and try again.', undefined, true);
     }
-    if (!res.ok) throw new ApiError(`Server error (${res.status}). Try again in a moment.`, res.status, true);
+    if (!res.ok) throw await serverError(res);
     const body = await parseBody(res);
     if (!body.success) throw new ApiError(body.error || 'Request failed.', undefined, false);
     return body.data as T;
@@ -153,7 +175,7 @@ export async function apiPost<T>(
       if (e instanceof ApiError) throw e;
       throw new ApiError('Network error. Check your internet connection and try again.', undefined, true);
     }
-    if (!res.ok) throw new ApiError(`Server error (${res.status}). Try again in a moment.`, res.status, true);
+    if (!res.ok) throw await serverError(res);
     const body = await parseBody(res);
     if (!body.success) throw new ApiError(body.error || 'Request failed.', undefined, false);
     return body.data as T;
