@@ -20,6 +20,12 @@ npm run dev        # → http://localhost:5173 (use mobile viewport / device too
 Without a backend URL the app shows an "not connected" banner. Everything else
 (cached data, themes, navigation) works.
 
+When running under Vite, Apps Script requests pass through a local server proxy
+because Apps Script `ContentService` responses redirect to a Google content
+host without browser CORS headers. This proxy is development-only; a deployed
+web app or Android build needs a server-side proxy with a stable URL if its
+runtime cannot read Apps Script responses directly.
+
 Useful scripts:
 
 | Command        | What it does                              |

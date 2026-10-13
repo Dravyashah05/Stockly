@@ -13,6 +13,18 @@ import type { ApiResponse } from './types';
 
 const IN_FLIGHT = new Map<string, Promise<unknown>>();
 
+/** In Vite dev, call the same-origin server proxy to avoid Apps Script's
+ * ContentService redirect failing the browser's CORS check. Production and
+ * Capacitor keep their configured backend URL unchanged. */
+function requestUrl(base: string): URL {
+  if (import.meta.env.DEV) {
+    const url = new URL('/__stockly_api', window.location.origin);
+    url.searchParams.set('target', base);
+    return url;
+  }
+  return new URL(base);
+}
+
 /** FIFO lane for write POSTs — see apiPost. Never rejects (errors are
  *  re-thrown to each caller via their own chained promise). */
 let postChain: Promise<unknown> = Promise.resolve();
@@ -79,7 +91,7 @@ export async function apiGet<T>(action: string, params: Record<string, string> =
   const base = getApiUrl();
   if (!base) throw new ApiError('Backend not connected. Open Settings and paste your Apps Script Web-App URL.');
 
-  const url = new URL(base);
+  const url = requestUrl(base);
   url.searchParams.set('action', action);
   for (const [k, v] of Object.entries(params)) url.searchParams.set(k, v);
 
@@ -130,7 +142,7 @@ export async function apiPost<T>(
     let res: Response;
     try {
       res = await withTimeout(
-        fetch(base, {
+        fetch(requestUrl(base).toString(), {
           method: 'POST',
           headers: { 'Content-Type': 'text/plain;charset=utf-8' },
           body: JSON.stringify({ action, ...payload }),

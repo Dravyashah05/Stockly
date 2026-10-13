@@ -6,7 +6,6 @@ const NAV = [
   { label: 'Product', href: '#product' },
   { label: 'Features', href: '#features' },
   { label: 'About', href: '#about' },
-  { label: 'Open app', href: 'app.html' },
 ];
 
 export default function StoreSite() {
@@ -55,12 +54,23 @@ export default function StoreSite() {
               </a>
             ))}
           </div>
-          <div className="flex items-center gap-3">
+          <div className="flex items-center gap-2.5">
+            <a
+              href="app.html"
+              className="hidden rounded-full bg-[#151515] px-6 py-2.5 text-[12px] font-extrabold uppercase tracking-[0.14em] text-white transition-transform hover:scale-[1.03] active:scale-95 md:inline-block"
+            >
+              Open app
+            </a>
             <a
               href="#store"
-              className="hidden rounded-full bg-[#151515] px-5 py-2.5 text-[12px] font-extrabold uppercase tracking-[0.14em] text-white transition-transform hover:scale-[1.03] active:scale-95 md:inline-block"
+              aria-label="Download app"
+              title="Download app"
+              className="flex h-10 w-10 items-center justify-center rounded-full bg-[#C7FF4D] text-[#151515] transition-transform hover:scale-105 active:scale-95"
             >
-              Get started
+              <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+                <path d="M12 3v12m0 0l-4.5-4.5M12 15l4.5-4.5" />
+                <path d="M4 20h16" />
+              </svg>
             </a>
             <button
               type="button"
@@ -81,7 +91,7 @@ export default function StoreSite() {
         </nav>
         {menu ? (
           <div className="border-t border-[#D9D9D0] bg-[#F7F7F2] px-5 pb-5 pt-2 md:hidden">
-            {[...NAV, { label: 'Get started', href: '#store' }].map((n) => (
+            {[...NAV, { label: 'Open app', href: 'app.html' }, { label: 'Download app', href: '#store' }].map((n) => (
               <a
                 key={n.href + n.label}
                 href={n.href}
