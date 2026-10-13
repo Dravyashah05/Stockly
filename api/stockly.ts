@@ -2,10 +2,11 @@
  *
  * Browsers cannot call Apps Script directly (its ContentService redirect
  * drops CORS headers), so hosted web builds go through this same-origin
- * route instead. It mirrors the Vite dev middleware (`__stockly_api`).
+ * route instead: `vercel.json` rewrites `/__stockly_api` here, so dev
+ * (Vite middleware) and production share ONE frontend URL and contract.
  * Native Capacitor builds never touch this route (they call Google direct).
  *
- * Routes: GET/POST /api/stockly?target=<exec-url>&action=... (proxied).
+ * Routes: GET/POST /__stockly_api?target=<exec-url>&action=... (proxied).
  *         GET      /api/stockly?probe=1 (liveness check, no target needed).
  */
 
@@ -64,7 +65,15 @@ export default async function handler(req: ProxyReq, res: ProxyRes): Promise<voi
     }
     const init: RequestInit = { method: req.method, redirect: 'follow' };
     if (req.method === 'POST') {
-      init.body = typeof req.body === 'string' ? req.body : JSON.stringify(req.body ?? {});
+      // Vercel hands text/plain bodies to us as a string; stay correct if a
+      // runtime ever gives parsed JSON or raw bytes instead of corrupting it.
+      const rawBody = req.body;
+      init.body =
+        typeof rawBody === 'string'
+          ? rawBody
+          : typeof Buffer !== 'undefined' && Buffer.isBuffer(rawBody)
+            ? rawBody.toString('utf-8')
+            : JSON.stringify(rawBody ?? {});
       init.headers = { 'Content-Type': 'text/plain;charset=utf-8' };
     }
     const upstream = await fetch(target, init);

@@ -13,48 +13,29 @@ import type { ApiResponse } from './types';
 
 const IN_FLIGHT = new Map<string, Promise<unknown>>();
 
-/** In Vite dev, call the same-origin server proxy to avoid Apps Script's
- * ContentService redirect failing the browser's CORS check. Production and
- * Capacitor keep their configured backend URL unchanged. */
-function devProxyUrl(base: string): URL {
+/** Same-origin API proxy for browser builds. Apps Script's ContentService
+ * redirect drops CORS headers, so browsers can't call Google directly:
+ * - Vite dev serves it via middleware;
+ * - Vercel rewrites it to the serverless function (see vercel.json).
+ * Same URL and contract (`?target=&action=&…`, JSON POST bodies) in both
+ * places. Installed native builds (Capacitor) call Google directly. */
+function proxyUrl(base: string): URL {
   const url = new URL('/__stockly_api', window.location.origin);
   url.searchParams.set('target', base);
   return url;
 }
 
-/** Hosted web (Vercel) goes through the same-origin serverless proxy for
- * the same CORS reason. Probed once per session; anything without the
- * route (Capacitor native, plain static hosts, file://) calls Google
- * directly instead. */
-function serverProxyUrl(base: string): URL {
-  const url = new URL('/api/stockly', window.location.origin);
-  url.searchParams.set('target', base);
-  return url;
-}
-
-let proxyDecision: 'unknown' | 'yes' | 'no' = 'unknown';
-async function shouldUseSameOriginProxy(): Promise<boolean> {
-  if (import.meta.env.DEV) return true;
-  if (proxyDecision !== 'unknown') return proxyDecision === 'yes';
+function isNativeApp(): boolean {
   try {
-    const w = window as unknown as { Capacitor?: unknown };
-    if (typeof window === 'undefined' || w.Capacitor || !window.location.origin.startsWith('http')) {
-      proxyDecision = 'no';
-    } else {
-      const probe = await fetch(new URL('/api/stockly?probe=1', window.location.origin), { method: 'GET' });
-      proxyDecision = probe.ok ? 'yes' : 'no';
-    }
+    return typeof window !== 'undefined' && !!(window as unknown as { Capacitor?: unknown }).Capacitor;
   } catch {
-    proxyDecision = 'no';
+    return false;
   }
-  return proxyDecision === 'yes';
 }
 
-async function requestUrl(base: string): Promise<URL> {
-  if (await shouldUseSameOriginProxy()) {
-    return import.meta.env.DEV ? devProxyUrl(base) : serverProxyUrl(base);
-  }
-  return new URL(base);
+function requestUrl(base: string): URL {
+  if (!import.meta.env.DEV && isNativeApp()) return new URL(base);
+  return proxyUrl(base);
 }
 
 /** FIFO lane for write POSTs — see apiPost. Never rejects (errors are
@@ -126,13 +107,15 @@ async function parseBody(res: Response): Promise<ApiResponse> {
  *  apply, so callers must verify (idempotency key / SKU / id), never assume. */
 async function serverError(res: Response): Promise<ApiError> {
   const contentType = res.headers.get('content-type') || '';
-  // Non-JSON failures: a bare 404 in dev means the request never reached our
-  // middleware (stale or wrong dev server on this port) — say exactly that
-  // instead of a mystery status code.
+  // Non-JSON failures: a bare 404 means the request never reached our proxy
+  // (stale/wrong dev server locally; missing rewrite or stale deployment
+  // when hosted) — say exactly that instead of a mystery status code.
   if (!contentType.includes('json')) {
-    if (res.status === 404 && import.meta.env.DEV) {
+    if (res.status === 404) {
       return new ApiError(
-        'Dev proxy not found — stop all local servers, then run `npm run dev` fresh in the Stockly folder and hard-refresh.',
+        import.meta.env.DEV
+          ? 'Dev proxy not found — stop all local servers, then run `npm run dev` fresh in the Stockly folder and hard-refresh.'
+          : 'Sync service unavailable (404) — the hosting rewrite for /__stockly_api is missing or the deployment is stale. Redeploy the site.',
         res.status,
         true,
       );
@@ -154,7 +137,7 @@ export async function apiGet<T>(action: string, params: Record<string, string> =
   const base = getApiUrl();
   if (!base) throw new ApiError('Backend not connected. Open Settings and paste your Apps Script Web-App URL.');
 
-  const url = await requestUrl(base);
+  const url = requestUrl(base);
   url.searchParams.set('action', action);
   for (const [k, v] of Object.entries(params)) url.searchParams.set(k, v);
 
@@ -205,7 +188,7 @@ export async function apiPost<T>(
     let res: Response;
     try {
       res = await withTimeout(
-        fetch((await requestUrl(base)).toString(), {
+        fetch(requestUrl(base).toString(), {
           method: 'POST',
           headers: { 'Content-Type': 'text/plain;charset=utf-8' },
           body: JSON.stringify({ action, ...payload }),
