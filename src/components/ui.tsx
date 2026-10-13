@@ -3,19 +3,25 @@ import { createPortal } from 'react-dom';
 import {
   ArrowDownToLine,
   ArrowUpFromLine,
+  Boxes,
   CheckCircle2,
+  Cloud,
   History,
   Home,
   Info,
   LayoutGrid,
+  PackagePlus,
   RefreshCw,
   RotateCcw,
   Search,
+  Shapes,
   Settings as SettingsIcon,
+  Truck,
   X,
   XCircle,
 } from 'lucide-react';
 import type { ToastMsg } from '../lib/types';
+import type { ThemeMode } from '../lib/types';
 
 /* ---------- Dismiss plumbing shared by every overlay ----------
  * - Escape key closes the topmost overlay (web / desktop).
@@ -167,7 +173,7 @@ export const BottomNav = memo(function BottomNav({ tab, setTab }: { tab: TabKey;
   };
 
   return (
-    <nav className="nav-bottom-offset fixed inset-x-0 z-30 px-4">
+    <nav className="bottom-navigation nav-bottom-offset fixed inset-x-0 z-30 px-4">
       <div className="glass-strong relative mx-auto grid max-w-md grid-cols-4 gap-0.5 rounded-[28px] p-1.5">
         {/* Sliding active pill — solid ink (lime in dark mode). */}
         {pill ? (
@@ -202,6 +208,103 @@ export const BottomNav = memo(function BottomNav({ tab, setTab }: { tab: TabKey;
     </nav>
   );
 });
+
+const SIDE_LINKS: { key: TabKey | 'stock-in' | 'stock-out' | 'categories' | 'suppliers'; label: string; icon: React.ReactNode }[] = [
+  { key: 'home', label: 'Dashboard', icon: <Home size={18} /> },
+  { key: 'products', label: 'Products', icon: <Boxes size={18} /> },
+  { key: 'stock-in', label: 'Stock In', icon: <ArrowDownToLine size={18} /> },
+  { key: 'stock-out', label: 'Stock Out', icon: <ArrowUpFromLine size={18} /> },
+  { key: 'history', label: 'Transaction History', icon: <History size={18} /> },
+  { key: 'categories', label: 'Categories', icon: <Shapes size={18} /> },
+  { key: 'suppliers', label: 'Suppliers', icon: <Truck size={18} /> },
+  { key: 'settings', label: 'Settings', icon: <SettingsIcon size={18} /> },
+];
+
+export function DesktopSidebar({
+  tab,
+  onNavigate,
+  onStock,
+}: {
+  tab: TabKey;
+  onNavigate: (tab: TabKey) => void;
+  onStock: (mode: 'IN' | 'OUT') => void;
+}) {
+  return (
+    <aside className="desktop-sidebar" aria-label="Main navigation">
+      <div className="desktop-brand">
+        <span aria-hidden="true" className="desktop-brand-mark">S</span>
+        <span>Stockly</span>
+      </div>
+      <p className="desktop-nav-caption">Workspace</p>
+      <nav className="desktop-side-links">
+        {SIDE_LINKS.map((item) => {
+          const selected = item.key === 'stock-in' || item.key === 'stock-out' || item.key === 'categories' || item.key === 'suppliers' ? false : tab === item.key;
+          return (
+            <button
+              key={item.key}
+              type="button"
+              title={item.label}
+              aria-current={selected ? 'page' : undefined}
+              onClick={() => {
+                if (item.key === 'stock-in') onStock('IN');
+                else if (item.key === 'stock-out') onStock('OUT');
+                else if (item.key === 'categories' || item.key === 'suppliers') onNavigate('settings');
+                else onNavigate(item.key);
+              }}
+              className={`desktop-side-link ${selected ? 'is-active' : ''}`}
+            >
+              {item.icon}
+              <span className="desktop-side-label">{item.label}</span>
+            </button>
+          );
+        })}
+      </nav>
+      <div className="desktop-sidebar-foot">
+        <span className="desktop-sidebar-foot-icon"><PackagePlus size={18} /></span>
+        <span><b>Stockly</b><small>Inventory workspace</small></span>
+      </div>
+    </aside>
+  );
+}
+
+export function DesktopToolbar({
+  title,
+  pending,
+  failed,
+  lastSync,
+  theme,
+  setTheme,
+}: {
+  title: string;
+  pending: number;
+  failed: number;
+  lastSync: Date | null;
+  theme: ThemeMode;
+  setTheme: (theme: ThemeMode) => void;
+}) {
+  const syncLabel = failed > 0 ? `${failed} sync issue${failed === 1 ? '' : 's'}` : pending > 0 ? `${pending} changes syncing` : lastSync ? `Synced ${lastSync.toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit' })}` : 'Sync status';
+  return (
+    <header className="desktop-toolbar">
+      <div className="desktop-toolbar-heading">
+        <span className="desktop-toolbar-eyebrow">Stockly / Workspace</span>
+        <h1>{title}</h1>
+      </div>
+      <div className={`desktop-sync-indicator ${failed ? 'has-error' : ''}`}>
+        <Cloud size={16} />
+        <span className="desktop-sync-dot" />
+        <span>{syncLabel}</span>
+      </div>
+      <label className="desktop-theme-control">
+        <span>Theme</span>
+        <select aria-label="Color theme" value={theme} onChange={(e) => setTheme(e.target.value as ThemeMode)}>
+          <option value="light">Light</option>
+          <option value="dark">Dark</option>
+          <option value="system">System</option>
+        </select>
+      </label>
+    </header>
+  );
+}
 
 /* ---------- Bottom sheet modal (single reusable implementation) ----------
  * Content-driven height: the panel grows with its content up to
@@ -277,10 +380,10 @@ export function Sheet({
   return createPortal(
     <div className="fixed inset-0 z-50" role="dialog" aria-modal="true" aria-label={label || title}>
       <button aria-label="Close dialog" onClick={onClose} className="animate-fade-in absolute inset-0 bg-black/45" />
-      <div className="absolute inset-x-0 bottom-0 mx-auto flex max-w-md justify-center">
+      <div className="sheet-dialog-position absolute inset-x-0 bottom-0 mx-auto flex max-w-md justify-center">
         <div
           ref={panelRef}
-          className={`glass-strong animate-sheet-up flex max-h-[86dvh] w-full flex-col overflow-hidden rounded-t-[28px] border-b-0 border-x-0 ${footer ? 'h-[86dvh]' : ''}`}
+          className={`sheet-dialog-panel glass-strong animate-sheet-up flex max-h-[86dvh] w-full flex-col overflow-hidden rounded-t-[28px] border-b-0 border-x-0 ${footer ? 'h-[86dvh]' : ''}`}
         >
           <div
             className="shrink-0 cursor-grab touch-none select-none px-5 pb-2.5 pt-2.5 active:cursor-grabbing"

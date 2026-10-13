@@ -89,7 +89,7 @@ export default function HistoryScreen() {
         }
       />
       {/* Fixed controls */}
-      <div className="mx-auto w-full max-w-md shrink-0 space-y-3 px-4 pt-3">
+      <div className="history-controls mx-auto w-full max-w-md shrink-0 space-y-3 px-4 pt-3">
         <SearchBar value={q} onChange={setQ} placeholder="Search product, reason, note…" />
 
         <Segmented<'ALL' | 'IN' | 'OUT'>
@@ -115,7 +115,7 @@ export default function HistoryScreen() {
       </div>
 
       {/* List card hugs its content when short; scrolls internally when long */}
-      <div className="mx-auto flex min-h-0 w-full max-w-md flex-1 flex-col overflow-hidden px-4 pt-3">
+      <div className="history-results mx-auto flex min-h-0 w-full max-w-md flex-1 flex-col overflow-hidden px-4 pt-3">
         {loading && transactions.length === 0 ? (
           <div className="sheet-scroll space-y-2.5 overflow-y-auto">
             <SkeletonRow h={72} />
@@ -132,6 +132,7 @@ export default function HistoryScreen() {
           </div>
         ) : (
           <div className="glass sheet-scroll min-h-0 flex-1 overflow-y-auto rounded-[26px] px-1.5 pt-1 pb-4">
+            <div className="history-table-head"><span>Type</span><span>Product</span><span>Details</span><span>Quantity</span></div>
             <div className="divide-y divide-(--stroke-dim)">
               {rows.map(({ t, when }) => (
                 <TxRow key={t.id} t={t} when={when} pending={isPending(t.id)} onOpen={openTx} />
@@ -182,18 +183,17 @@ const TxRow = memo(function TxRow({
     <button
       type="button"
       onClick={() => onOpen(t.id)}
-      className="press cv-row block w-full rounded-[20px] px-2.5 py-2.5 text-left hover:bg-(--accent-soft)/50"
+      className="history-row press cv-row block w-full rounded-[20px] px-2.5 py-2.5 text-left hover:bg-(--accent-soft)/50"
     >
-      <div className="flex items-center gap-2.5">
-        <StockBadge kind={t.type} />
-        {pending ? (
-          <span className="rounded-full bg-(--accent-soft) px-2 py-0.5 text-[10.5px] font-extrabold text-(--accent)">
+      <div className="history-row-main flex items-center gap-2.5">
+        <span className="history-type"><StockBadge kind={t.type} />{pending ? (
+          <span className="history-pending rounded-full bg-(--accent-soft) px-2 py-0.5 text-[10.5px] font-extrabold text-(--accent)">
             Saving…
           </span>
-        ) : null}
-        <p className="min-w-0 flex-1 truncate text-[14px] font-semibold text-(--ink)">{t.productName}</p>
+        ) : null}</span>
+        <p className="history-product min-w-0 flex-1 truncate text-[14px] font-semibold text-(--ink)">{t.productName}</p>
         <span
-          className={`tnum text-[15px] font-bold ${
+          className={`history-quantity tnum text-[15px] font-bold ${
             t.type === 'IN' ? 'text-emerald-600 dark:text-emerald-300' : 'text-rose-600 dark:text-rose-300'
           }`}
         >
@@ -201,7 +201,7 @@ const TxRow = memo(function TxRow({
           {t.quantity}
         </span>
       </div>
-      <p className="mt-1 text-xs leading-relaxed text-(--ink-2)">
+      <p className="history-row-meta mt-1 text-xs leading-relaxed text-(--ink-2)">
         {when}
         {t.reason ? ` · ${t.reason}` : ''}
         {t.note ? ` — ${t.note}` : ''}

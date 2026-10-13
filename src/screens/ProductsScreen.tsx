@@ -127,7 +127,13 @@ export default function ProductsScreen({
       />
 
       {/* Fixed controls */}
-      <div className="mx-auto w-full max-w-md shrink-0 space-y-3 px-4 pt-3">
+      <div className="products-controls mx-auto w-full max-w-md shrink-0 space-y-3 px-4 pt-3">
+        <div className="desktop-products-heading hidden items-center justify-between">
+          <p className="text-[13px] font-semibold text-(--ink-2)">{list.length} matching product{list.length === 1 ? '' : 's'}</p>
+          <button type="button" onClick={onAdd} className="press flex min-h-11 items-center gap-2 rounded-xl bg-(--primary) px-4 text-[13px] font-bold text-(--primary-foreground)">
+            <Plus size={16} /> Add product
+          </button>
+        </div>
         {/* Floating glass search (header above is already sticky) */}
         <SearchBar value={q} onChange={setQ} placeholder="Search name, SKU, category…" />
 
@@ -141,7 +147,7 @@ export default function ProductsScreen({
         </div>
 
         {/* Status filter + sort */}
-        <div className="flex items-center gap-2">
+        <div className="products-filter-row flex items-center gap-2">
           <div className="flex-1">
             <Segmented<ProductFilter>
               label="Stock status filter"
@@ -174,7 +180,7 @@ export default function ProductsScreen({
       </div>
 
       {/* List card hugs its content when short; scrolls internally when long */}
-      <div className="mx-auto flex min-h-0 w-full max-w-md flex-1 flex-col overflow-hidden px-4 pt-3">
+      <div className="products-results mx-auto flex min-h-0 w-full max-w-md flex-1 flex-col overflow-hidden px-4 pt-3">
         {loading && products.length === 0 ? (
           <div className="sheet-scroll space-y-2.5 overflow-y-auto">
             <SkeletonRow h={84} />
@@ -190,8 +196,12 @@ export default function ProductsScreen({
             />
           </div>
         ) : (
-          <div className="glass sheet-scroll min-h-0 flex-1 overflow-y-auto rounded-[26px] px-1.5 pt-1 pb-4">
-            <div className="divide-y divide-(--stroke-dim)">
+          <div className="glass sheet-scroll min-h-0 flex-1 overflow-auto rounded-[26px] px-1.5 pt-1 pb-4">
+            <div className="desktop-product-table">
+              <div className="desktop-product-table-head" role="row">
+                <span role="columnheader">Product</span><span role="columnheader">SKU</span><span role="columnheader">Category</span><span role="columnheader">Stock</span><span role="columnheader">Minimum</span><span role="columnheader">Price</span><span role="columnheader">Status</span><span role="columnheader" aria-label="Actions" />
+              </div>
+              <div className="divide-y divide-(--stroke-dim)" role="rowgroup">
               {list.slice(0, visible).map((p) => (
                 <ProductRow
                   key={p.id}
@@ -205,6 +215,7 @@ export default function ProductsScreen({
                   onMenu={handleMenu}
                 />
               ))}
+              </div>
             </div>
             {list.length > visible ? (
               <button
@@ -295,8 +306,13 @@ const ProductRow = memo(function ProductRow({
   return (
     <div
       onClick={() => onView(p)}
-      className="press cv-row flex cursor-pointer items-center gap-3 rounded-[20px] px-2.5 py-2.5 hover:bg-(--accent-soft)/50"
+      role="row"
+      tabIndex={0}
+      aria-label={`${p.name}, ${p.currentStock} in stock`}
+      onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); onView(p); } }}
+      className="product-list-row press cv-row flex cursor-pointer items-center gap-3 rounded-[20px] px-2.5 py-2.5 hover:bg-(--accent-soft)/50"
     >
+      <div className="product-identity" role="cell">
       {p.image ? (
         <img
           src={p.image}
@@ -314,7 +330,7 @@ const ProductRow = memo(function ProductRow({
           {p.name.slice(0, 1).toUpperCase()}
         </span>
       )}
-      <div className="min-w-0 flex-1">
+      <div className="product-mobile-details min-w-0 flex-1">
         <p className="truncate text-[14.5px] font-semibold text-(--ink)">{p.name}</p>
         {sub ? <p className="tnum truncate text-xs text-(--ink-2)">{sub}</p> : null}
         <div className="mt-1 flex flex-wrap items-center gap-x-2 gap-y-0.5">
@@ -339,13 +355,21 @@ const ProductRow = memo(function ProductRow({
           ) : null}
         </div>
       </div>
+      <span className="product-desktop-name hidden">{p.name}</span>
+      </div>
+      <span className="product-desktop-cell" role="cell">{sku || '—'}</span>
+      <span className="product-desktop-cell" role="cell">{catLabel || 'Uncategorized'}</span>
+      <span className="product-desktop-cell tnum" role="cell">{p.currentStock}</span>
+      <span className="product-desktop-cell tnum" role="cell">{p.minimumStock}</span>
+      <span className="product-desktop-cell tnum" role="cell">{p.sellingPrice > 0 ? formatMoney(p.sellingPrice) : '—'}</span>
+      <span className={`product-desktop-cell product-desktop-status ${st === 'low' ? 'is-low' : st === 'out' ? 'is-out' : ''}`} role="cell">{st === 'out' ? 'Out of stock' : st === 'low' ? 'Low stock' : 'In stock'}</span>
       <button
         onClick={(e) => {
           e.stopPropagation();
           onMenu(p);
         }}
         aria-label={`Actions for ${p.name}`}
-        className="press glass-soft flex h-11 w-11 shrink-0 items-center justify-center rounded-full text-(--ink-2)"
+        className="product-desktop-actions press glass-soft flex h-11 w-11 shrink-0 items-center justify-center rounded-full text-(--ink-2)"
       >
         <MoreVertical size={16} />
       </button>

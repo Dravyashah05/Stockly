@@ -2,7 +2,7 @@ import React, { Suspense, lazy, useCallback, useEffect, useRef, useState, useTra
 import { CloudOff } from 'lucide-react';
 import { StoreProvider, useStore } from './lib/store';
 import type { Product } from './lib/types';
-import { BottomNav, SyncStatus, Toasts, AppLoader, hasOpenOverlay, useOverlayOpen, type TabKey } from './components/ui';
+import { BottomNav, DesktopSidebar, DesktopToolbar, SyncStatus, Toasts, AppLoader, hasOpenOverlay, useOverlayOpen, type TabKey } from './components/ui';
 import HomeScreen from './screens/HomeScreen';
 import type { ProductFilter } from './screens/ProductsScreen';
 
@@ -35,7 +35,7 @@ function Shell() {
   const [productFilter, setProductFilter] = useState<ProductFilter>('all');
   const [formOpen, setFormOpen] = useState(false);
   const [editing, setEditing] = useState<Product | null>(null);
-  const { toasts, dismissToast, configured, ready, loading, lastSync, pendingIds, failedOps, retryFailedOp, dismissFailedOp } = useStore();
+  const { toasts, dismissToast, configured, ready, loading, lastSync, pendingIds, failedOps, retryFailedOp, dismissFailedOp, theme, setTheme } = useStore();
   // Hide the bottom nav under any popup so sheet buttons are never covered.
   const overlayOpen = useOverlayOpen();
   const showSync = !overlayOpen && (pendingIds.length > 0 || failedOps.length > 0);
@@ -97,6 +97,7 @@ function Shell() {
   const closeForm = useCallback(() => setFormOpen(false), []);
   const closeStock = useCallback(() => setStockReq(null), []);
   const retryOp = useCallback((k: string) => void retryFailedOp(k), [retryFailedOp]);
+  const pageTitle = tab === 'home' ? 'Dashboard' : tab === 'products' ? 'Products' : tab === 'history' ? 'Transaction History' : 'Settings';
 
   /* Horizontal swipe switches tabs. Guards keep it out of the way:
    * - single touch only, inputs never start a swipe;
@@ -193,9 +194,11 @@ function Shell() {
   return (
     <div className="min-h-dvh bg-(--bg) text-(--ink)">
       <div className="ambient" aria-hidden="true" />
-      <div className="relative z-[1] mx-auto min-h-dvh max-w-md sm:border-x sm:border-(--stroke-dim)">
+      <div className="app-shell relative z-[1] mx-auto min-h-dvh max-w-md sm:border-x sm:border-(--stroke-dim)">
+        <DesktopSidebar tab={tab} onNavigate={switchTab} onStock={openStock} />
+        <DesktopToolbar title={pageTitle} pending={pendingIds.length} failed={failedOps.length} lastSync={lastSync} theme={theme} setTheme={setTheme} />
         {!configured ? (
-          <div className="safe-top sticky top-0 z-20 px-3 pt-3">
+          <div className="backend-banner safe-top sticky top-0 z-20 px-3 pt-3">
             <button
               onClick={() => setTab('settings')}
               className="glass mx-auto flex w-full max-w-md items-center gap-2.5 rounded-2xl border-amber-500/25 px-4 py-3 text-left"

@@ -249,7 +249,7 @@ export default function SettingsScreen() {
     <div className="app-page-viewport mx-auto max-w-md">
       <Header title="Settings" subtitle={`Stockly v${APP_VERSION}`} />
 
-      <div className="mx-auto max-w-md space-y-5 px-4 pt-4">
+      <div className="settings-content mx-auto max-w-md space-y-5 px-4 pt-4">
         {/* App identity — premium dark hero */}
         <div className="relative overflow-hidden rounded-[28px] bg-[#111210] p-5 text-white">
           <div aria-hidden="true" className="pointer-events-none absolute -right-20 -top-24 h-64 w-64 rounded-full bg-white/[0.07] blur-3xl" />

@@ -181,9 +181,9 @@ export default function HomeScreen({
         }
       />
 
-      <div className="mx-auto max-w-md space-y-5 px-4 pt-4">
+      <div className="dashboard-content mx-auto max-w-md space-y-5 px-4 pt-4">
         {/* Greeting — modern editorial header with Add button */}
-        <div className="px-1 pt-1">
+        <div className="dashboard-greeting px-1 pt-1">
           <span className="inline-flex items-center gap-1.5 rounded-full bg-[#151515] px-3 py-1 text-[11px] font-bold uppercase tracking-wider text-[#F7F7F2] dark:bg-[#C7FF4D] dark:text-[#151515]">
             <span className={`h-1.5 w-1.5 rounded-full ${online ? 'bg-emerald-500' : 'bg-amber-500'}`} />
             {today}
@@ -209,7 +209,7 @@ export default function HomeScreen({
         </div>
 
         {/* Stock In / Out — big action buttons */}
-        <div className="grid grid-cols-2 gap-2.5">
+        <div className="dashboard-actions grid grid-cols-2 gap-2.5">
           {quickActions.map((a) => (
             <button
               key={a.label}
@@ -231,7 +231,7 @@ export default function HomeScreen({
         </div>
 
         {/* Separation line below Stock In / Out */}
-        <div aria-hidden="true" className="mx-1 h-px bg-(--stroke-dim)" />
+        <div aria-hidden="true" className="dashboard-divider mx-1 h-px bg-(--stroke-dim)" />
 
         {!online ? (
           <div className="glass flex items-center gap-2 rounded-2xl border-amber-500/25 px-4 py-3 text-[13px] font-medium text-amber-600 dark:text-amber-300">
@@ -249,7 +249,7 @@ export default function HomeScreen({
         ) : null}
 
         {loading && products.length === 0 ? (
-          <div className="space-y-3">
+          <div className="dashboard-loading space-y-3">
             <SkeletonRow h={190} />
             <div className="grid grid-cols-2 gap-3">
               <SkeletonRow h={110} />
@@ -260,7 +260,7 @@ export default function HomeScreen({
         ) : (
           <>
             {/* Bento stats */}
-            <div className="grid grid-cols-2 gap-2.5">
+            <div className="dashboard-stats-grid grid grid-cols-2 gap-2.5">
               {bentoStats.map((c) => (
                 <button
                   key={c.label}
@@ -281,7 +281,7 @@ export default function HomeScreen({
             </div>
 
             {/* Needs attention — modern rows with stock bars */}
-            <div>
+            <div className="dashboard-attention">
               <div className="mb-2.5 flex items-center justify-between px-1">
                 <p className="flex items-center gap-2 text-[13px] font-extrabold uppercase tracking-wider text-(--ink-2)">
                   <span aria-hidden="true" className="h-3 w-1 rounded-full bg-[#C7FF4D]" />
@@ -347,7 +347,7 @@ export default function HomeScreen({
             </div>
 
             {/* Recent activity — timeline cards */}
-            <div>
+            <div className="dashboard-activity">
               <div className="mb-2.5 flex items-center justify-between px-1">
                 <p className="flex items-center gap-2 text-[13px] font-extrabold uppercase tracking-wider text-(--ink-2)">
                   <span aria-hidden="true" className="h-3 w-1 rounded-full bg-[#C7FF4D]" />
