@@ -17,11 +17,13 @@ export default defineConfig({
     cssCodeSplit: true,
     chunkSizeWarningLimit: 600,
     rollupOptions: {
-      // Two independent pages: the Capacitor app (index.html, unchanged)
-      // and the marketing + store site (site.html). Neither loads the other.
+      // Two independent pages: the app (app.html) and the marketing + store
+      // site (index.html, the main landing page). Neither loads the other.
+      // Capacitor Android boots index.html, which hands native runtimes
+      // straight to app.html (see the inline snippet there).
       input: {
-        app: resolve(import.meta.dirname, 'index.html'),
-        site: resolve(import.meta.dirname, 'site.html'),
+        app: resolve(import.meta.dirname, 'app.html'),
+        site: resolve(import.meta.dirname, 'index.html'),
       },
       output: {
         manualChunks(id) {

@@ -6,6 +6,7 @@ const NAV = [
   { label: 'Product', href: '#product' },
   { label: 'Features', href: '#features' },
   { label: 'About', href: '#about' },
+  { label: 'Open app', href: 'app.html' },
 ];
 
 export default function StoreSite() {

@@ -3,34 +3,23 @@
   <head>
     <meta charset="UTF-8" />
     <link rel="icon" type="image/svg+xml" href="/icons.svg" />
-    <link rel="apple-touch-icon" href="/icons.svg" />
-    <meta
-      name="viewport"
-      content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover"
-    />
-    <meta name="theme-color" content="#F7F7F2" media="(prefers-color-scheme: light)" />
-    <meta name="theme-color" content="#111210" media="(prefers-color-scheme: dark)" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
+    <meta name="description" content="Stockly — inventory management that makes stock tracking simple, fast, and effortless. Know your stock. Move with clarity." />
+    <meta name="theme-color" content="#F7F7F2" />
+    <meta property="og:title" content="Stockly — Know your stock. Move with clarity." />
+    <meta property="og:description" content="Your inventory. Under control. Stockly for Android with Google Sheets sync." />
+    <meta property="og:type" content="website" />
+    <meta name="twitter:card" content="summary" />
+    <title>Stockly — Know your stock. Move with clarity.</title>
     <script>
-      (() => {
-        try {
-          const saved = localStorage.getItem('stockly.theme');
-          const dark = saved === 'dark' || (saved !== 'light' && matchMedia('(prefers-color-scheme: dark)').matches);
-          document.documentElement.classList.toggle('dark', dark);
-          document.documentElement.style.colorScheme = dark ? 'dark' : 'light';
-          document.querySelectorAll('meta[name="theme-color"]').forEach((meta) => {
-            meta.setAttribute('content', dark ? '#111210' : '#F7F7F2');
-          });
-        } catch { /* Theme is applied by the app once it starts. */ }
-      })();
+      // Main landing page is the website. The installed Android app boots
+      // here too, so hand native runtimes straight to the app (app.html).
+      // Runs before first paint, under the splash screen — no visible flash.
+      if (window.Capacitor) window.location.replace('app.html');
     </script>
-    <meta name="mobile-web-app-capable" content="yes" />
-    <meta name="apple-mobile-web-app-capable" content="yes" />
-    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
-    <meta name="description" content="Stockly - Simple mobile stock management for small business" />
-    <title>Stockly — Stock Management</title>
   </head>
   <body>
-    <div id="root"></div>
-    <script type="module" src="/src/main.tsx"></script>
+    <div id="site-root"></div>
+    <script type="module" src="/src/site/main.tsx"></script>
   </body>
 </html>
