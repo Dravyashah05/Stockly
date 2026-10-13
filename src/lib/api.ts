@@ -93,18 +93,27 @@ async function parseBody(res: Response): Promise<ApiResponse> {
  *  unknownOutcome=true: a failed response never proves a mutation didn't
  *  apply, so callers must verify (idempotency key / SKU / id), never assume. */
 async function serverError(res: Response): Promise<ApiError> {
+  const contentType = res.headers.get('content-type') || '';
+  // Non-JSON failures: a bare 404 in dev means the request never reached our
+  // middleware (stale or wrong dev server on this port) — say exactly that
+  // instead of a mystery status code.
+  if (!contentType.includes('json')) {
+    if (res.status === 404 && import.meta.env.DEV) {
+      return new ApiError(
+        'Dev proxy not found — stop all local servers, then run `npm run dev` fresh in the Stockly folder and hard-refresh.',
+        res.status,
+        true,
+      );
+    }
+    return new ApiError(`Server error (${res.status}). Try again in a moment.`, res.status, true);
+  }
   try {
-    const text = await res.text();
-    try {
-      const body = JSON.parse(text) as ApiResponse;
-      if (body && typeof body.error === 'string' && body.error.trim() !== '') {
-        return new ApiError(body.error, res.status, true);
-      }
-    } catch {
-      /* Not JSON (e.g. a Google error page) — fall through to generic. */
+    const body = (await res.json()) as ApiResponse;
+    if (body && typeof body.error === 'string' && body.error.trim() !== '') {
+      return new ApiError(body.error, res.status, true);
     }
   } catch {
-    /* Unreadable body — fall through to generic. */
+    /* Malformed JSON — fall through to generic. */
   }
   return new ApiError(`Server error (${res.status}). Try again in a moment.`, res.status, true);
 }
