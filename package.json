@@ -8,6 +8,7 @@
     "dev": "vite",
     "build": "tsc -b && vite build",
     "lint": "oxlint",
+    "test": "node --experimental-strip-types --test tests/api-response.test.ts",
     "preview": "vite preview",
     "cap:sync": "cap sync",
     "cap:open": "cap open android",

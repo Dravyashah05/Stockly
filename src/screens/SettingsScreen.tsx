@@ -19,7 +19,7 @@ import {
   Trash2,
   X,
 } from 'lucide-react';
-import { APP_VERSION, LS_KEYS, UPDATE_CHECK_URL, formatMoney, getApiUrl, setApiUrl } from '../lib/config';
+import { APP_VERSION, LS_KEYS, UPDATE_CHECK_URL, formatMoney, getApiUrl, isAppsScriptExecUrl, setApiUrl } from '../lib/config';
 import { computeCategoryStats, stockStatus, useStore, type CategoryStats } from '../lib/store';
 import type { Category } from '../lib/types';
 import { Field, Header, Sheet, BrandMark, inputCls } from '../components/ui';
@@ -194,8 +194,8 @@ export default function SettingsScreen() {
 
   const saveUrl = async () => {
     const v = url.trim();
-    if (v && !/^https:\/\/script\.google(users)?\.com\//.test(v) && !/^https:\/\//.test(v)) {
-      notify('That does not look like a valid https URL.', 'error');
+    if (v && !isAppsScriptExecUrl(v)) {
+      notify('Paste the deployed Apps Script Web App URL in the form https://script.google.com/macros/s/…/exec.', 'error');
       return;
     }
     // New backend = new data. Drop the old Sheet's cached products first so

@@ -30,13 +30,6 @@ function first(v: QueryValue): string | undefined {
 }
 
 export default async function handler(req: ProxyReq, res: ProxyRes): Promise<void> {
-  res.setHeader('Access-Control-Allow-Origin', '*');
-  res.setHeader('Access-Control-Allow-Methods', 'GET,POST,OPTIONS');
-  res.setHeader('Access-Control-Allow-Headers', 'Content-Type');
-  if (req.method === 'OPTIONS') {
-    res.status(200).send('');
-    return;
-  }
   if (req.method !== 'GET' && req.method !== 'POST') {
     res.status(405).json({ success: false, error: 'Method not allowed.' });
     return;
@@ -53,9 +46,17 @@ export default async function handler(req: ProxyReq, res: ProxyRes): Promise<voi
     if (
       target.protocol !== 'https:' ||
       target.hostname !== 'script.google.com' ||
-      !target.pathname.startsWith('/macros/s/')
+      !/^\/macros\/s\/[^/]+\/exec\/?$/.test(target.pathname) ||
+      target.username ||
+      target.password ||
+      target.search ||
+      target.hash
     ) {
-      throw new Error('The API proxy only accepts Google Apps Script Web-App URLs.');
+      res.status(400).json({
+        success: false,
+        error: 'The API proxy only accepts a deployed Google Apps Script Web App /exec URL.',
+      });
+      return;
     }
     if (req.method === 'GET') {
       for (const [key, value] of Object.entries(req.query)) {
@@ -78,13 +79,21 @@ export default async function handler(req: ProxyReq, res: ProxyRes): Promise<voi
     }
     const upstream = await fetch(target, init);
     const text = await upstream.text();
-    console.log(`[stockly-proxy] ${req.method} action=${target.searchParams.get('action') || '?'} -> upstream ${upstream.status}`);
+    const upstreamHost = new URL(upstream.url).hostname;
+    const contentType = upstream.headers.get('content-type') || 'application/json; charset=utf-8';
+    res.setHeader('X-Stockly-Upstream-Host', upstreamHost);
+    res.setHeader('X-Stockly-Upstream-Redirected', String(upstream.redirected));
+    res.setHeader('X-Stockly-Upstream-Status', String(upstream.status));
+    console.info(
+      `[stockly-proxy] ${req.method} action=${(target.searchParams.get('action') || '?').slice(0, 32)} ` +
+      `status=${upstream.status} type=${contentType.split(';', 1)[0]} redirected=${upstream.redirected} host=${upstreamHost}`,
+    );
     res.status(upstream.status);
-    res.setHeader('Content-Type', upstream.headers.get('content-type') || 'application/json; charset=utf-8');
+    res.setHeader('Content-Type', contentType);
     res.send(text);
   } catch (error) {
-    const message = error instanceof Error ? error.message : 'Apps Script proxy request failed.';
-    console.error(`[stockly-proxy] ${message}`);
-    res.status(502).json({ success: false, error: message });
+    const kind = error instanceof Error ? error.name : 'Error';
+    console.error(`[stockly-proxy] upstream request failed (${kind})`);
+    res.status(502).json({ success: false, error: 'Apps Script upstream request failed.' });
   }
 }

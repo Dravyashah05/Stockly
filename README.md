@@ -56,6 +56,11 @@ No API keys or secrets live in the app — the Web-App URL is public-by-design
 6. Open **Stockly → Settings → Cloud database**, paste the URL, tap
    **Save & sync**. Repeat step 6 on every device — all phones share the same Sheet.
 
+The URL is stored in the current app/browser’s `localStorage` key
+`stockly.apiUrl`; Vercel domains and local development origins have separate
+settings. Use the deployed Web App URL ending in `/exec`, not an Apps Script
+editor URL or `/dev` test URL.
+
 > **Updating the backend later:** edit `Code.gs`, then
 > **Deploy → Manage deployments → Edit → New version**. The URL stays the same.
 > (The app now fetches everything via a single `sync` call — redeploy to enable

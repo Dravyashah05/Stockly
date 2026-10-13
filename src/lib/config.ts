@@ -64,6 +64,24 @@ export function getApiUrl(): string {
   }
 }
 
+/** Accept only the deployed Apps Script Web App URL format used by Stockly. */
+export function isAppsScriptExecUrl(value: string): boolean {
+  try {
+    const url = new URL(value.trim());
+    return (
+      url.protocol === 'https:' &&
+      url.hostname === 'script.google.com' &&
+      /^\/macros\/s\/[^/]+\/exec\/?$/.test(url.pathname) &&
+      !url.username &&
+      !url.password &&
+      !url.search &&
+      !url.hash
+    );
+  } catch {
+    return false;
+  }
+}
+
 export function setApiUrl(url: string): void {
   try {
     if (url) localStorage.setItem(LS_KEYS.apiUrl, url);

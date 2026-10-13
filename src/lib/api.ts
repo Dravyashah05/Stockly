@@ -8,8 +8,8 @@
  * - Never resolves "success" when the request failed — errors throw.
  */
 
-import { getApiUrl } from './config';
-import type { ApiResponse } from './types';
+import { getApiUrl, isAppsScriptExecUrl } from './config';
+import { interpretApiResponse } from './api-response';
 
 const IN_FLIGHT = new Map<string, Promise<unknown>>();
 
@@ -34,8 +34,17 @@ function isNativeApp(): boolean {
 }
 
 function requestUrl(base: string): URL {
+  if (!isAppsScriptExecUrl(base)) {
+    throw new ApiError('The saved backend URL is not a deployed Apps Script Web App /exec URL. Update it in Settings.', undefined, false);
+  }
   if (!import.meta.env.DEV && isNativeApp()) return new URL(base);
   return proxyUrl(base);
+}
+
+function networkFailureMessage(): string {
+  return isNativeApp()
+    ? 'Could not read the Apps Script response. Check the device connection and Web App access; the browser may report network and CORS failures the same way.'
+    : 'Could not reach Stockly’s Vercel API route. Check the connection and /__stockly_api deployment; browser CORS failures can look like network errors.';
 }
 
 /** FIFO lane for write POSTs — see apiPost. Never rejects (errors are
@@ -91,46 +100,26 @@ function withTimeout<T>(p: Promise<T>, ms = 25000): Promise<T> {
   });
 }
 
-async function parseBody(res: Response): Promise<ApiResponse> {
-  const text = await res.text();
+async function responseData<T>(res: Response): Promise<T> {
+  let text: string;
   try {
-    return JSON.parse(text) as ApiResponse;
+    text = await res.text();
   } catch {
-    throw new ApiError('Unexpected server response. Redeploy the Apps Script as a Web App with “Anyone” access.', undefined, true);
+    throw new ApiError('The connection ended before the API response could be read. Retry; verify the last operation before resubmitting.', res.status, true);
   }
-}
-
-/** Non-2xx responses still carry information: the dev proxy and Apps Script
- *  both return `{ success: false, error }` JSON on failures they understand.
- *  Surface that message instead of a bare status code — but ALWAYS keep
- *  unknownOutcome=true: a failed response never proves a mutation didn't
- *  apply, so callers must verify (idempotency key / SKU / id), never assume. */
-async function serverError(res: Response): Promise<ApiError> {
-  const contentType = res.headers.get('content-type') || '';
-  // Non-JSON failures: a bare 404 means the request never reached our proxy
-  // (stale/wrong dev server locally; missing rewrite or stale deployment
-  // when hosted) — say exactly that instead of a mystery status code.
-  if (!contentType.includes('json')) {
-    if (res.status === 404) {
-      return new ApiError(
-        import.meta.env.DEV
-          ? 'Dev proxy not found — stop all local servers, then run `npm run dev` fresh in the Stockly folder and hard-refresh.'
-          : 'Sync service unavailable (404) — the hosting rewrite for /__stockly_api is missing or the deployment is stale. Redeploy the site.',
-        res.status,
-        true,
-      );
-    }
-    return new ApiError(`Server error (${res.status}). Try again in a moment.`, res.status, true);
-  }
-  try {
-    const body = (await res.json()) as ApiResponse;
-    if (body && typeof body.error === 'string' && body.error.trim() !== '') {
-      return new ApiError(body.error, res.status, true);
-    }
-  } catch {
-    /* Malformed JSON — fall through to generic. */
-  }
-  return new ApiError(`Server error (${res.status}). Try again in a moment.`, res.status, true);
+  const result = interpretApiResponse(
+    {
+      status: res.status,
+      ok: res.ok,
+      contentType: res.headers.get('content-type') || '',
+      url: res.url,
+      redirected: res.redirected || res.headers.get('x-stockly-upstream-redirected') === 'true',
+      upstreamHost: res.headers.get('x-stockly-upstream-host') || undefined,
+    },
+    text,
+  );
+  if (result.ok === false) throw new ApiError(result.message, result.status, result.unknownOutcome);
+  return result.data as T;
 }
 
 export async function apiGet<T>(action: string, params: Record<string, string> = {}): Promise<T> {
@@ -155,12 +144,9 @@ export async function apiGet<T>(action: string, params: Record<string, string> =
       res = await withTimeout(fetch(url.toString(), { method: 'GET', redirect: 'follow' }));
     } catch (e) {
       if (e instanceof ApiError) throw e;
-      throw new ApiError('Network error. Check your internet connection and try again.', undefined, true);
+      throw new ApiError(networkFailureMessage(), undefined, true);
     }
-    if (!res.ok) throw await serverError(res);
-    const body = await parseBody(res);
-    if (!body.success) throw new ApiError(body.error || 'Request failed.', undefined, false);
-    return body.data as T;
+    return responseData<T>(res);
   })();
 
   IN_FLIGHT.set(key, run);
@@ -197,12 +183,9 @@ export async function apiPost<T>(
       );
     } catch (e) {
       if (e instanceof ApiError) throw e;
-      throw new ApiError('Network error. Check your internet connection and try again.', undefined, true);
+      throw new ApiError(networkFailureMessage(), undefined, true);
     }
-    if (!res.ok) throw await serverError(res);
-    const body = await parseBody(res);
-    if (!body.success) throw new ApiError(body.error || 'Request failed.', undefined, false);
-    return body.data as T;
+    return responseData<T>(res);
   };
 
   // Apps Script cold-starts slowly and serialises writes behind a script
