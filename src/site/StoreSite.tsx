@@ -57,10 +57,9 @@ export default function StoreSite() {
           <div className="flex items-center gap-2.5">
             <a
               href="app.html"
-              className="group hidden items-center gap-1.5 text-[12px] font-extrabold uppercase tracking-[0.14em] transition-colors hover:text-neutral-500 md:inline-flex"
+              className="hidden text-[12px] font-extrabold uppercase tracking-[0.14em] transition-colors hover:text-neutral-500 md:inline-block"
             >
               Open app
-              <span aria-hidden="true" className="text-[15px] leading-none transition-transform group-hover:translate-x-0.5">→</span>
             </a>
             <a
               href="#store"
