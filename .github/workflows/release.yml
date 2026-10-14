@@ -106,15 +106,16 @@ jobs:
           distribution: 'temurin'
           java-version: '21'
 
-      - name: Set up Android SDK
+      - name: Set up Android SDK (explicit packages only — no obsolete tools)
         if: steps.versions.outputs.publish == 'true'
         uses: android-actions/setup-android@v3
-
-      - name: Install platform + build-tools
-        if: steps.versions.outputs.publish == 'true'
-        run: |
-          yes | sdkmanager --licenses >/dev/null
-          sdkmanager "platforms;android-36" "build-tools;36.0.0"
+        with:
+          # The action defaults to `packages: 'tools platform-tools`, but
+          # Google removed the obsolete `tools` package, which fails the run
+          # with "Failed to find package 'tools'". Pin only what the Gradle
+          # config requires (compileSdk 36): platform, build-tools, adb.
+          accept-android-sdk-licenses: true
+          packages: 'platform-tools platforms;android-36 build-tools;36.0.0'
 
       - name: Detect signing mode (never prints secrets)
         if: steps.versions.outputs.publish == 'true'
