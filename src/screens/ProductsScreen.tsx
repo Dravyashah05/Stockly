@@ -515,20 +515,24 @@ function DetailPage({
           </div>
 
           {(p.description || '').trim() ? (
-            <div className="product-detail-desc glass rounded-[26px] p-4">
-              <p className="mb-1 text-[12px] font-bold uppercase tracking-wider text-(--ink-2)">Description</p>
-              <p className="text-[14px] leading-relaxed text-(--ink)">{p.description}</p>
+            <div className="product-detail-desc glass rounded-[26px] p-5">
+              <p className="mb-1.5 flex items-center gap-2 text-[12px] font-bold uppercase tracking-wider text-(--ink-2)">
+                <span aria-hidden="true" className="h-3 w-1 rounded-full bg-[#C7FF4D]" />
+                Description
+              </p>
+              <p className="whitespace-pre-wrap break-words text-[14.5px] leading-relaxed text-(--ink)">{p.description}</p>
             </div>
           ) : null}
 
           {/* Stock In / Out history for this product */}
           <div className="product-detail-history glass rounded-[26px] p-4">
-            <div className="mb-2 flex items-center justify-between">
-              <p className="text-[12px] font-bold uppercase tracking-wider text-(--ink-2)">
+            <div className="mb-2 flex items-center justify-between gap-2">
+              <p className="flex items-center gap-2 text-[12px] font-bold uppercase tracking-wider text-(--ink-2)">
+                <span aria-hidden="true" className="h-3 w-1 rounded-full bg-[#C7FF4D]" />
                 Stock history{history.length > 0 ? ` · ${history.length}` : ''}
               </p>
               {history.length > 0 ? (
-                <p className="tnum text-[11.5px] font-bold">
+                <p className="tnum shrink-0 text-[11.5px] font-bold">
                   <span className="text-emerald-600 dark:text-emerald-300">+{totalIn} in</span>
                   <span className="text-(--ink-3)"> · </span>
                   <span className="text-rose-600 dark:text-rose-300">−{totalOut} out</span>
@@ -536,29 +540,31 @@ function DetailPage({
               ) : null}
             </div>
             {history.length === 0 ? (
-              <p className="py-2 text-center text-[13px] text-(--ink-2)">
+              <p className="py-3 text-center text-[13px] text-(--ink-2)">
                 No stock movements yet — use Stock In / Out below.
               </p>
             ) : (
               <div className="divide-y divide-(--stroke-dim)">
                 {history.slice(0, 20).map((t) => (
-                  <div key={t.id} className="flex items-center gap-2.5 py-2.5">
+                  <div key={t.id} className="flex items-center gap-3 rounded-[18px] px-2 py-3 transition-colors hover:bg-(--accent-soft)/40">
                     <StockBadge kind={t.type} />
                     {isPending(t.id) ? (
-                      <span className="rounded-full bg-(--accent-soft) px-2 py-0.5 text-[10.5px] font-extrabold text-(--accent)">
+                      <span className="shrink-0 rounded-full bg-(--accent-soft) px-2 py-0.5 text-[10.5px] font-extrabold text-(--accent)">
                         Saving…
                       </span>
                     ) : null}
                     <div className="min-w-0 flex-1">
-                      <p className="text-xs leading-relaxed text-(--ink-2)">
+                      <p className="text-xs font-medium leading-relaxed text-(--ink-2)">
                         {dateTimeFmt(t.createdAt)}
                         {t.reason ? ` · ${t.reason}` : ''}
-                        {t.note ? ` — ${t.note}` : ''}
                       </p>
+                      {t.note ? (
+                        <p className="mt-0.5 line-clamp-2 break-words text-[13px] leading-snug text-(--ink)">{t.note}</p>
+                      ) : null}
                     </div>
                     <span
-                      className={`tnum shrink-0 text-[15px] font-bold ${
-                        t.type === 'IN' ? 'text-emerald-600 dark:text-emerald-300' : 'text-rose-600 dark:text-rose-300'
+                      className={`tnum shrink-0 rounded-full px-2.5 py-1 text-[14px] font-extrabold ${
+                        t.type === 'IN' ? 'bg-emerald-500/12 text-emerald-600 dark:text-emerald-300' : 'bg-rose-500/12 text-rose-600 dark:text-rose-300'
                       }`}
                     >
                       {t.type === 'IN' ? '+' : '−'}
