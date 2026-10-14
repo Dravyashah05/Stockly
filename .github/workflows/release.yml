@@ -25,9 +25,13 @@
 #   Keep using the SAME keystore for every release: Android refuses updates
 #   signed with a different certificate (users would have to reinstall).
 #
-# METADATA (no commit-backs, no loops)
+# METADATA (no loops, no committed APKs)
 # - GitHub Releases are the source of truth. The workflow attaches
 #   `release.json` (machine-readable, see Phase 3 schema) + SHA256SUMS.txt.
+# - After publishing, the same file is committed to `public/release.json`
+#   so the website + updater read it same-origin (no API rate limits).
+#   That commit re-triggers this workflow once, but the tag then exists, so
+#   the re-run is validation-only and publishes nothing further.
 # - The website, store page, and in-app updater read the live Releases API.
 # - Vercel deploys automatically via its existing Git integration.
 #
@@ -229,6 +233,21 @@ jobs:
             stockly-${{ steps.versions.outputs.version }}.apk
             SHA256SUMS.txt
             release.json
+
+      - name: Publish static website metadata (ends the loop safely)
+        if: steps.versions.outputs.publish == 'true'
+        run: |
+          # The website + in-app updater read same-origin release.json first
+          # (no API rate limits); the Releases API stays as fallback. This
+          # commit triggers one more validation-only run (the tag now exists),
+          # which publishes nothing further — so the loop terminates here.
+          cp "$GITHUB_WORKSPACE/release.json" public/release.json
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git pull --rebase origin main
+          git add public/release.json
+          git commit -m "Release metadata for ${{ steps.versions.outputs.tag }}"
+          git push origin HEAD:main
 
       - name: Summarize
         if: always() && steps.versions.outputs.publish == 'true'

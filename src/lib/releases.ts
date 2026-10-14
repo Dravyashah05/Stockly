@@ -68,6 +68,22 @@ function isRecord(v: unknown): v is Record<string, unknown> {
   return typeof v === 'object' && v !== null && !Array.isArray(v);
 }
 
+/** Minimal shape check for a ReleaseInfo payload from any source. */
+export function isReleaseInfoLike(v: unknown): v is ReleaseInfo {
+  if (!isRecord(v)) return false;
+  if (typeof v.version !== 'string' || v.version.trim() === '') return false;
+  if (typeof v.apkUrl !== 'string' || v.apkUrl.trim() === '') return false;
+  return true;
+}
+
+function isNativeRuntime(): boolean {
+  try {
+    return typeof window !== 'undefined' && !!(window as unknown as { Capacitor?: unknown }).Capacitor;
+  } catch {
+    return false;
+  }
+}
+
 /**
  * Pure mapping of one GitHub release (+ optional release.json payload) to
  * ReleaseInfo. Exported for tests; network code below stays thin.
@@ -148,6 +164,52 @@ export async function fetchLatestRelease(opts?: { noCache?: boolean }): Promise<
     if (cached) {
       memory = cached;
       return cached.info;
+    }
+  }
+  // Static metadata shipped with the website: updated on every publish, no
+  // rate limits, no extra requests. Skipped on native builds, whose bundled
+  // copy would be stale by design — installed apps always check the network.
+  if (!isNativeRuntime()) {
+    try {
+      const ctrl = new AbortController();
+      const timer = window.setTimeout(() => ctrl.abort(), 8000);
+      try {
+        const res = await fetch('release.json', { cache: 'no-store', signal: ctrl.signal });
+        if (res.ok) {
+          const data = (await res.json().catch(() => null)) as unknown;
+          if (isReleaseInfoLike(data)) {
+            // Normalize with the same defaults as the API mapping so a
+            // thinner file can never crash readers (e.g. missing notes).
+            const d = data as Partial<ReleaseInfo> & { version: string; apkUrl: string };
+            const info: ReleaseInfo = {
+              tag: typeof d.tag === 'string' ? d.tag : '',
+              version: d.version,
+              versionCode: typeof d.versionCode === 'number' && Number.isFinite(d.versionCode) ? Math.floor(d.versionCode) : 0,
+              build: typeof d.build === 'string' ? d.build : 'debug',
+              publishedAt: typeof d.publishedAt === 'string' ? d.publishedAt : '',
+              minimumSupportedVersion: typeof d.minimumSupportedVersion === 'string' ? d.minimumSupportedVersion : '1.0.0',
+              releaseNotes: Array.isArray(d.releaseNotes) ? d.releaseNotes.filter((n): n is string => typeof n === 'string').slice(0, 12) : [],
+              apkUrl: d.apkUrl,
+              apkSize: typeof d.apkSize === 'number' && d.apkSize > 0 ? d.apkSize : 0,
+              sha256: typeof d.sha256 === 'string' && /^[0-9a-f]{64}$/i.test(d.sha256) ? d.sha256.toLowerCase() : null,
+              releaseUrl: typeof d.releaseUrl === 'string' ? d.releaseUrl : '',
+              commit: typeof d.commit === 'string' ? d.commit : '',
+              source: 'release.json',
+            };
+            memory = { at: Date.now(), info };
+            try {
+              localStorage.setItem(CACHE_KEY, JSON.stringify(memory));
+            } catch {
+              /* storage unavailable — memory cache still applies */
+            }
+            return info;
+          }
+        }
+      } finally {
+        window.clearTimeout(timer);
+      }
+    } catch {
+      /* fall through to the Releases API */
     }
   }
   const { status, data } = await getJson(API_BASE + '/latest', 12000);

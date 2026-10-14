@@ -185,10 +185,12 @@ release publishes `stockly-<version>.apk` + `SHA256SUMS.txt` + `release.json`
 (machine-readable metadata: version, code, size, checksum, notes, commit) and
 links them from the release notes.
 
-**Where releases surface (no committed APKs or metadata files):**
+**Where releases surface (no committed APKs):**
 - Website store section (`index.html#store`) and dedicated App Store page
-  (`/app-store`) read the live GitHub Releases API.
-- Settings → App update in the installed app checks the same source.
+  (`/app-store`) read a static `public/release.json` first (refreshed by the
+  release workflow on every publish), falling back to the live GitHub
+  Releases API.
+- Settings → App update in the installed app uses the same source.
 - The website itself deploys automatically through the existing Vercel Git
   integration — no tokens or extra steps needed.
 

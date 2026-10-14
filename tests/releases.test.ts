@@ -4,7 +4,7 @@ import { execFileSync } from 'node:child_process';
 import { mkdtempSync, writeFileSync, readFileSync, rmSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
-import { fetchLatestRelease, formatApkSize, mapReleasePayload } from '../src/lib/releases.ts';
+import { fetchLatestRelease, formatApkSize, isReleaseInfoLike, mapReleasePayload } from '../src/lib/releases.ts';
 import { assertVersionsMatch, buildReleaseJson, parseBadging, readVersions } from '../scripts/release-info.mjs';
 
 function ghRelease(overrides = {}) {
@@ -201,4 +201,96 @@ test('importing the module never runs the CLI (node -e regression)', () => {
     { encoding: 'utf8' },
   );
   assert.match(String(out), /function/);
+});
+
+test('isReleaseInfoLike gates static payloads strictly', () => {
+  assert.equal(isReleaseInfoLike({ version: '1.0.0', apkUrl: 'https://x/y.apk' }), true);
+  for (const bad of [null, [], {}, { version: '' }, { apkUrl: 'https://x/y.apk' }, { version: '1.0.0' }, 'x', 42]) {
+    assert.equal(isReleaseInfoLike(bad), false);
+  }
+});
+
+/** Minimal browser globals so fetchLatestRelease can run under node. */
+function stubBrowser(handler: (url: string) => { status: number; body: unknown } | null) {
+  const g = globalThis as Record<string, unknown>;
+  const prevWindow = g.window;
+  const prevStorage = g.localStorage;
+  const prevNavigatorDesc = Object.getOwnPropertyDescriptor(globalThis, 'navigator');
+  const prevFetchDesc = Object.getOwnPropertyDescriptor(globalThis, 'fetch');
+  const calls: string[] = [];
+  const store = new Map<string, string>();
+  (g as Record<string, unknown>).window = {
+    setTimeout: (...a: [unknown, ...unknown[]]) => setTimeout(a[0] as never, ...(a.slice(1) as [])),
+    clearTimeout: (id: unknown) => clearTimeout(id as never),
+  };
+  (g as Record<string, unknown>).localStorage = {
+    getItem: (k: string) => (store.has(k) ? store.get(k)! : null),
+    setItem: (k: string, v: string) => { store.set(k, v); },
+    removeItem: (k: string) => { store.delete(k); },
+  };
+  Object.defineProperty(globalThis, 'navigator', { value: { onLine: true }, configurable: true, writable: true });
+  Object.defineProperty(globalThis, 'fetch', {
+    value: async (url: string) => {
+      calls.push(String(url));
+      const route = handler(String(url));
+      if (!route) throw new Error('network down');
+      return {
+        ok: route.status >= 200 && route.status < 300,
+        status: route.status,
+        json: async () => route.body,
+        text: async () => JSON.stringify(route.body),
+      };
+    },
+    configurable: true,
+    writable: true,
+  });
+  return {
+    calls,
+    restore: () => {
+      if (prevWindow === undefined) delete (g as Record<string, unknown>).window;
+      else (g as Record<string, unknown>).window = prevWindow;
+      if (prevStorage === undefined) delete (g as Record<string, unknown>).localStorage;
+      else (g as Record<string, unknown>).localStorage = prevStorage;
+      if (prevNavigatorDesc) Object.defineProperty(globalThis, 'navigator', prevNavigatorDesc);
+      else delete (globalThis as Record<string, unknown>).navigator;
+      if (prevFetchDesc) Object.defineProperty(globalThis, 'fetch', prevFetchDesc);
+      else delete (globalThis as Record<string, unknown>).fetch;
+    },
+  };
+}
+
+test('static release.json is preferred and the API is never called', async () => {
+  const stub = stubBrowser((url) =>
+    url === 'release.json'
+      ? { status: 200, body: { version: '9.9.9', apkUrl: 'https://example.com/r/a.apk', releaseNotes: ['Static note'] } }
+      : null,
+  );
+  try {
+    const info = await fetchLatestRelease({ noCache: true });
+    assert.equal(info.version, '9.9.9');
+    assert.equal(info.source, 'release.json');
+    assert.equal(info.versionCode, 0);
+    assert.deepEqual(info.releaseNotes, ['Static note']);
+    assert.ok(stub.calls.every((c) => !c.includes('api.github.com')));
+  } finally {
+    stub.restore();
+  }
+});
+
+test('an invalid static file falls back to the Releases API', async () => {
+  const meta = releaseJson();
+  const stub = stubBrowser((url) => {
+    if (url === 'release.json') return { status: 200, body: { nope: true } };
+    if (url.includes('/releases/latest')) return { status: 200, body: ghRelease() };
+    if (url.includes('release.json')) return { status: 200, body: meta };
+    return null;
+  });
+  try {
+    const info = await fetchLatestRelease({ noCache: true });
+    assert.equal(info.version, '1.2.0');
+    assert.equal(info.source, 'release.json');
+    assert.ok(stub.calls.some((c) => c.includes('api.github.com')));
+  } finally {
+    stub.restore();
+  }
 });
