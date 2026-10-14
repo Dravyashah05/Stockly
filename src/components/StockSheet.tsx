@@ -31,7 +31,7 @@ export default function StockSheet({
   openKey: number;
   onClose: () => void;
 }) {
-  const { products, doStockIn, doStockOut, categoryName } = useStore();
+  const { products, doStockIn, doStockOut } = useStore();
   const [mode, setMode] = useState<'IN' | 'OUT'>(initialMode);
   const [productId, setProductId] = useState(presetProductId);
   const [qty, setQty] = useState('');
@@ -63,9 +63,9 @@ export default function StockSheet({
     const needle = deferredQ.trim().toLowerCase();
     if (!needle) return products;
     return products.filter((p) =>
-      `${p.name} ${p.sku} ${categoryName(p.categoryId)}`.toLowerCase().includes(needle),
+      `${p.name} ${p.sku}`.toLowerCase().includes(needle),
     );
-  }, [products, deferredQ, categoryName]);
+  }, [products, deferredQ]);
 
   const selected = products.find((p) => p.id === productId);
   const qtyNum = Math.floor(Number(qty) || 0);

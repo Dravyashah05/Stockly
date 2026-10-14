@@ -9,9 +9,6 @@ import { ActionSheet, Confirm, EmptyState, Header, SearchBar, Segmented, Skeleto
 type SortKey = 'name' | 'stock' | 'price' | 'updated';
 export type ProductFilter = 'all' | 'low' | 'out';
 
-/** Pseudo-filter for products with no category assigned. */
-const UNCAT = '__none';
-
 /** Paginated rendering keeps large catalogs smooth (V2 perf). */
 const PAGE_SIZE = 50;
 
@@ -28,9 +25,8 @@ export default function ProductsScreen({
   onStockIn: (p: Product) => void;
   onStockOut: (p: Product) => void;
 }) {
-  const { products, categories, removeProduct, loading, isPending } = useStore();
+  const { products, removeProduct, loading, isPending } = useStore();
   const [q, setQ] = useState('');
-  const [cat, setCat] = useState('all');
   const [status, setStatus] = useState<ProductFilter>(initialFilter);
   const [sort, setSort] = useState<SortKey>('updated');
   const [del, setDel] = useState<Product | null>(null);
@@ -41,15 +37,6 @@ export default function ProductsScreen({
   // Defer filtering so typing stays at 90Hz — list catches up a frame later.
   const deferredQ = useDeferredValue(q);
 
-  // O(1) category lookups: the old per-row .find() made every list render
-  // O(rows × categories). Map identity is stable until categories change,
-  // so the filter memo below doesn't recompute on unrelated store updates.
-  const catMap = useMemo(() => {
-    const m = new Map<string, string>();
-    for (const c of categories) m.set(String(c.id), c.name);
-    return m;
-  }, [categories]);
-
   // Stable row callbacks — without these every store update (toasts, sync
   // badges) creates new closures and re-renders all memoized rows.
   const handleView = useCallback((p: Product) => setView(p), []);
@@ -58,27 +45,15 @@ export default function ProductsScreen({
   // Reset pagination whenever the result set changes.
   useEffect(() => {
     setVisible(PAGE_SIZE);
-  }, [deferredQ, cat, status, sort, products.length]);
+  }, [deferredQ, status, sort, products.length]);
 
   const list = useMemo(() => {
     const needle = deferredQ.trim().toLowerCase();
-    // Lookup once: Sheet columns edited by hand sometimes hold the category
-    // NAME instead of its id, or ids with stray spaces — match both.
-    const selectedName = cat === 'all' || cat === UNCAT
-      ? ''
-      : (catMap.get(String(cat)) || '').trim().toLowerCase();
     let rows = products.filter((p) => {
-      const pid = String(p.categoryId || '').trim();
-      if (cat === UNCAT) {
-        if (pid !== '') return false;
-      } else if (cat !== 'all') {
-        if (pid !== String(cat) && (!selectedName || pid.toLowerCase() !== selectedName)) return false;
-      }
       if (status === 'low' && stockStatus(p) !== 'low') return false;
       if (status === 'out' && stockStatus(p) !== 'out') return false;
       if (needle) {
-        const cn = catMap.get(String(p.categoryId)) || '';
-        const hay = `${p.name} ${p.sku} ${cn}`.toLowerCase();
+        const hay = `${p.name} ${p.sku}`.toLowerCase();
         if (!hay.includes(needle)) return false;
       }
       return true;
@@ -90,7 +65,7 @@ export default function ProductsScreen({
       return +new Date(b.updatedAt || 0) - +new Date(a.updatedAt || 0);
     });
     return rows;
-  }, [products, deferredQ, cat, status, sort, catMap]);
+  }, [products, deferredQ, status, sort]);
 
   const statusTabs: { key: ProductFilter; label: string }[] = [
     { key: 'all', label: 'All' },
@@ -98,10 +73,9 @@ export default function ProductsScreen({
     { key: 'out', label: 'Out' },
   ];
 
-  const filtersActive = q !== '' || cat !== 'all' || status !== 'all' || sort !== 'updated';
+  const filtersActive = q !== '' || status !== 'all' || sort !== 'updated';
   const clearFilters = () => {
     setQ('');
-    setCat('all');
     setStatus('all');
     setSort('updated');
   };
@@ -111,7 +85,7 @@ export default function ProductsScreen({
       <Header
         title="Products"
         subtitle={
-          cat !== 'all' || status !== 'all' || deferredQ.trim()
+          status !== 'all' || deferredQ.trim()
             ? `${list.length} of ${products.length} items`
             : `${products.length} item${products.length === 1 ? '' : 's'}`
         }
@@ -135,16 +109,7 @@ export default function ProductsScreen({
           </button>
         </div>
         {/* Floating glass search (header above is already sticky) */}
-        <SearchBar value={q} onChange={setQ} placeholder="Search name, SKU, category…" />
-
-        {/* Category chips */}
-        <div className="no-scrollbar flex gap-2 overflow-x-auto pb-0.5">
-          <Chip active={cat === 'all'} onClick={() => setCat('all')} label="All" />
-          {categories.map((c) => (
-            <Chip key={c.id} active={cat === c.id} onClick={() => setCat(c.id)} label={c.name} />
-          ))}
-          <Chip active={cat === UNCAT} onClick={() => setCat(UNCAT)} label="Uncategorized" />
-        </div>
+        <SearchBar value={q} onChange={setQ} placeholder="Search name, SKU…" />
 
         {/* Status filter + sort */}
         <div className="products-filter-row flex items-center gap-2">
@@ -191,7 +156,7 @@ export default function ProductsScreen({
           <div className="sheet-scroll overflow-y-auto">
             <EmptyState
               icon={<Search size={22} />}
-              title={q || cat !== 'all' || status !== 'all' ? 'No products match' : 'No products yet'}
+              title={q || status !== 'all' ? 'No products match' : 'No products yet'}
               hint="Tap + to add your first product."
             />
           </div>
@@ -199,17 +164,13 @@ export default function ProductsScreen({
           <div className="glass sheet-scroll min-h-0 flex-1 overflow-auto rounded-[26px] px-1.5 pt-1 pb-4">
             <div className="desktop-product-table">
               <div className="desktop-product-table-head" role="row">
-                <span role="columnheader">Product</span><span role="columnheader">SKU</span><span role="columnheader">Category</span><span role="columnheader">Stock</span><span role="columnheader">Minimum</span><span role="columnheader">Price</span><span role="columnheader">Status</span><span role="columnheader" aria-label="Actions" />
+                <span role="columnheader">Product</span><span role="columnheader">SKU</span><span role="columnheader">Stock</span><span role="columnheader">Minimum</span><span role="columnheader">Price</span><span role="columnheader">Status</span><span role="columnheader" aria-label="Actions" />
               </div>
               <div className="divide-y divide-(--stroke-dim)" role="rowgroup">
               {list.slice(0, visible).map((p) => (
                 <ProductRow
                   key={p.id}
                   p={p}
-                  catLabel={(() => {
-                    const raw = catMap.get(String(p.categoryId));
-                    return raw && raw !== '—' ? raw.trim() : '';
-                  })()}
                   pending={isPending(p.id)}
                   onView={handleView}
                   onMenu={handleMenu}
@@ -234,7 +195,6 @@ export default function ProductsScreen({
       {view ? (
         <DetailPage
           p={view}
-          categoryName={catMap.get(String(view.categoryId)) || '—'}
           onClose={() => setView(null)}
           onEdit={() => {
             setView(null);
@@ -284,25 +244,23 @@ export default function ProductsScreen({
   );
 }
 
-/* Memoized row: re-renders only when its own product, label, pending flag
+/* Memoized row: re-renders only when its own product, pending flag
  * or the stable callbacks change — not on unrelated store updates
  * (toasts, sync banners, other rows' pending badges). */
 const ProductRow = memo(function ProductRow({
   p,
-  catLabel,
   pending,
   onView,
   onMenu,
 }: {
   p: Product;
-  catLabel: string;
   pending: boolean;
   onView: (p: Product) => void;
   onMenu: (p: Product) => void;
 }) {
   const st = stockStatus(p);
   const sku = (p.sku || '').trim();
-  const sub = [sku, catLabel].filter(Boolean).join(' · ');
+  const sub = sku;
   return (
     <div
       onClick={() => onView(p)}
@@ -358,7 +316,6 @@ const ProductRow = memo(function ProductRow({
       <span className="product-desktop-name hidden">{p.name}</span>
       </div>
       <span className="product-desktop-cell" role="cell">{sku || '—'}</span>
-      <span className="product-desktop-cell" role="cell">{catLabel || 'Uncategorized'}</span>
       <span className="product-desktop-cell tnum" role="cell">{p.currentStock}</span>
       <span className="product-desktop-cell tnum" role="cell">{p.minimumStock}</span>
       <span className="product-desktop-cell tnum" role="cell">{p.sellingPrice > 0 ? formatMoney(p.sellingPrice) : '—'}</span>
@@ -379,7 +336,6 @@ const ProductRow = memo(function ProductRow({
 
 function DetailPage({
   p,
-  categoryName,
   onClose,
   onEdit,
   onStockIn,
@@ -387,7 +343,6 @@ function DetailPage({
   onDelete,
 }: {
   p: Product;
-  categoryName: string;
   onClose: () => void;
   onEdit: () => void;
   onStockIn: () => void;
@@ -459,7 +414,7 @@ function DetailPage({
               <Pencil size={16} /> Edit
             </button>
           </div>
-          {/* Status + category over image */}
+          {/* Status over image */}
           <div className="absolute bottom-3 left-4 flex flex-wrap gap-1.5">
             <span
               className={`glass-strong tnum rounded-full px-3 py-1.5 text-[12px] font-bold ${
@@ -472,11 +427,6 @@ function DetailPage({
             >
               {st === 'out' ? 'Out of stock' : st === 'low' ? `Low stock · ${p.currentStock} left` : `${p.currentStock} in stock`}
             </span>
-            {categoryName && categoryName !== '—' ? (
-              <span className="glass-strong rounded-full px-3 py-1.5 text-[12px] font-bold text-(--ink)">
-                {categoryName}
-              </span>
-            ) : null}
           </div>
         </div>
 

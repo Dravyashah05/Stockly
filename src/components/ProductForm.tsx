@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
-import { ImagePlus, Link2, Plus, Trash2, Upload } from 'lucide-react';
+import { ImagePlus, Link2, Trash2, Upload } from 'lucide-react';
 import { validateProductInput, useStore } from '../lib/store';
 import type { Product } from '../lib/types';
 import { Field, PrimaryBtn, Sheet, inputCls } from '../components/ui';
@@ -138,7 +138,7 @@ export default function ProductForm({
   onClose: () => void;
   editing: Product | null;
 }) {
-  const { categories, products, saveProduct, saveCategory, getCategoryByName, categoryName, notify } = useStore();
+  const { products, saveProduct, notify } = useStore();
   const [name, setName] = useState('');
   const [image, setImage] = useState('');
   const [upload, setUpload] = useState('');
@@ -148,23 +148,14 @@ export default function ProductForm({
   const [stockQty, setStockQty] = useState('0');
   const [price, setPrice] = useState('');
   const [description, setDescription] = useState('');
-  const [categoryId, setCategoryId] = useState('');
   const [err, setErr] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
-  // Inline category quick-add (no need to leave the form).
-  const [showCatAdd, setShowCatAdd] = useState(false);
-  const [newCatName, setNewCatName] = useState('');
-  const [catAdding, setCatAdding] = useState(false);
-  // Assigned category deleted since? Keep it visible, block submit until fixed.
-  const unknownCategory = categoryId !== '' && !categories.some((c) => c.id === categoryId);
 
   useEffect(() => {
     if (open) {
       setErr(null);
       setUpload('');
       setUploading(false);
-      setShowCatAdd(false);
-      setNewCatName('');
       if (editing) {
         setName(editing.name);
         if (editing.image.startsWith('data:image/')) {
@@ -178,7 +169,6 @@ export default function ProductForm({
         const p = editing.sellingPrice > 0 ? editing.sellingPrice : editing.costPrice;
         setPrice(p > 0 ? String(p) : '');
         setDescription(editing.description || '');
-        setCategoryId(editing.categoryId || '');
       } else {
         setName('');
         setImage('');
@@ -186,7 +176,6 @@ export default function ProductForm({
         setStockQty('0');
         setPrice('');
         setDescription('');
-        setCategoryId('');
       }
     }
   }, [open, editing]);
@@ -219,22 +208,6 @@ export default function ProductForm({
     }
   };
 
-  const submitCatQuickAdd = async () => {
-    const v = newCatName.trim();
-    if (!v) return setErr('Type a category name first.');
-    setCatAdding(true);
-    const ok = await saveCategory(v);
-    setCatAdding(false);
-    if (ok) {
-      // Selectable immediately: the optimistic record is in live state.
-      const found = getCategoryByName(v);
-      if (found) setCategoryId(found.id);
-      setNewCatName('');
-      setShowCatAdd(false);
-      setErr(null);
-    }
-  };
-
   const submit = async () => {
     const trimmedName = name.trim();
     if (!trimmedName) return setErr('Product name is required.');
@@ -252,8 +225,6 @@ export default function ProductForm({
     }
     if (imageValue && !/^https?:\/\//i.test(imageValue) && !imageValue.startsWith('data:image/'))
       return setErr('Image must be an uploaded photo or a valid http(s) URL, or left blank.');
-    if (categoryId && !categories.some((c) => c.id === categoryId))
-      return setErr(`This product's category (“${categoryName(categoryId)}”) was deleted — please choose a new one below.`);
 
     const sku = editing ? editing.sku : genSku(trimmedName, takenSkus);
 
@@ -261,14 +232,12 @@ export default function ProductForm({
       {
         name: trimmedName,
         sku,
-        categoryId,
         description: description.trim(),
         image: imageValue,
         costPrice: unitPrice,
         sellingPrice: unitPrice,
         currentStock: qty,
         minimumStock: min,
-        supplierId: '',
       },
       { isNew: !editing },
     );
@@ -283,15 +252,12 @@ export default function ProductForm({
       {
         name: trimmedName,
         sku,
-        categoryId,
         description: description.trim(),
         image: imageValue,
         costPrice: unitPrice,
         sellingPrice: unitPrice,
         currentStock: qty,
         minimumStock: min,
-        // Suppliers removed from the app — always blank.
-        supplierId: '',
       },
       editing?.id,
     );
@@ -448,71 +414,6 @@ export default function ProductForm({
               className={`${inputCls} resize-none`}
             />
           </Field>
-        </div>
-
-        {/* 7 — Category */}
-        <div className="glass rounded-3xl p-4">
-          <Field
-            label="Category"
-            hint={
-              categories.length === 0
-                ? 'No categories yet — create one below without leaving this form.'
-                : undefined
-            }
-          >
-            <select
-              value={unknownCategory ? '__unknown' : categoryId}
-              onChange={(e) => setCategoryId(e.target.value === '__unknown' ? categoryId : e.target.value)}
-              className={inputCls}
-            >
-              <option value="">Uncategorized</option>
-              {categories.map((c) => (
-                <option key={c.id} value={c.id}>
-                  {c.name}
-                </option>
-              ))}
-              {unknownCategory ? (
-                <option value="__unknown" disabled>
-                  Previously: {categoryName(categoryId)} (deleted — pick a new one)
-                </option>
-              ) : null}
-            </select>
-          </Field>
-          {unknownCategory ? (
-            <p className="mt-2 rounded-2xl bg-amber-500/10 px-3.5 py-2.5 text-[12.5px] font-medium leading-relaxed text-amber-700 dark:text-amber-300">
-              This product's category was deleted. Choose Uncategorized or another category before saving.
-            </p>
-          ) : null}
-          {!showCatAdd ? (
-            <button
-              type="button"
-              onClick={() => setShowCatAdd(true)}
-              className="press mt-2.5 flex min-h-[44px] items-center gap-1.5 rounded-2xl bg-(--accent-soft) px-4 text-[13px] font-extrabold text-(--accent)"
-            >
-              <Plus size={16} /> New category
-            </button>
-          ) : (
-            <div className="mt-2.5 flex gap-2">
-              <input
-                value={newCatName}
-                onChange={(e) => setNewCatName(e.target.value)}
-                onKeyDown={(e) => {
-                  if (e.key === 'Enter') void submitCatQuickAdd();
-                }}
-                placeholder="New category name…"
-                aria-label="New category name"
-                className={inputCls}
-              />
-              <button
-                type="button"
-                onClick={() => void submitCatQuickAdd()}
-                disabled={catAdding}
-                className="press flex min-h-[48px] shrink-0 items-center rounded-2xl bg-[#151515] px-4 text-[14px] font-extrabold text-white dark:bg-[#C7FF4D] dark:text-[#151515] disabled:opacity-50"
-              >
-                {catAdding ? 'Adding…' : 'Add'}
-              </button>
-            </div>
-          )}
         </div>
 
         {err ? (

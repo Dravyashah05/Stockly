@@ -12,23 +12,25 @@
  *
  * All responses are JSON: { success: true, data } or
  * { success: false, error }.
+ *
+ * NOTE: categories and suppliers were removed in v1.1.0. Products carry
+ * no category/supplier fields; old Categories/Suppliers tabs (if any)
+ * are simply left unused.
  */
 
 /* ------------------------------ schema ------------------------------ */
 
-var VERSION = '1.0.2';
+var VERSION = '1.1.0';
 
 /** Bound sheet ID override for standalone projects (set via configureSpreadsheet). */
 var PROP_SHEET_ID = 'SPREADSHEET_ID';
 
 var HEADERS = {
-  Products: ['id', 'name', 'sku', 'categoryId', 'description', 'image',
+  Products: ['id', 'name', 'sku', 'description', 'image',
     'costPrice', 'sellingPrice', 'currentStock', 'minimumStock',
-    'supplierId', 'status', 'createdAt', 'updatedAt'],
-  Categories: ['id', 'name', 'createdAt'],
-  Suppliers: ['id', 'name', 'phone', 'email', 'address', 'notes', 'createdAt'],
+    'status', 'createdAt', 'updatedAt'],
   StockTransactions: ['id', 'productId', 'productName', 'type', 'quantity',
-    'price', 'reason', 'supplierId', 'note', 'idempotencyKey', 'createdAt'],
+    'price', 'reason', 'note', 'idempotencyKey', 'createdAt'],
   Settings: ['key', 'value']
 };
 
@@ -172,7 +174,7 @@ function readRow_(sh, tabName, idx) {
 
 /**
  * Idempotency lookup WITHOUT reading the whole transaction table:
- * single-column scan of col J (idempotencyKey), then one row read on hit.
+ * single-column scan of col I (idempotencyKey), then one row read on hit.
  * Used inside stockIn_/stockOut_ while the script lock is held, so the
  * lock window stays short even with thousands of transactions.
  */
@@ -181,7 +183,7 @@ function findTxByIdemKey_(idem) {
   var sh = sheet_('StockTransactions');
   var last = sh.getLastRow();
   if (last < 2) return null;
-  var keys = sh.getRange(2, 10, last - 1, 1).getValues();
+  var keys = sh.getRange(2, 9, last - 1, 1).getValues();
   for (var i = 0; i < keys.length; i++) {
     if (String(keys[i][0]) === String(idem) && String(keys[i][0]) !== '') {
       return readRow_(sh, 'StockTransactions', i + 2);
@@ -240,7 +242,7 @@ function withLock_(fn) {
 
 /* ------------------------------ setup ------------------------------ */
 
-/** Creates the five tabs with headers. Safe to re-run. */
+/** Creates the tabs with headers. Safe to re-run. */
 function setupDatabase() {
   var s = ss_();
   Object.keys(HEADERS).forEach(function (name) {
@@ -258,33 +260,18 @@ function setupDatabase() {
 /** Inserts small-business demo data. Run AFTER setupDatabase. */
 function setupDemoData() {
   return withLock_(function () {
-    var catIds = {}, supIds = {};
-    [['Groceries'], ['Beverages'], ['Household']].forEach(function (c) {
-      var id = uid_('cat');
-      sheet_('Categories').appendRow([id, c[0], nowIso_()]);
-      catIds[c[0]] = id;
-    });
-    var sups = [
-      ['Sharma Traders', '9876543210', 'sharma@example.com', 'Main Bazaar Road', 'Groceries wholesaler'],
-      ['Fresh Dairy Co.', '9811112222', 'fresh@example.com', 'Dairy Mandi', 'Milk & bread daily']
-    ];
-    sups.forEach(function (sp) {
-      var id = uid_('sup');
-      sheet_('Suppliers').appendRow([id, sp[0], sp[1], sp[2], sp[3], sp[4], nowIso_()]);
-      supIds[sp[0]] = id;
-    });
     var t = nowIso_();
     var demo = [
-      ['Basmati Rice 5kg', 'RICE-001', 'Groceries', 'Premium long-grain rice', '', 240, 320, 40, 10, 'Sharma Traders'],
-      ['Whole Wheat Atta 10kg', 'ATTA-010', 'Groceries', 'Stone-ground atta', '', 380, 460, 25, 8, 'Sharma Traders'],
-      ['Milk 1L', 'MILK-001', 'Beverages', 'Toned milk, daily stock', '', 55, 65, 30, 12, 'Fresh Dairy Co.'],
-      ['Brown Bread', 'BREAD-002', 'Beverages', '', '', 35, 45, 4, 6, 'Fresh Dairy Co.'],
-      ['Dish Soap 500ml', 'SOAP-005', 'Household', '', '', 80, 110, 0, 5, 'Sharma Traders']
+      ['Basmati Rice 5kg', 'RICE-001', 'Premium long-grain rice', '', 240, 320, 40, 10],
+      ['Whole Wheat Atta 10kg', 'ATTA-010', 'Stone-ground atta', '', 380, 460, 25, 8],
+      ['Milk 1L', 'MILK-001', 'Toned milk, daily stock', '', 55, 65, 30, 12],
+      ['Brown Bread', 'BREAD-002', '', '', 35, 45, 4, 6],
+      ['Dish Soap 500ml', 'SOAP-005', '', '', 80, 110, 0, 5]
     ];
     demo.forEach(function (d) {
       sheet_('Products').appendRow([
-        uid_('prd'), d[0], d[1], catIds[d[2]] || '', d[3], d[4],
-        d[5], d[6], d[7], d[8], supIds[d[9]] || '', 'active', t, t
+        uid_('prd'), d[0], d[1], d[2], d[3],
+        d[4], d[5], d[6], d[7], 'active', t, t
       ]);
     });
     return 'Demo data inserted.';
@@ -293,25 +280,11 @@ function setupDemoData() {
 
 /* ------------------------------ lookups ------------------------------ */
 
-function categoryMap_() {
-  var m = {};
-  rows_('Categories').forEach(function (c) { m[c.id] = c.name; });
-  return m;
-}
-
-function supplierMap_() {
-  var m = {};
-  rows_('Suppliers').forEach(function (s) { m[s.id] = s.name; });
-  return m;
-}
-
-function decorateProduct_(p, cats, sups) {
+function decorateProduct_(p) {
   p.costPrice = num_(p.costPrice, 0);
   p.sellingPrice = num_(p.sellingPrice, 0);
   p.currentStock = Math.floor(num_(p.currentStock, 0));
   p.minimumStock = Math.floor(num_(p.minimumStock, 0));
-  p.categoryName = cats[p.categoryId] || '';
-  p.supplierName = sups[p.supplierId] || '';
   if (p.createdAt instanceof Date) p.createdAt = p.createdAt.toISOString();
   if (p.updatedAt instanceof Date) p.updatedAt = p.updatedAt.toISOString();
   return p;
@@ -320,16 +293,13 @@ function decorateProduct_(p, cats, sups) {
 /* ------------------------------ reads ------------------------------ */
 
 function listProducts_() {
-  var cats = categoryMap_(), sups = supplierMap_();
-  return rows_('Products').map(function (p) { return decorateProduct_(p, cats, sups); });
+  return rows_('Products').map(function (p) { return decorateProduct_(p); });
 }
 
 function listTransactions_(limit) {
-  var sups = supplierMap_();
   var all = rows_('StockTransactions').map(function (t) {
     t.quantity = Math.floor(num_(t.quantity, 0));
     t.price = num_(t.price, 0);
-    t.supplierName = sups[t.supplierId] || '';
     if (t.createdAt instanceof Date) t.createdAt = t.createdAt.toISOString();
     return t;
   });
@@ -364,7 +334,7 @@ function dashboard_(preProducts, preTx) {
 /**
  * Single-call sync: everything the app needs in ONE execution.
  * Apps Script calls are slow (~1-3s each), so one round trip instead
- * of five makes refreshes and post-save updates much faster.
+ * of several makes refreshes and post-save updates much faster.
  * txLimit bounds the transaction payload (dashboard needs ~6 rows;
  * History pages older rows on demand). Defaults to 200 so older app
  * versions that send no limit behave exactly as before.
@@ -375,8 +345,6 @@ function sync_(txLimit) {
   var tx = listTransactions_(lim);
   return {
     products: products,
-    categories: rows_('Categories'),
-    suppliers: rows_('Suppliers'),
     transactions: tx,
     dashboard: dashboard_(products, tx)
   };
@@ -384,7 +352,7 @@ function sync_(txLimit) {
 
 /* ------------------------------ validation ------------------------------ */
 
-function checkProduct_(b, isNew, maps) {
+function checkProduct_(b, isNew) {
   if (!b.name || !String(b.name).trim()) throw new Error('Product name is required.');
   if (!b.sku || !String(b.sku).trim()) throw new Error('SKU is required.');
   var cost = Number(b.costPrice), sell = Number(b.sellingPrice);
@@ -406,29 +374,13 @@ function checkProduct_(b, isNew, maps) {
       throw new Error('Image must be an uploaded photo or a valid http(s) URL, or left blank.');
     }
   }
-  // Validate against preloaded maps when the caller already read them
-  // (create/update do), avoiding two extra sheet reads per save.
-  if (b.categoryId && String(b.categoryId)) {
-    var catOk = maps && maps.cats
-      ? Object.prototype.hasOwnProperty.call(maps.cats, String(b.categoryId))
-      : rowIndexById_('Categories', b.categoryId) !== -1;
-    if (!catOk) throw new Error('Unknown category.');
-  }
-  if (b.supplierId && String(b.supplierId)) {
-    var supOk = maps && maps.sups
-      ? Object.prototype.hasOwnProperty.call(maps.sups, String(b.supplierId))
-      : rowIndexById_('Suppliers', b.supplierId) !== -1;
-    if (!supOk) throw new Error('Unknown supplier.');
-  }
 }
 
 /* ------------------------------ writes ------------------------------ */
 
 function createProduct_(b) {
   return withLock_(function () {
-    // Load lookup maps ONCE and reuse for validation + decoration.
-    var cats = categoryMap_(), sups = supplierMap_();
-    checkProduct_(b, true, { cats: cats, sups: sups });
+    checkProduct_(b, true);
     var sku = String(b.sku).trim();
     if (skuTaken_(sku, null)) throw new Error('SKU already exists. Use a unique SKU.');
     var t = nowIso_();
@@ -436,20 +388,18 @@ function createProduct_(b) {
       id: uid_('prd'),
       name: String(b.name).trim(),
       sku: sku,
-      categoryId: String(b.categoryId || ''),
       description: String(b.description || ''),
       image: String(b.image || '').trim(),
       costPrice: Number(b.costPrice),
       sellingPrice: Number(b.sellingPrice),
       currentStock: Math.floor(Number(b.currentStock)),
       minimumStock: Math.floor(Number(b.minimumStock)),
-      supplierId: String(b.supplierId || ''),
       status: 'active',
       createdAt: t,
       updatedAt: t
     };
     sheet_('Products').appendRow(objToRow_('Products', p));
-    return decorateProduct_(p, cats, sups);
+    return decorateProduct_(p);
   });
 }
 
@@ -463,21 +413,18 @@ function updateProduct_(b) {
     var row = sh.getRange(idx, 1, 1, HEADERS.Products.length).getValues()[0];
     var cur = {};
     HEADERS.Products.forEach(function (h, i) { cur[h] = row[i]; });
-    var maps = { cats: categoryMap_(), sups: supplierMap_() };
     var next = {
       name: b.name !== undefined ? String(b.name).trim() : cur.name,
       sku: b.sku !== undefined ? String(b.sku).trim() : cur.sku,
-      categoryId: b.categoryId !== undefined ? String(b.categoryId || '') : cur.categoryId,
       description: b.description !== undefined ? String(b.description || '') : cur.description,
       image: b.image !== undefined ? String(b.image || '').trim() : cur.image,
       costPrice: b.costPrice !== undefined ? Number(b.costPrice) : num_(cur.costPrice, 0),
       sellingPrice: b.sellingPrice !== undefined ? Number(b.sellingPrice) : num_(cur.sellingPrice, 0),
       currentStock: b.currentStock !== undefined ? Math.floor(Number(b.currentStock)) : Math.floor(num_(cur.currentStock, 0)),
       minimumStock: b.minimumStock !== undefined ? Math.floor(Number(b.minimumStock)) : Math.floor(num_(cur.minimumStock, 0)),
-      supplierId: b.supplierId !== undefined ? String(b.supplierId || '') : cur.supplierId,
       status: b.status !== undefined ? String(b.status) : cur.status
     };
-    checkProduct_(next, false, maps);
+    checkProduct_(next, false);
     if (!isFinite(next.currentStock) || next.currentStock < 0) throw new Error('Stock cannot be negative.');
     var sku = next.sku;
     if (skuTaken_(sku, b.id)) throw new Error('SKU already used by another product.');
@@ -490,7 +437,7 @@ function updateProduct_(b) {
     merged.createdAt = cur.createdAt instanceof Date ? cur.createdAt.toISOString() : cur.createdAt;
     sh.getRange(idx, 1, 1, HEADERS.Products.length).setValues([objToRow_('Products', merged)]);
     merged.createdAt = String(merged.createdAt);
-    return decorateProduct_(merged, maps.cats, maps.sups);
+    return decorateProduct_(merged);
   });
 }
 
@@ -500,157 +447,6 @@ function deleteProduct_(id) {
     var idx = rowIndexById_('Products', id);
     if (idx === -1) throw new Error('Product not found.');
     sheet_('Products').deleteRow(idx);
-    return { deleted: String(id) };
-  });
-}
-
-/**
- * Normalised category name: trimmed, internal whitespace collapsed.
- * Display keeps the user's casing; duplicates compare case-insensitively,
- * so "Electronics", " electronics " and "ELECTRONICS" are the same.
- */
-function normCatName_(name) {
-  return String(name || '').trim().replace(/\s+/g, ' ');
-}
-
-function catNameTaken_(name, excludeId) {
-  var want = normCatName_(name).toLowerCase();
-  var rows = rows_('Categories');
-  for (var i = 0; i < rows.length; i++) {
-    if (String(rows[i].name).trim().toLowerCase() === want &&
-        String(rows[i].id) !== String(excludeId || '')) {
-      return true;
-    }
-  }
-  return false;
-}
-
-function createCategory_(name) {
-  return withLock_(function () {
-    name = normCatName_(name);
-    if (!name) throw new Error('Category name is required.');
-    // Single batched read, duplicate-safe under the script lock even when
-    // two phones create the same name at the same moment.
-    if (catNameTaken_(name, null)) throw new Error('Category already exists.');
-    var c = { id: uid_('cat'), name: name, createdAt: nowIso_() };
-    sheet_('Categories').appendRow(objToRow_('Categories', c));
-    return c;
-  });
-}
-
-function updateCategory_(id, name) {
-  return withLock_(function () {
-    if (!id) throw new Error('Category id is required.');
-    name = normCatName_(name);
-    if (!name) throw new Error('Category name is required.');
-    var idx = rowIndexById_('Categories', id);
-    if (idx === -1) throw new Error('Category not found.');
-    // ID never changes on rename; exclude self from the duplicate check.
-    if (catNameTaken_(name, id)) throw new Error('Category already exists.');
-    sheet_('Categories').getRange(idx, 2).setValue(name);
-    return { id: String(id), name: name };
-  });
-}
-
-/**
- * Safe delete with two caller-chosen outcomes for assigned products:
- *  - reassignTo = '' (or omitted): move them to explicit Uncategorized.
- *  - reassignTo = <categoryId>: move them to that category (must exist).
- * Everything happens inside ONE script lock: one batched column read, one
- * RangeList write, then the row delete — no partial updates on failure
- * (any throw before deleteRow leaves products untouched... note the column
- * write itself precedes the delete, so validation runs first and the only
- * failure window after the write is the row delete, which cannot leave
- * products pointing at a live-but-wrong category: on deleteRow failure the
- * category still exists with products already moved — a safe state that a
- * retry completes idempotently).
- */
-function deleteCategory_(id, reassignTo) {
-  return withLock_(function () {
-    if (!id) throw new Error('Category id is required.');
-    var target = String(reassignTo || '');
-    if (target && target === String(id)) throw new Error('Cannot reassign a category to itself.');
-    if (target && rowIndexById_('Categories', target) === -1) {
-      throw new Error('Reassignment category not found.');
-    }
-    var idx = rowIndexById_('Categories', id);
-    if (idx === -1) throw new Error('Category not found.');
-    var sh = sheet_('Products');
-    var last = sh.getLastRow();
-    var moved = 0;
-    if (last >= 2) {
-      // One batched column-D read (no getValue in a loop).
-      var col = sh.getRange(2, 4, last - 1, 1).getValues();
-      var targets = [];
-      for (var r = 0; r < col.length; r++) {
-        if (String(col[r][0]) === String(id)) targets.push('D' + (r + 2));
-      }
-      // One batched write: reassign or clear to Uncategorized.
-      if (targets.length) {
-        sh.getRangeList(targets).setValue(target);
-        moved = targets.length;
-      }
-    }
-    sheet_('Categories').deleteRow(idx);
-    return { deleted: String(id), reassigned: moved };
-  });
-}
-
-function createSupplier_(b) {
-  return withLock_(function () {
-    var name = String((b && b.name) || '').trim();
-    if (!name) throw new Error('Supplier name is required.');
-    if (b.email && String(b.email).trim() && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(String(b.email).trim()))
-      throw new Error('Invalid email address.');
-    var s = {
-      id: uid_('sup'), name: name,
-      phone: String(b.phone || ''), email: String(b.email || '').trim(),
-      address: String(b.address || ''), notes: String(b.notes || ''),
-      createdAt: nowIso_()
-    };
-    sheet_('Suppliers').appendRow(objToRow_('Suppliers', s));
-    return s;
-  });
-}
-
-function updateSupplier_(b) {
-  return withLock_(function () {
-    if (!b.id) throw new Error('Supplier id is required.');
-    var idx = rowIndexById_('Suppliers', b.id);
-    if (idx === -1) throw new Error('Supplier not found.');
-    if (b.email && String(b.email).trim() && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(String(b.email).trim()))
-      throw new Error('Invalid email address.');
-    var sh = sheet_('Suppliers');
-    // Batch the whole row in one read-modify-write instead of per-cell calls.
-    var srow = sh.getRange(idx, 1, 1, HEADERS.Suppliers.length).getValues()[0];
-    var names = ['name', 'phone', 'email', 'address', 'notes'];
-    names.forEach(function (k, i) {
-      if (b[k] !== undefined) srow[i + 1] = (k === 'name' ? String(b[k]).trim() : String(b[k] || ''));
-    });
-    sh.getRange(idx, 1, 1, HEADERS.Suppliers.length).setValues([srow]);
-    var cur = {};
-    HEADERS.Suppliers.forEach(function (h, i) { cur[h] = srow[i]; });
-    return cur;
-  });
-}
-
-function deleteSupplier_(id) {
-  return withLock_(function () {
-    if (!id) throw new Error('Supplier id is required.');
-    var sh = sheet_('Products');
-    var last = sh.getLastRow();
-    if (last >= 2) {
-      // One batched column read + one RangeList write (no per-row calls).
-      var col = sh.getRange(2, 11, last - 1, 1).getValues();
-      var targets = [];
-      for (var r = 0; r < col.length; r++) {
-        if (String(col[r][0]) === String(id)) targets.push('K' + (r + 2));
-      }
-      if (targets.length) sh.getRangeList(targets).setValue('');
-    }
-    var idx = rowIndexById_('Suppliers', id);
-    if (idx === -1) throw new Error('Supplier not found.');
-    sheet_('Suppliers').deleteRow(idx);
     return { deleted: String(id) };
   });
 }
@@ -673,10 +469,9 @@ function stockIn_(b) {
     var existing = findTxByIdemKey_(idem);
     if (existing) {
       var pIdx0 = rowIndexById_('Products', existing.productId);
-      var cats0 = categoryMap_(), sups0 = supplierMap_();
       var cur0 = null;
       if (pIdx0 !== -1) {
-        cur0 = decorateProduct_(readRow_(sheet_('Products'), 'Products', pIdx0), cats0, sups0);
+        cur0 = decorateProduct_(readRow_(sheet_('Products'), 'Products', pIdx0));
       }
       return { product: cur0, transaction: existing, replayed: true };
     }
@@ -697,12 +492,12 @@ function stockIn_(b) {
     var tx = {
       id: uid_('txn'), productId: productId, productName: String(prow.name), type: 'IN',
       quantity: qty, price: isFinite(price) ? price : '',
-      reason: '', supplierId: String(b.supplierId || ''),
+      reason: '',
       note: String(b.note || ''), idempotencyKey: idem, createdAt: t
     };
     sheet_('StockTransactions').appendRow(objToRow_('StockTransactions', tx));
 
-    return { product: decorateProduct_(prow, categoryMap_(), supplierMap_()), transaction: tx };
+    return { product: decorateProduct_(prow), transaction: tx };
   });
 }
 
@@ -724,7 +519,7 @@ function stockOut_(b) {
       var pIdx0 = rowIndexById_('Products', existing.productId);
       var cur0 = null;
       if (pIdx0 !== -1) {
-        cur0 = decorateProduct_(readRow_(sheet_('Products'), 'Products', pIdx0), categoryMap_(), supplierMap_());
+        cur0 = decorateProduct_(readRow_(sheet_('Products'), 'Products', pIdx0));
       }
       return { product: cur0, transaction: existing, replayed: true };
     }
@@ -742,12 +537,12 @@ function stockOut_(b) {
 
     var tx = {
       id: uid_('txn'), productId: productId, productName: String(prow.name), type: 'OUT',
-      quantity: qty, price: '', reason: reason, supplierId: '',
+      quantity: qty, price: '', reason: reason,
       note: String(b.note || ''), idempotencyKey: idem, createdAt: nowIso_()
     };
     sheet_('StockTransactions').appendRow(objToRow_('StockTransactions', tx));
 
-    return { product: decorateProduct_(prow, categoryMap_(), supplierMap_()), transaction: tx };
+    return { product: decorateProduct_(prow), transaction: tx };
   });
 }
 
@@ -771,12 +566,6 @@ function doGet(e) {
         data = all[0];
         break;
       }
-      case 'listCategories':
-        data = rows_('Categories');
-        break;
-      case 'listSuppliers':
-        data = rows_('Suppliers');
-        break;
       case 'listTransactions':
         data = listTransactions_(num_(e.parameter.limit, 200));
         break;
@@ -809,12 +598,6 @@ function doPost(e) {
       case 'createProduct': data = createProduct_(body); break;
       case 'updateProduct': data = updateProduct_(body); break;
       case 'deleteProduct': data = deleteProduct_(body.id); break;
-      case 'createCategory': data = createCategory_(body.name); break;
-      case 'updateCategory': data = updateCategory_(body.id, body.name); break;
-      case 'deleteCategory': data = deleteCategory_(body.id, body.reassignTo); break;
-      case 'createSupplier': data = createSupplier_(body); break;
-      case 'updateSupplier': data = updateSupplier_(body); break;
-      case 'deleteSupplier': data = deleteSupplier_(body.id); break;
       case 'stockIn': data = stockIn_(body); break;
       case 'stockOut': data = stockOut_(body); break;
       default:

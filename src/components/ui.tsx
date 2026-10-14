@@ -14,9 +14,7 @@ import {
   RefreshCw,
   RotateCcw,
   Search,
-  Shapes,
   Settings as SettingsIcon,
-  Truck,
   X,
   XCircle,
 } from 'lucide-react';
@@ -209,14 +207,12 @@ export const BottomNav = memo(function BottomNav({ tab, setTab }: { tab: TabKey;
   );
 });
 
-const SIDE_LINKS: { key: TabKey | 'stock-in' | 'stock-out' | 'categories' | 'suppliers'; label: string; icon: React.ReactNode }[] = [
+const SIDE_LINKS: { key: TabKey | 'stock-in' | 'stock-out'; label: string; icon: React.ReactNode }[] = [
   { key: 'home', label: 'Dashboard', icon: <Home size={18} /> },
   { key: 'products', label: 'Products', icon: <Boxes size={18} /> },
   { key: 'stock-in', label: 'Stock In', icon: <ArrowDownToLine size={18} /> },
   { key: 'stock-out', label: 'Stock Out', icon: <ArrowUpFromLine size={18} /> },
   { key: 'history', label: 'Transaction History', icon: <History size={18} /> },
-  { key: 'categories', label: 'Categories', icon: <Shapes size={18} /> },
-  { key: 'suppliers', label: 'Suppliers', icon: <Truck size={18} /> },
   { key: 'settings', label: 'Settings', icon: <SettingsIcon size={18} /> },
 ];
 
@@ -238,7 +234,7 @@ export function DesktopSidebar({
       <p className="desktop-nav-caption">Workspace</p>
       <nav className="desktop-side-links">
         {SIDE_LINKS.map((item) => {
-          const selected = item.key === 'stock-in' || item.key === 'stock-out' || item.key === 'categories' || item.key === 'suppliers' ? false : tab === item.key;
+          const selected = item.key === 'stock-in' || item.key === 'stock-out' ? false : tab === item.key;
           return (
             <button
               key={item.key}
@@ -248,7 +244,6 @@ export function DesktopSidebar({
               onClick={() => {
                 if (item.key === 'stock-in') onStock('IN');
                 else if (item.key === 'stock-out') onStock('OUT');
-                else if (item.key === 'categories' || item.key === 'suppliers') onNavigate('settings');
                 else onNavigate(item.key);
               }}
               className={`desktop-side-link ${selected ? 'is-active' : ''}`}

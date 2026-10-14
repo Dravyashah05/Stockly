@@ -207,11 +207,9 @@ export async function apiPost<T>(
 /* ---------- Typed endpoints ---------- */
 
 import type {
-  Category,
   DashboardStats,
   Product,
   StockTransaction,
-  Supplier,
   SyncData,
 } from './types';
 
@@ -225,24 +223,10 @@ export const api = {
     apiPost<Product>('updateProduct', { id, ...p }, { dedupe: false }),
   deleteProduct: (id: string) => apiPost<{ deleted: string }>('deleteProduct', { id }, { dedupe: false }),
 
-  listCategories: () => apiGet<Category[]>('listCategories'),
-  createCategory: (name: string) => apiPost<Category>('createCategory', { name }, { dedupe: false }),
-  updateCategory: (id: string, name: string) =>
-    apiPost<Category>('updateCategory', { id, name }, { dedupe: false }),
-  deleteCategory: (id: string, reassignTo?: string) =>
-    apiPost<{ deleted: string; reassigned: number }>('deleteCategory', { id, reassignTo: reassignTo || '' }, { dedupe: false }),
-
-  listSuppliers: () => apiGet<Supplier[]>('listSuppliers'),
-  createSupplier: (s: Record<string, unknown>) => apiPost<Supplier>('createSupplier', s, { dedupe: false }),
-  updateSupplier: (id: string, s: Record<string, unknown>) =>
-    apiPost<Supplier>('updateSupplier', { id, ...s }, { dedupe: false }),
-  deleteSupplier: (id: string) => apiPost('deleteSupplier', { id }, { dedupe: false }),
-
   stockIn: (args: {
     productId: string;
     quantity: number;
     price?: number;
-    supplierId?: string;
     note?: string;
     idempotencyKey: string;
   }) => apiPost<{ product: Product; transaction: StockTransaction }>('stockIn', args),

@@ -36,7 +36,7 @@ export default function HomeScreen({
   goProducts: (filter?: 'low' | 'out') => void;
   goHistory: () => void;
 }) {
-  const { dashboard, products, transactions, loading, refreshing, error, refresh, online, lastSync, categoryName, isPending } =
+  const { dashboard, products, transactions, loading, refreshing, error, refresh, online, lastSync, isPending } =
     useStore();
 
   const stats = useMemo(() => {
@@ -134,14 +134,11 @@ export default function HomeScreen({
     [stats],
   );
 
-  // Precompute per-row display data once per stats change: category label,
-  // stock-bar width and formatted date. The old code ran categoryName() +
-  // toLocaleString() for every row on every render (incl. toast/sync ticks).
+  // Precompute per-row display data once per stats change: stock-bar width
+  // and formatted date.
   const attentionRows = useMemo(
     () =>
       stats.lowStockItems.slice(0, 5).map((p) => {
-        const rawCat = categoryName(p.categoryId);
-        const catLabel = rawCat === '—' ? '' : rawCat.trim();
         return {
           p,
           isOut: stockStatus(p) === 'out',
@@ -151,10 +148,10 @@ export default function HomeScreen({
               : p.currentStock > 0
                 ? 100
                 : 0,
-          meta: catLabel ? `${catLabel} · min ${p.minimumStock}` : `min ${p.minimumStock}`,
+          meta: `min ${p.minimumStock}`,
         };
       }),
-    [stats, categoryName],
+    [stats],
   );
   const recentRows = useMemo(
     () =>

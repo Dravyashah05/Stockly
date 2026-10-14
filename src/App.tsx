@@ -102,8 +102,8 @@ function Shell() {
   /* Horizontal swipe switches tabs. Guards keep it out of the way:
    * - single touch only, inputs never start a swipe;
    * - horizontal must dominate vertical (page scroll untouched);
-   * - touches starting inside a horizontally scrollable strip (category
-   *   chips) belong to that strip;
+   * - touches starting inside a horizontally scrollable strip belong
+   *   to that strip;
    * - sheets/detail/toasts live in portals outside the swipe zone, and the
    *   bottom nav sits outside it too — taps there are never hijacked. */
   const swipeZoneRef = useRef<HTMLDivElement>(null);

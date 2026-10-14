@@ -4,47 +4,30 @@ import { ArrowDownToLine, ArrowLeft, ArrowUpFromLine, History as HistoryIcon } f
 import { formatMoney } from '../lib/config';
 import { useStore } from '../lib/store';
 import type { StockTransaction } from '../lib/types';
-import { Chip } from './ProductsScreen';
 import { EmptyState, Header, SearchBar, Segmented, SkeletonRow, StockBadge, useDismissable } from '../components/ui';
 
 /** Rendered rows per page — full history stays server-side, screen pages locally. */
 const PAGE_SIZE = 100;
 
 export default function HistoryScreen() {
-  const { transactions, products, categories, loading, loadMoreTransactions, txLoadingMore, txExhausted, isPending } = useStore();
+  const { transactions, loading, loadMoreTransactions, txLoadingMore, txExhausted, isPending } = useStore();
   const [q, setQ] = useState('');
   const [type, setType] = useState<'ALL' | 'IN' | 'OUT'>('ALL');
-  const [cat, setCat] = useState('all');
   const [visible, setVisible] = useState(PAGE_SIZE);
   const deferredQ = useDeferredValue(q);
 
   useEffect(() => {
     setVisible(PAGE_SIZE);
-  }, [deferredQ, type, cat, transactions.length]);
-
-  // Live product→category map (stable Map identity — the old closure
-  // invalidated the filter memo on every products change anyway, but a Map
-  // avoids rebuilding the lookup per row).
-  const txCatMap = useMemo(() => {
-    const map = new Map<string, string>();
-    for (const p of products) map.set(p.id, String(p.categoryId || ''));
-    return map;
-  }, [products]);
+  }, [deferredQ, type, transactions.length]);
 
   const list = useMemo(() => {
     const needle = deferredQ.trim().toLowerCase();
     return transactions
       .filter((t) => (type === 'ALL' ? true : t.type === type))
-      .filter((t) => {
-        if (cat === 'all') return true;
-        const c = txCatMap.get(t.productId) ?? '';
-        if (cat === '__none') return c === '';
-        return c === String(cat);
-      })
       .filter((t) =>
         needle ? `${t.productName} ${t.reason} ${t.note}`.toLowerCase().includes(needle) : true,
       );
-  }, [transactions, deferredQ, type, cat, txCatMap]);
+  }, [transactions, deferredQ, type]);
 
   // Format dates once per result set — toLocaleString × 100 rows on every
   // keystroke/render was a measurable main-thread cost while typing.
@@ -102,16 +85,6 @@ export default function HistoryScreen() {
             { key: 'OUT', label: 'Stock Out' },
           ]}
         />
-
-        {/* Category filter (product's current category; records are kept
-            even if the product or category is later deleted) */}
-        <div className="no-scrollbar flex gap-2 overflow-x-auto pb-0.5">
-          <Chip active={cat === 'all'} onClick={() => setCat('all')} label="All categories" />
-          {categories.map((c) => (
-            <Chip key={c.id} active={cat === c.id} onClick={() => setCat(c.id)} label={c.name} />
-          ))}
-          <Chip active={cat === '__none'} onClick={() => setCat('__none')} label="Uncategorized" />
-        </div>
       </div>
 
       {/* List card hugs its content when short; scrolls internally when long */}
@@ -318,7 +291,6 @@ function TxDetailPage({ t, onClose, onSelect }: { t: StockTransaction; onClose: 
             {t.reason ? <DetailRow label="Reason" value={t.reason} /> : null}
             {t.note ? <DetailRow label="Note" value={t.note} /> : null}
             {t.price > 0 ? <DetailRow label="Price" value={formatMoney(t.price)} /> : null}
-            {t.supplierName ? <DetailRow label="Supplier" value={t.supplierName} /> : null}
             <DetailRow label="Status" value={pending ? 'Saving — not yet confirmed' : 'Synced'} />
             {t.idempotencyKey ? (
               <DetailRow label="Reference" value={t.idempotencyKey.slice(0, 8)} />

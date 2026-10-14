@@ -10,19 +10,15 @@ import React, {
 import { api, ApiError, isUnknownOutcome, newIdempotencyKey } from './api';
 import { LS_KEYS, AUTO_SYNC_MS, SYNC_FRESH_MS, SYNC_TX_LIMIT, TX_CACHE_CAP, TX_MEMORY_CAP, getApiUrl } from './config';
 import type {
-  Category,
   DashboardStats,
   Product,
   StockTransaction,
-  Supplier,
   ThemeMode,
   ToastMsg,
 } from './types';
 
 interface CacheShape {
   products: Product[];
-  categories: Category[];
-  suppliers: Supplier[];
   transactions: StockTransaction[];
   dashboard: DashboardStats | null;
   savedAt: number;
@@ -41,8 +37,6 @@ export interface FailedOp {
 interface Store {
   // data
   products: Product[];
-  categories: Category[];
-  suppliers: Supplier[];
   transactions: StockTransaction[];
   dashboard: DashboardStats | null;
   loading: boolean;
@@ -84,49 +78,29 @@ interface Store {
   clearCache: () => void;
   saveProduct: (input: ProductFormInput, editingId?: string) => Promise<boolean>;
   removeProduct: (id: string) => Promise<boolean>;
-  doStockIn: (a: { productId: string; quantity: number; price?: number; supplierId?: string; note?: string }) => Promise<boolean>;
+  doStockIn: (a: { productId: string; quantity: number; price?: number; note?: string }) => Promise<boolean>;
   doStockOut: (a: { productId: string; quantity: number; reason: string; note?: string }) => Promise<boolean>;
-  saveCategory: (name: string, editingId?: string) => Promise<boolean>;
-  removeCategory: (id: string, reassignTo?: string) => Promise<boolean>;
-  saveSupplier: (input: SupplierFormInput, editingId?: string) => Promise<boolean>;
-  removeSupplier: (id: string) => Promise<boolean>;
   // optimistic primitives (screens use the wrappers above; these share one engine)
   addProductOptimistically: (input: ProductFormInput) => Promise<boolean>;
   updateProductOptimistically: (editingId: string, input: ProductFormInput) => Promise<boolean>;
   deleteProductOptimistically: (id: string) => Promise<boolean>;
-  submitStockIn: (a: { productId: string; quantity: number; price?: number; supplierId?: string; note?: string }, opts?: { idempotencyKey?: string }) => Promise<boolean>;
+  submitStockIn: (a: { productId: string; quantity: number; price?: number; note?: string }, opts?: { idempotencyKey?: string }) => Promise<boolean>;
   submitStockOut: (a: { productId: string; quantity: number; reason: string; note?: string }, opts?: { idempotencyKey?: string }) => Promise<boolean>;
   /** Replace a temporary record with the authoritative server record. */
-  reconcileServerResponse: (kind: 'product' | 'category' | 'supplier' | 'transaction', tempId: string, saved: Product | Category | Supplier | StockTransaction) => void;
-  /** Targeted silent re-fetch after name-affecting writes (no full reload). */
+  reconcileServerResponse: (kind: 'product' | 'transaction', tempId: string, saved: Product | StockTransaction) => void;
+  /** Targeted silent re-fetch (no full reload). */
   invalidateAffectedQueries: () => Promise<void>;
-  // lookups
-  categoryName: (id: string) => string;
-  supplierName: (id: string) => string;
-  /** Live lookup by name (reads the synchronous mirror — usable right after
-   *  an optimistic add, before React re-renders). */
-  getCategoryByName: (name: string) => Category | undefined;
 }
 
 export interface ProductFormInput {
   name: string;
   sku: string;
-  categoryId: string;
   description: string;
   image: string;
   costPrice: number;
   sellingPrice: number;
   currentStock: number;
   minimumStock: number;
-  supplierId: string;
-}
-
-export interface SupplierFormInput {
-  name: string;
-  phone: string;
-  email: string;
-  address: string;
-  notes: string;
 }
 
 const Ctx = createContext<Store | null>(null);
@@ -182,11 +156,7 @@ export type OutboxKind =
   | 'stock-in'
   | 'stock-out'
   | 'save-product'
-  | 'delete-product'
-  | 'save-category'
-  | 'delete-category'
-  | 'save-supplier'
-  | 'delete-supplier';
+  | 'delete-product';
 
 export interface OutboxDesc {
   /** Same key as its FailedOp (`fail-…`) or pending id (`pend-stock-…`). */
@@ -254,8 +224,6 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
   const [initial] = useState<CacheShape | null>(() => readCache());
 
   const [products, setProducts] = useState<Product[]>(initial?.products || []);
-  const [categories, setCategories] = useState<Category[]>(initial?.categories || []);
-  const [suppliers, setSuppliers] = useState<Supplier[]>(initial?.suppliers || []);
   const [transactions, setTransactions] = useState<StockTransaction[]>(initial?.transactions || []);
   const [dashboard, setDashboard] = useState<DashboardStats | null>(initial?.dashboard || null);
   const [loading, setLoading] = useState(false);
@@ -352,7 +320,7 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
   const setTheme = useCallback((t: ThemeMode) => setThemeState(t), []);
 
   const persistCache = useCallback(
-    (d: DashboardStats | null, p: Product[], c: Category[], s: Supplier[], t: StockTransaction[]) => {
+    (d: DashboardStats | null, p: Product[], t: StockTransaction[]) => {
       // Perf: JSON.stringify of the whole cache on the UI thread drops frames
       // on 60/90Hz phones during scroll + commit. Defer to idle.
       const write = () => {
@@ -362,8 +330,6 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
           const shape: CacheShape = {
             dashboard: d,
             products: p.filter((x) => !isTempId(x.id)),
-            categories: c.filter((x) => !isTempId(x.id)),
-            suppliers: s.filter((x) => !isTempId(x.id)),
             transactions: t.filter((x) => !isTempId(x.id)),
             savedAt: Date.now(),
           };
@@ -388,9 +354,9 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
   // Last successful sync (ms epoch). Drives the SYNC_FRESH_MS background gate.
   const lastSyncAt = useRef<number>(initial?.savedAt || 0);
   // Fresh snapshot mirror for event handlers (foreground/resume listeners).
-  const live = useRef({ products, transactions, categories, suppliers });
+  const live = useRef({ products, transactions });
   useEffect(() => {
-    live.current = { products, transactions, categories, suppliers };
+    live.current = { products, transactions };
   });
 
   const markSynced = useCallback(() => {
@@ -407,22 +373,16 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
     (next: {
       products?: Product[];
       transactions?: StockTransaction[];
-      categories?: Category[];
-      suppliers?: Supplier[];
     }) => {
       const cur = live.current;
       const p = next.products ?? cur.products;
       const t = next.transactions ?? cur.transactions;
-      const c = next.categories ?? cur.categories;
-      const s = next.suppliers ?? cur.suppliers;
       const d = computeDashboard(p, t);
-      live.current = { products: p, transactions: t, categories: c, suppliers: s };
+      live.current = { products: p, transactions: t };
       setProducts(p);
       setTransactions(t);
-      setCategories(c);
-      setSuppliers(s);
       setDashboard(d);
-      persistCache(d, p, c, s, t.slice(0, TX_CACHE_CAP));
+      persistCache(d, p, t.slice(0, TX_CACHE_CAP));
     },
     [persistCache],
   );
@@ -438,8 +398,6 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
     (next: {
       products?: Product[];
       transactions?: StockTransaction[];
-      categories?: Category[];
-      suppliers?: Supplier[];
     }) => {
       applyLocal(next);
       markSynced();
@@ -578,14 +536,12 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
     return (
       p.name === input.name &&
       p.sku === input.sku &&
-      p.categoryId === (input.categoryId || '') &&
       (p.description || '') === (input.description || '') &&
       (p.image || '') === (input.image || '') &&
       Number(p.costPrice) === Number(input.costPrice) &&
       Number(p.sellingPrice) === Number(input.sellingPrice) &&
       Math.floor(Number(p.currentStock)) === Math.floor(Number(input.currentStock)) &&
-      Math.floor(Number(p.minimumStock)) === Math.floor(Number(input.minimumStock)) &&
-      (p.supplierId || '') === (input.supplierId || '')
+      Math.floor(Number(p.minimumStock)) === Math.floor(Number(input.minimumStock))
     );
   }
 
@@ -595,36 +551,20 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
 
   /**
    * Replace a temporary record with the authoritative server record.
-   * Products / categories / suppliers swap by id; transactions swap by id
+   * Products swap by id; transactions swap by id
    * and are de-duplicated by idempotency key (lost-response replays).
    */
   const reconcileServerResponse = useCallback(
     (
-      kind: 'product' | 'category' | 'supplier' | 'transaction',
+      kind: 'product' | 'transaction',
       tempId: string,
-      saved: Product | Category | Supplier | StockTransaction,
+      saved: Product | StockTransaction,
     ) => {
       const cur = live.current;
       if (kind === 'product') {
         const s = saved as Product;
         const without = cur.products.filter((p) => p.id !== tempId);
         commit({ products: upsertProduct(without, s) });
-      } else if (kind === 'category') {
-        const s = saved as Category;
-        const cats = cur.categories.filter((c) => c.id !== tempId);
-        commit({
-          categories: cats.some((c) => c.id === s.id)
-            ? cats.map((c) => (c.id === s.id ? s : c))
-            : [...cats, s],
-        });
-      } else if (kind === 'supplier') {
-        const s = saved as Supplier;
-        const sups = cur.suppliers.filter((x) => x.id !== tempId);
-        commit({
-          suppliers: sups.some((x) => x.id === s.id)
-            ? sups.map((x) => (x.id === s.id ? s : x))
-            : [...sups, s],
-        });
       } else {
         const s = saved as StockTransaction;
         const without = cur.transactions.filter(
@@ -638,8 +578,7 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
   );
 
   /**
-   * Targeted silent re-fetch after writes whose effects fan out
-   * (category/supplier renames re-join denormalised names on products).
+   * Targeted silent re-fetch.
    * Single `sync` call, silent, no UI blocking — never a full reload.
    */
   const invalidateAffectedQueries = useCallback(async () => {
@@ -658,7 +597,7 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
       setError(null);
       const t0 = typeof performance !== 'undefined' ? performance.now() : 0;
       try {
-        let d: DashboardStats, p: Product[], c: Category[], s: Supplier[], t: StockTransaction[];
+        let d: DashboardStats, p: Product[], t: StockTransaction[];
         let freshTx = 0;
         let txRequested = SYNC_TX_LIMIT;
         try {
@@ -668,8 +607,6 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
           const sync = await api.sync(SYNC_TX_LIMIT);
           d = sync.dashboard;
           p = sync.products;
-          c = sync.categories;
-          s = sync.suppliers;
           freshTx = sync.transactions.length;
           t = mergeTransactions(live.current.transactions, sync.transactions, TX_MEMORY_CAP);
         } catch (e) {
@@ -678,11 +615,9 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
           if (!/unknown action/i.test(msg)) throw e;
           txRequested = 200;
           let fetched: StockTransaction[];
-          [d, p, c, s, fetched] = await Promise.all([
+          [d, p, fetched] = await Promise.all([
             api.dashboard(),
             api.listProducts(),
-            api.listCategories(),
-            api.listSuppliers(),
             api.listTransactions(200),
           ]);
           freshTx = fetched.length;
@@ -696,9 +631,7 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
           const cur = live.current;
           if (
             sigProducts(cur.products) === sigProducts(p) &&
-            sigTx(cur.transactions) === sigTx(t) &&
-            sigNames(cur.categories) === sigNames(c) &&
-            sigNames(cur.suppliers) === sigNames(s)
+            sigTx(cur.transactions) === sigTx(t)
           ) {
             setTxExhausted(freshTx < txRequested);
             markSynced();
@@ -724,14 +657,12 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
         }
         setDashboard(d);
         setProducts(p);
-        setCategories(c);
-        setSuppliers(s);
         setTransactions(t);
         // Fewer rows than requested ⇒ server has nothing older.
         setTxExhausted(freshTx < txRequested);
-        live.current = { products: p, transactions: t, categories: c, suppliers: s };
+        live.current = { products: p, transactions: t };
         markSynced();
-        persistCache(d, p, c, s, t.slice(0, TX_CACHE_CAP));
+        persistCache(d, p, t.slice(0, TX_CACHE_CAP));
         if (typeof performance !== 'undefined' && import.meta.env.DEV) {
           console.debug(`[sync] refresh ok in ${Math.round(performance.now() - t0)}ms (${p.length} products, ${t.length} tx)`);
         }
@@ -895,10 +826,8 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
   }, []);
 
   const clearCache = useCallback(() => {
-    live.current = { products: [], transactions: [], categories: [], suppliers: [] };
+    live.current = { products: [], transactions: [] };
     setProducts([]);
-    setCategories([]);
-    setSuppliers([]);
     setTransactions([]);
     setDashboard(null);
     setTxExhausted(false);
@@ -981,16 +910,12 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
         id: tempId('prd'),
         name: input.name.trim(),
         sku: input.sku.trim(),
-        categoryId: input.categoryId || '',
-        categoryName: cur.categories.find((c) => c.id === input.categoryId)?.name || '',
         description: input.description || '',
         image: input.image || '',
         costPrice: Number(input.costPrice),
         sellingPrice: Number(input.sellingPrice),
         currentStock: Math.floor(Number(input.currentStock)),
         minimumStock: Math.floor(Number(input.minimumStock)),
-        supplierId: input.supplierId || '',
-        supplierName: cur.suppliers.find((s) => s.id === input.supplierId)?.name || '',
         status: 'active',
         createdAt: t,
         updatedAt: t,
@@ -1069,16 +994,12 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
         ...prev,
         name: input.name.trim(),
         sku: input.sku.trim(),
-        categoryId: input.categoryId || '',
-        categoryName: cur.categories.find((c) => c.id === input.categoryId)?.name || prev.categoryName || '',
         description: input.description || '',
         image: input.image || '',
         costPrice: Number(input.costPrice),
         sellingPrice: Number(input.sellingPrice),
         currentStock: Math.floor(Number(input.currentStock)),
         minimumStock: Math.floor(Number(input.minimumStock)),
-        supplierId: input.supplierId || '',
-        supplierName: cur.suppliers.find((s) => s.id === input.supplierId)?.name || prev.supplierName || '',
         updatedAt: nowIso(),
       };
       applyLocal({ products: upsertProduct(cur.products, next) });
@@ -1225,7 +1146,7 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
 
   const submitStockIn = useCallback(
     async (
-      a: { productId: string; quantity: number; price?: number; supplierId?: string; note?: string },
+      a: { productId: string; quantity: number; price?: number; note?: string },
       opts?: { idempotencyKey?: string },
     ): Promise<boolean> => {
       // Stock keys embed a UUID: every tap is distinct, rapid legit retaps
@@ -1249,7 +1170,6 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
         quantity: Math.floor(Number(a.quantity)),
         price: a.price ?? 0,
         reason: '',
-        supplierId: a.supplierId || '',
         note: a.note || '',
         idempotencyKey: idem,
         createdAt: nowIso(),
@@ -1267,7 +1187,6 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
         productId: a.productId,
         quantity: Math.floor(Number(a.quantity)),
         price: a.price ?? null,
-        supplierId: a.supplierId || '',
         note: a.note || '',
       };
       putDesc({
@@ -1382,7 +1301,7 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
   );
 
   const doStockIn = useCallback(
-    async (a: { productId: string; quantity: number; price?: number; supplierId?: string; note?: string }) =>
+    async (a: { productId: string; quantity: number; price?: number; note?: string }) =>
       submitStockIn(a),
     [submitStockIn],
   );
@@ -1414,7 +1333,6 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
         quantity: qty,
         price: 0,
         reason: a.reason,
-        supplierId: '',
         note: a.note || '',
         idempotencyKey: idem,
         createdAt: nowIso(),
@@ -1538,506 +1456,6 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
     [submitStockOut],
   );
 
-  const saveCategory = useCallback(
-    async (name: string, editingId?: string): Promise<boolean> => {
-      // Frontend mirror of the backend rule: trim, reject empty, reject
-      // case-insensitive duplicates (backend re-validates under its lock).
-      const trimmed = normCategoryName(name);
-      if (!trimmed) {
-        notify('Category name is required.', 'error');
-        return false;
-      }
-      if (isCategoryNameTaken(live.current.categories, trimmed, editingId)) {
-        notify(`Category “${trimmed}” already exists.`, 'error');
-        return false;
-      }
-      const key = `cat-${editingId || trimmed.toLowerCase()}`;
-      if (!claimSubmit(key)) return false;
-      const base = getApiUrl();
-      const cur = live.current;
-      const t = nowIso();
-
-      if (!editingId) {
-        const temp: Category = { id: tempId('cat'), name: trimmed, createdAt: t };
-        applyLocal({ categories: [...cur.categories, temp] });
-        markPending([temp.id]);
-        void (async () => {
-          try {
-            const saved = await api.createCategory(trimmed);
-            if (!isCurrentBackend(base)) {
-              unmarkPending([temp.id]);
-              return;
-            }
-            reconcileServerResponse('category', temp.id, saved);
-            notify('Category added.');
-          } catch (e) {
-            if (!isCurrentBackend(base)) {
-              unmarkPending([temp.id]);
-              return;
-            }
-            const msg = e instanceof ApiError ? e.message : 'Save failed.';
-            unmarkPending([temp.id]);
-            if (!isUnknownOutcome(e)) {
-              applyLocal({ categories: live.current.categories.filter((c) => c.id !== temp.id) });
-              notify(msg, 'error');
-              return;
-            }
-            const refreshed = await refresh({ silent: true });
-            if (!isCurrentBackend(base)) {
-              unmarkPending([temp.id]);
-              return;
-            }
-            const adopted = refreshed
-              ? live.current.categories.find((c) => c.name.toLowerCase() === trimmed.toLowerCase())
-              : undefined;
-            if (adopted) {
-              applyLocal({ categories: live.current.categories.filter((c) => c.id !== temp.id) });
-              notify('Category added.');
-              return;
-            }
-            if (!refreshed) {
-              applyLocal({ categories: live.current.categories.filter((c) => c.id !== temp.id) });
-            }
-            const catAddOp: FailedOp = {
-              key: `fail-${temp.id}`,
-              label: `Add category “${trimmed}”`,
-              detail: msg,
-              retry: () => saveCategory(trimmed),
-            };
-            pushFailedOp(catAddOp, descFor(catAddOp, { kind: 'save-category', payload: { name: trimmed }, base }));
-            notify(`Couldn't save category “${trimmed}” — kept as an unsaved change. Retry from the sync banner.`, 'error');
-          }
-        })();
-        return true;
-      }
-
-      const prev = cur.categories.find((c) => c.id === editingId);
-      if (!prev) {
-        notify('Category not found — syncing latest data.', 'error');
-        void refresh({ silent: true });
-        return true;
-      }
-      const next: Category = { ...prev, name: trimmed };
-      const renamedProductIds = cur.products.filter((p) => p.categoryId === editingId).map((p) => p.id);
-      const renamedPending = [editingId, ...renamedProductIds];
-      // Keep related product displays consistent immediately.
-      applyLocal({
-        categories: cur.categories.map((c) => (c.id === editingId ? next : c)),
-        products: cur.products.map((p) =>
-          p.categoryId === editingId ? { ...p, categoryName: trimmed } : p,
-        ),
-      });
-      markPending(renamedPending);
-      void (async () => {
-        try {
-          const saved = await api.updateCategory(editingId, trimmed);
-          if (!isCurrentBackend(base)) {
-            unmarkPending(renamedPending);
-            return;
-          }
-          reconcileServerResponse('category', editingId, saved);
-          unmarkPending(renamedProductIds);
-          notify('Category updated.');
-          void invalidateAffectedQueries();
-        } catch (e) {
-          if (!isCurrentBackend(base)) {
-            unmarkPending(renamedPending);
-            return;
-          }
-          const msg = e instanceof ApiError ? e.message : 'Save failed.';
-          unmarkPending(renamedPending);
-          if (!isUnknownOutcome(e)) {
-            const latest = live.current;
-            applyLocal({
-              categories: latest.categories.map((c) => (c.id === editingId ? prev : c)),
-              products: latest.products.map((p) =>
-                p.categoryId === editingId ? { ...p, categoryName: prev.name } : p,
-              ),
-            });
-            notify(msg, 'error');
-            return;
-          }
-          const refreshed = await refresh({ silent: true });
-          if (!isCurrentBackend(base)) return;
-          const server = live.current.categories.find((c) => c.id === editingId);
-          if (refreshed && server && server.name === trimmed) {
-            notify('Category updated.');
-            void invalidateAffectedQueries();
-            return;
-          }
-          if (!refreshed) {
-            const latest = live.current;
-            applyLocal({
-              categories: latest.categories.map((c) => (c.id === editingId ? prev : c)),
-              products: latest.products.map((p) =>
-                p.categoryId === editingId ? { ...p, categoryName: prev.name } : p,
-              ),
-            });
-          }
-          const catUpdOp: FailedOp = {
-            key: `fail-cat-upd-${editingId}-${Date.now()}`,
-            label: `Rename category “${prev.name}”`,
-            detail: msg,
-            retry: () => saveCategory(trimmed, editingId),
-          };
-          pushFailedOp(
-            catUpdOp,
-            descFor(catUpdOp, { kind: 'save-category', payload: { name: trimmed, editingId }, base }),
-          );
-          notify(`Couldn't rename category — kept as an unsaved change. Retry from the sync banner.`, 'error');
-        }
-      })();
-      return true;
-    },
-    [claimSubmit, applyLocal, markPending, unmarkPending, reconcileServerResponse, invalidateAffectedQueries, notify, refresh, pushFailedOp, descFor],
-  );
-
-  const removeCategory = useCallback(
-    async (id: string, reassignTo?: string): Promise<boolean> => {
-      const key = `del-cat-${id}`;
-      if (!claimSubmit(key)) return false;
-      const base = getApiUrl();
-      const cur = live.current;
-      const prev = cur.categories.find((c) => c.id === id);
-      if (!prev) {
-        notify('Category not found — syncing latest data.', 'error');
-        void refresh({ silent: true });
-        return true;
-      }
-      // Validate the reassignment target up front: '' means explicit
-      // Uncategorized, otherwise it must be a different live category.
-      const target = String(reassignTo || '');
-      const targetCat = target ? cur.categories.find((c) => c.id === target) : null;
-      if (target && (target === String(id) || !targetCat)) {
-        notify('Pick a valid category to move these products to.', 'error');
-        return false;
-      }
-      const targetName = targetCat ? targetCat.name : '';
-      const affectedIds = cur.products.filter((p) => p.categoryId === id).map((p) => p.id);
-      const deletePending = [id, ...affectedIds];
-      const reattach = (list: Product[]) =>
-        list.map((p) =>
-          affectedIds.includes(p.id) ? { ...p, categoryId: id, categoryName: prev.name } : p,
-        );
-      const restoreCategory = (list: Category[]) =>
-        list.some((c) => c.id === id) ? list : [...list, prev];
-      // Mirror the backend outcome locally: move assigned products to the
-      // chosen category, or to explicit Uncategorized when target is ''.
-      applyLocal({
-        products: cur.products.map((p) =>
-          p.categoryId === id ? { ...p, categoryId: target, categoryName: targetName } : p,
-        ),
-        categories: cur.categories.filter((c) => c.id !== id),
-      });
-      markPending(deletePending);
-      void (async () => {
-        try {
-          const res = await api.deleteCategory(id, target);
-          if (!isCurrentBackend(base)) {
-            unmarkPending(deletePending);
-            return;
-          }
-          unmarkPending(deletePending);
-          commit({});
-          notify(
-            res.reassigned > 0
-              ? `Category deleted. ${res.reassigned} product${res.reassigned === 1 ? '' : 's'} moved to ${targetName || 'Uncategorized'}.`
-              : 'Category deleted.',
-          );
-          void invalidateAffectedQueries();
-        } catch (e) {
-          if (!isCurrentBackend(base)) {
-            unmarkPending(deletePending);
-            return;
-          }
-          const msg = e instanceof ApiError ? e.message : 'Delete failed.';
-          unmarkPending(deletePending);
-          if (!isUnknownOutcome(e)) {
-            const latest = live.current;
-            applyLocal({
-              products: reattach(latest.products),
-              categories: restoreCategory(latest.categories),
-            });
-            notify(msg, 'error');
-            return;
-          }
-          const refreshed = await refresh({ silent: true });
-          if (!isCurrentBackend(base)) return;
-          const stillThere = live.current.categories.some((c) => c.id === id);
-          if (refreshed && !stillThere) {
-            notify('Category deleted.');
-            return;
-          }
-          if (!refreshed) {
-            const latest = live.current;
-            applyLocal({
-              products: reattach(latest.products),
-              categories: restoreCategory(latest.categories),
-            });
-          }
-          const catDelOp: FailedOp = {
-            key: `fail-cat-del-${id}-${Date.now()}`,
-            label: `Delete category “${prev.name}”`,
-            detail: msg,
-            retry: () => removeCategory(id, target),
-          };
-          pushFailedOp(
-            catDelOp,
-            descFor(catDelOp, { kind: 'delete-category', payload: { id, target }, base }),
-          );
-          notify(`Couldn't delete “${prev.name}” — it was restored. Retry from the sync banner.`, 'error');
-        }
-      })();
-      return true;
-    },
-    [claimSubmit, applyLocal, markPending, unmarkPending, commit, invalidateAffectedQueries, notify, refresh, pushFailedOp, descFor],
-  );
-
-  const saveSupplier = useCallback(
-    async (input: SupplierFormInput, editingId?: string): Promise<boolean> => {
-      const trimmedName = input.name.trim();
-      if (!trimmedName) {
-        notify('Supplier name is required.', 'error');
-        return false;
-      }
-      const key = `sup-${editingId || trimmedName}`;
-      if (!claimSubmit(key)) return false;
-      const base = getApiUrl();
-      const cur = live.current;
-      const t = nowIso();
-
-      if (!editingId) {
-        const temp: Supplier = {
-          id: tempId('sup'),
-          name: trimmedName,
-          phone: input.phone || '',
-          email: (input.email || '').trim(),
-          address: input.address || '',
-          notes: input.notes || '',
-          createdAt: t,
-        };
-        applyLocal({ suppliers: [...cur.suppliers, temp] });
-        markPending([temp.id]);
-        void (async () => {
-          try {
-            const saved = await api.createSupplier({ ...input, name: trimmedName });
-            if (!isCurrentBackend(base)) {
-              unmarkPending([temp.id]);
-              return;
-            }
-            reconcileServerResponse('supplier', temp.id, saved);
-            notify('Supplier added.');
-          } catch (e) {
-            if (!isCurrentBackend(base)) {
-              unmarkPending([temp.id]);
-              return;
-            }
-            const msg = e instanceof ApiError ? e.message : 'Save failed.';
-            unmarkPending([temp.id]);
-            if (!isUnknownOutcome(e)) {
-              applyLocal({ suppliers: live.current.suppliers.filter((s) => s.id !== temp.id) });
-              notify(msg, 'error');
-              return;
-            }
-            const refreshed = await refresh({ silent: true });
-            if (!isCurrentBackend(base)) {
-              unmarkPending([temp.id]);
-              return;
-            }
-            const adopted = refreshed
-              ? live.current.suppliers.find((s) => s.name.toLowerCase() === trimmedName.toLowerCase())
-              : undefined;
-            if (adopted) {
-              applyLocal({ suppliers: live.current.suppliers.filter((s) => s.id !== temp.id) });
-              notify('Supplier added.');
-              return;
-            }
-            if (!refreshed) {
-              applyLocal({ suppliers: live.current.suppliers.filter((s) => s.id !== temp.id) });
-            }
-            const supAddOp: FailedOp = {
-              key: `fail-${temp.id}`,
-              label: `Add supplier “${trimmedName}”`,
-              detail: msg,
-              retry: () => saveSupplier(input),
-            };
-            pushFailedOp(supAddOp, descFor(supAddOp, { kind: 'save-supplier', payload: { input }, base }));
-            notify(`Couldn't save supplier “${trimmedName}” — kept as an unsaved change. Retry from the sync banner.`, 'error');
-          }
-        })();
-        return true;
-      }
-
-      const prev = cur.suppliers.find((s) => s.id === editingId);
-      if (!prev) {
-        notify('Supplier not found — syncing latest data.', 'error');
-        void refresh({ silent: true });
-        return true;
-      }
-      const next: Supplier = {
-        ...prev,
-        name: trimmedName,
-        phone: input.phone ?? prev.phone,
-        email: (input.email ?? prev.email).trim(),
-        address: input.address ?? prev.address,
-        notes: input.notes ?? prev.notes,
-      };
-      const renamedProductIds = cur.products.filter((p) => p.supplierId === editingId).map((p) => p.id);
-      const renamedPending = [editingId, ...renamedProductIds];
-      applyLocal({
-        suppliers: cur.suppliers.map((s) => (s.id === editingId ? next : s)),
-        products: cur.products.map((p) =>
-          p.supplierId === editingId ? { ...p, supplierName: trimmedName } : p,
-        ),
-      });
-      markPending(renamedPending);
-      void (async () => {
-        try {
-          const saved = await api.updateSupplier(editingId, { ...input });
-          if (!isCurrentBackend(base)) {
-            unmarkPending(renamedPending);
-            return;
-          }
-          reconcileServerResponse('supplier', editingId, saved);
-          unmarkPending(renamedProductIds);
-          notify('Supplier updated.');
-          void invalidateAffectedQueries();
-        } catch (e) {
-          if (!isCurrentBackend(base)) {
-            unmarkPending(renamedPending);
-            return;
-          }
-          const msg = e instanceof ApiError ? e.message : 'Save failed.';
-          unmarkPending(renamedPending);
-          if (!isUnknownOutcome(e)) {
-            const latest = live.current;
-            applyLocal({
-              suppliers: latest.suppliers.map((s) => (s.id === editingId ? prev : s)),
-              products: latest.products.map((p) =>
-                p.supplierId === editingId ? { ...p, supplierName: prev.name } : p,
-              ),
-            });
-            notify(msg, 'error');
-            return;
-          }
-          const refreshed = await refresh({ silent: true });
-          if (!isCurrentBackend(base)) return;
-          const server = live.current.suppliers.find((s) => s.id === editingId);
-          if (refreshed && server && server.name === trimmedName) {
-            notify('Supplier updated.');
-            void invalidateAffectedQueries();
-            return;
-          }
-          if (!refreshed) {
-            const latest = live.current;
-            applyLocal({
-              suppliers: latest.suppliers.map((s) => (s.id === editingId ? prev : s)),
-              products: latest.products.map((p) =>
-                p.supplierId === editingId ? { ...p, supplierName: prev.name } : p,
-              ),
-            });
-          }
-          const supUpdOp: FailedOp = {
-            key: `fail-sup-upd-${editingId}-${Date.now()}`,
-            label: `Edit supplier “${prev.name}”`,
-            detail: msg,
-            retry: () => saveSupplier(input, editingId),
-          };
-          pushFailedOp(
-            supUpdOp,
-            descFor(supUpdOp, { kind: 'save-supplier', payload: { input, editingId }, base }),
-          );
-          notify(`Couldn't save supplier edits — kept as an unsaved change. Retry from the sync banner.`, 'error');
-        }
-      })();
-      return true;
-    },
-    [claimSubmit, applyLocal, markPending, unmarkPending, reconcileServerResponse, invalidateAffectedQueries, notify, refresh, pushFailedOp, descFor],
-  );
-
-  const removeSupplier = useCallback(
-    async (id: string): Promise<boolean> => {
-      const key = `del-sup-${id}`;
-      if (!claimSubmit(key)) return false;
-      const base = getApiUrl();
-      const cur = live.current;
-      const prev = cur.suppliers.find((s) => s.id === id);
-      if (!prev) {
-        notify('Supplier not found — syncing latest data.', 'error');
-        void refresh({ silent: true });
-        return true;
-      }
-      const affectedIds = cur.products.filter((p) => p.supplierId === id).map((p) => p.id);
-      const reattach = (list: Product[]) =>
-        list.map((p) =>
-          affectedIds.includes(p.id) ? { ...p, supplierId: id, supplierName: prev.name } : p,
-        );
-      const restoreSupplier = (list: Supplier[]) =>
-        list.some((s) => s.id === id) ? list : [...list, prev];
-      const deletePending = [id, ...affectedIds];
-      // Backend detaches the supplier from products — mirror it locally.
-      applyLocal({
-        products: cur.products.map((p) =>
-          p.supplierId === id ? { ...p, supplierId: '', supplierName: '' } : p,
-        ),
-        suppliers: cur.suppliers.filter((s) => s.id !== id),
-      });
-      markPending(deletePending);
-      void (async () => {
-        try {
-          await api.deleteSupplier(id);
-          if (!isCurrentBackend(base)) {
-            unmarkPending(deletePending);
-            return;
-          }
-          unmarkPending(deletePending);
-          commit({});
-          notify('Supplier deleted.');
-          void invalidateAffectedQueries();
-        } catch (e) {
-          if (!isCurrentBackend(base)) {
-            unmarkPending(deletePending);
-            return;
-          }
-          const msg = e instanceof ApiError ? e.message : 'Delete failed.';
-          unmarkPending(deletePending);
-          if (!isUnknownOutcome(e)) {
-            const latest = live.current;
-            applyLocal({
-              products: reattach(latest.products),
-              suppliers: restoreSupplier(latest.suppliers),
-            });
-            notify(msg, 'error');
-            return;
-          }
-          const refreshed = await refresh({ silent: true });
-          if (!isCurrentBackend(base)) return;
-          const stillThere = live.current.suppliers.some((s) => s.id === id);
-          if (refreshed && !stillThere) {
-            notify('Supplier deleted.');
-            return;
-          }
-          if (!refreshed) {
-            const latest = live.current;
-            applyLocal({
-              products: reattach(latest.products),
-              suppliers: restoreSupplier(latest.suppliers),
-            });
-          }
-          const supDelOp: FailedOp = {
-            key: `fail-sup-del-${id}-${Date.now()}`,
-            label: `Delete supplier “${prev.name}”`,
-            detail: msg,
-            retry: () => removeSupplier(id),
-          };
-          pushFailedOp(supDelOp, descFor(supDelOp, { kind: 'delete-supplier', payload: { id }, base }));
-          notify(`Couldn't delete “${prev.name}” — it was restored. Retry from the sync banner.`, 'error');
-        }
-      })();
-      return true;
-    },
-    [claimSubmit, applyLocal, markPending, unmarkPending, commit, invalidateAffectedQueries, notify, refresh, pushFailedOp, descFor],
-  );
 
   /* ---------------- outbox dispatcher + recovery ----------------
    * Re-runs a persisted descriptor through the SAME mutation functions the
@@ -2046,7 +1464,7 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
   const runOutboxOp = useCallback(
     async (d: OutboxDesc): Promise<boolean> => {
       const p = d.payload as {
-        input?: ProductFormInput | SupplierFormInput;
+        input?: ProductFormInput;
         editingId?: string;
         id?: string;
         name?: string;
@@ -2054,7 +1472,6 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
         productId?: string;
         quantity?: number;
         price?: number | null;
-        supplierId?: string;
         reason?: string;
         note?: string;
       };
@@ -2066,7 +1483,6 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
               productId: p.productId,
               quantity: p.quantity,
               price: p.price ?? undefined,
-              supplierId: p.supplierId,
               note: p.note,
             },
             { idempotencyKey: d.idem || newIdempotencyKey() },
@@ -2088,18 +1504,6 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
         case 'delete-product':
           if (!p.id) return false;
           return deleteProductOptimistically(p.id);
-        case 'save-category':
-          if (!p.name) return false;
-          return saveCategory(p.name, p.editingId);
-        case 'delete-category':
-          if (!p.id) return false;
-          return removeCategory(p.id, p.target);
-        case 'save-supplier':
-          if (!p.input) return false;
-          return saveSupplier(p.input as SupplierFormInput, p.editingId);
-        case 'delete-supplier':
-          if (!p.id) return false;
-          return removeSupplier(p.id);
         default:
           return false;
       }
@@ -2109,10 +1513,6 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
       submitStockOut,
       saveProduct,
       deleteProductOptimistically,
-      saveCategory,
-      removeCategory,
-      saveSupplier,
-      removeSupplier,
     ],
   );
 
@@ -2231,31 +1631,9 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
     void verifyPendingStock();
   }, [ready, configured, notify, saveOutbox, runOutboxOp, verifyPendingStock]);
 
-  // O(1) name lookups: screens call these per row per render, and .find
-  // over categories/suppliers each time turns every list render into O(n*c).
-  const catMap = useMemo(() => {
-    const m = new Map<string, string>();
-    for (const c of categories) m.set(String(c.id), c.name);
-    return m;
-  }, [categories]);
-  const supMap = useMemo(() => {
-    const m = new Map<string, string>();
-    for (const s of suppliers) m.set(String(s.id), s.name);
-    return m;
-  }, [suppliers]);
-  const categoryName = useCallback((id: string) => catMap.get(String(id)) || '—', [catMap]);
-  const supplierName = useCallback((id: string) => supMap.get(String(id)) || '—', [supMap]);
-  const getCategoryByName = useCallback((name: string) => {
-    const want = normCategoryName(name).toLowerCase();
-    if (!want) return undefined;
-    return live.current.categories.find((c) => normCategoryName(c.name).toLowerCase() === want);
-  }, []);
-
   const value = useMemo<Store>(
     () => ({
       products,
-      categories,
-      suppliers,
       transactions,
       dashboard,
       loading,
@@ -2287,10 +1665,6 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
       removeProduct,
       doStockIn,
       doStockOut,
-      saveCategory,
-      removeCategory,
-      saveSupplier,
-      removeSupplier,
       addProductOptimistically,
       updateProductOptimistically,
       deleteProductOptimistically,
@@ -2298,22 +1672,17 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
       submitStockOut,
       reconcileServerResponse,
       invalidateAffectedQueries,
-      categoryName,
-      supplierName,
-      getCategoryByName,
     }),
     [
-      products, categories, suppliers, transactions, dashboard, loading,
+      products, transactions, dashboard, loading,
       refreshing, ready, error, lastSync, online, configured,
       pendingIds, failedOps, isPending, retryFailedOp, dismissFailedOp,
       theme, setTheme,
       dark, toasts, notify, dismissToast, refresh, ensureFresh,
       loadMoreTransactions, txLoadingMore, txExhausted, setConfiguredFlag, clearCache,
-      saveProduct, removeProduct, doStockIn, doStockOut, saveCategory,
-      removeCategory, saveSupplier, removeSupplier,
+      saveProduct, removeProduct, doStockIn, doStockOut,
       addProductOptimistically, updateProductOptimistically, deleteProductOptimistically,
       submitStockIn, submitStockOut, reconcileServerResponse, invalidateAffectedQueries,
-      categoryName, supplierName, getCategoryByName,
     ],
   );
 
@@ -2326,64 +1695,6 @@ export function stockStatus(p: Product): 'out' | 'low' | 'ok' {
   if (p.currentStock <= 0) return 'out';
   if (p.currentStock <= p.minimumStock) return 'low';
   return 'ok';
-}
-
-/**
- * Normalised category name — mirrors Apps Script `normCatName_` exactly:
- * trimmed, internal whitespace collapsed. Duplicates compare
- * case-insensitively, so "Electronics" === " electronics " === "ELECTRONICS".
- */
-export function normCategoryName(name: string): string {
-  return String(name || '').trim().replace(/\s+/g, ' ');
-}
-
-/** True when `name` is taken by another category (case-insensitive). */
-export function isCategoryNameTaken(
-  categories: Category[],
-  name: string,
-  excludeId?: string,
-): boolean {
-  const want = normCategoryName(name).toLowerCase();
-  if (!want) return false;
-  return categories.some(
-    (c) => String(c.id) !== String(excludeId || '') && normCategoryName(c.name).toLowerCase() === want,
-  );
-}
-
-export interface CategoryStats {
-  productCount: number;
-  totalUnits: number;
-  /** Σ(currentStock × costPrice) over the category's products. */
-  inventoryCostValue: number;
-  lowStockCount: number;
-  outOfStockCount: number;
-}
-
-/**
- * Per-category statistics from current authoritative product data —
- * single pass, no extra API calls. Keyed by categoryId; '' aggregates
- * Uncategorized products. Zero-product categories are absent (callers
- * render them as all-zero).
- */
-export function computeCategoryStats(products: Product[]): Map<string, CategoryStats> {
-  const map = new Map<string, CategoryStats>();
-  for (const p of products) {
-    const key = String(p.categoryId || '');
-    let s = map.get(key);
-    if (!s) {
-      s = { productCount: 0, totalUnits: 0, inventoryCostValue: 0, lowStockCount: 0, outOfStockCount: 0 };
-      map.set(key, s);
-    }
-    s.productCount += 1;
-    s.totalUnits += p.currentStock;
-    s.inventoryCostValue += p.currentStock * p.costPrice;
-    if (p.currentStock <= 0) s.outOfStockCount += 1;
-    else if (p.currentStock <= p.minimumStock) s.lowStockCount += 1;
-  }
-  for (const s of map.values()) {
-    s.inventoryCostValue = Math.round(s.inventoryCostValue * 100) / 100;
-  }
-  return map;
 }
 
 /**
@@ -2440,15 +1751,6 @@ function sigTx(list: StockTransaction[]): string {
   }
   return s;
 }
-function sigNames(list: { id: string; name: string }[]): string {
-  let s = list.length + '|';
-  for (let i = 0; i < list.length; i++) {
-    s += list[i].id + '#' + list[i].name + ';';
-    if (s.length > 10000) break;
-  }
-  return s;
-}
-
 /**
  * Merge transaction windows by id (transactions are immutable +
  * append-only, so id-keyed merge is safe across devices). Newest first,
