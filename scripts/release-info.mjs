@@ -99,6 +99,13 @@ function arg(name) {
   return i === -1 ? '' : (process.argv[i + 1] || '');
 }
 
+/** Required CLI flag: fails with a helpful message instead of a downstream ENOENT. */
+function requireArg(name) {
+  const v = arg(name);
+  if (!v) throw new Error(`Missing required --${name} argument.`);
+  return v;
+}
+
 async function main() {
   const cmd = process.argv[2] || '';
   if (cmd === 'check') {
@@ -113,33 +120,49 @@ async function main() {
     return;
   }
   if (cmd === 'write') {
-    const tag = arg('tag');
+    const tag = requireArg('tag');
     const v = assertVersionsMatch();
     const version = v.appVersion;
     if (tag !== `v${version}`) {
       throw new Error(`Tag ${tag} does not match package version v${version}.`);
     }
-    const apkPath = arg('apk');
-    const notesFile = arg('notes-file');
+    const apkPath = requireArg('apk');
+    const notesFile = requireArg('notes-file');
+    const outFile = requireArg('out');
     const notes = readFileSync(notesFile, 'utf8').split('\n').map((l) => l.trim()).filter(Boolean);
     const info = buildReleaseJson({
-      tag,
       version,
       versionCode: v.versionCode,
       build: arg('build') || 'debug',
       apkPath,
-      apkUrl: arg('apk-url'),
-      releaseUrl: arg('release-url'),
-      commit: arg('commit'),
+      apkUrl: requireArg('apk-url'),
+      releaseUrl: requireArg('release-url'),
+      commit: requireArg('commit'),
       notes,
     });
-    writeFileSync(arg('out') || 'release.json', JSON.stringify(info, null, 2) + '\n');
-    console.log(`wrote ${arg('out') || 'release.json'} for ${tag}`);
+    writeFileSync(outFile, JSON.stringify(info, null, 2) + '\n');
+    console.log(`wrote ${outFile} for ${tag}`);
     return;
   }
   throw new Error('Usage: release-info.mjs <check|notes [prevTag]|write ...>');
 }
 
-if (import.meta.url === pathToFileURL(process.argv[1]).href) {
+/**
+ * Direct-execution check that is safe for every invocation style.
+ * `process.argv[1]` is undefined under `node -e` (and in some embeddings),
+ * so the unguarded comparison used to throw at import time — breaking any
+ * `import` of this module, including the workflow's `node -e` verifier.
+ */
+function isDirectExecution() {
+  const entry = process.argv[1];
+  if (typeof entry !== 'string' || entry === '') return false;
+  try {
+    return import.meta.url === pathToFileURL(entry).href;
+  } catch {
+    return false;
+  }
+}
+
+if (isDirectExecution()) {
   await main();
 }

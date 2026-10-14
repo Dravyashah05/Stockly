@@ -1,5 +1,9 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
+import { execFileSync } from 'node:child_process';
+import { mkdtempSync, writeFileSync, readFileSync, rmSync } from 'node:fs';
+import { tmpdir } from 'node:os';
+import { join } from 'node:path';
 import { fetchLatestRelease, formatApkSize, mapReleasePayload } from '../src/lib/releases.ts';
 import { assertVersionsMatch, buildReleaseJson, parseBadging, readVersions } from '../scripts/release-info.mjs';
 
@@ -114,4 +118,87 @@ test('buildReleaseJson refuses empty APKs and missing fields', () => {
   assert.ok(info.apkSize > 0);
   assert.match(info.sha256, /^[0-9a-f]{64}$/);
   assert.ok(Date.parse(info.publishedAt) > 0);
+});
+
+function runCli(args: string[]): { status: number; stdout: string; stderr: string } {
+  try {
+    const stdout = execFileSync(process.execPath, ['scripts/release-info.mjs', ...args], {
+      encoding: 'utf8',
+      stdio: ['ignore', 'pipe', 'pipe'],
+    });
+    return { status: 0, stdout: stdout as string, stderr: '' };
+  } catch (e) {
+    const err = e as { status?: number; stdout?: unknown; stderr?: unknown };
+    return {
+      status: typeof err.status === 'number' ? err.status : 1,
+      stdout: typeof err.stdout === 'string' ? err.stdout : String(err.stdout ?? ''),
+      stderr: typeof err.stderr === 'string' ? err.stderr : String(err.stderr ?? ''),
+    };
+  }
+}
+
+test('CLI direct invocation: check reports versions', () => {
+  const r = runCli(['check']);
+  assert.equal(r.status, 0);
+  assert.match(r.stdout, /^version=\d+\.\d+\.\d+$/m);
+  assert.match(r.stdout, /^versionCode=\d+$/m);
+});
+
+test('CLI with no command reports usage and fails', () => {
+  const r = runCli([]);
+  assert.notEqual(r.status, 0);
+  assert.match(r.stderr, /Usage: release-info\.mjs/);
+});
+
+test('CLI write without required flags reports a helpful error', () => {
+  const v = readVersions();
+  const r = runCli(['write', '--tag', `v${v.appVersion}`]);
+  assert.notEqual(r.status, 0);
+  assert.match(r.stderr, /Missing required --apk argument/);
+});
+
+test('CLI write generates real release metadata end to end', () => {
+  const v = readVersions();
+  const dir = mkdtempSync(join(tmpdir(), 'stockly-rel-'));
+  try {
+    const apk = join(dir, 'fake.apk');
+    const notesFile = join(dir, 'NOTES.md');
+    const outFile = join(dir, 'release.json');
+    writeFileSync(apk, Buffer.from([0, 1, 2, 3, 4, 5, 6, 7]));
+    writeFileSync(notesFile, '- CLI note one\n- CLI note two\n');
+    const tag = `v${v.appVersion}`;
+    const r = runCli([
+      'write',
+      '--tag', tag,
+      '--apk', apk,
+      '--apk-url', `https://example.com/r/download/${tag}/stockly-${v.appVersion}.apk`,
+      '--release-url', `https://example.com/r/tag/${tag}`,
+      '--commit', 'cli-test',
+      '--build', 'debug',
+      '--notes-file', notesFile,
+      '--out', outFile,
+    ]);
+    assert.equal(r.status, 0);
+    const info = JSON.parse(readFileSync(outFile, 'utf8')) as Record<string, unknown>;
+    assert.equal(info.version, v.appVersion);
+    assert.equal(info.versionCode, v.versionCode);
+    assert.equal(info.build, 'debug');
+    assert.equal(info.apkSize, 8);
+    assert.match(String(info.sha256), /^[0-9a-f]{64}$/);
+    assert.deepEqual(info.releaseNotes, ['- CLI note one', '- CLI note two']);
+    assert.equal(info.commit, 'cli-test');
+  } finally {
+    rmSync(dir, { recursive: true, force: true });
+  }
+});
+
+test('importing the module never runs the CLI (node -e regression)', () => {
+  // Reproduces the workflow failure: `node -e` leaves process.argv[1]
+  // undefined, which used to crash the entry-point check at import time.
+  const out = execFileSync(
+    process.execPath,
+    ['--input-type=module', '-e', "import('./scripts/release-info.mjs').then((m) => console.log(typeof m.buildReleaseJson))"],
+    { encoding: 'utf8' },
+  );
+  assert.match(String(out), /function/);
 });
