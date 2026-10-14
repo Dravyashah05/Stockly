@@ -161,6 +161,42 @@ capacitor.config.ts         app name/ID, splash, status bar, keyboard
 2. **App icon:** the launcher currently uses Capacitor's default icon. Replace
    `android/app/src/main/res/mipmap-*` + `assets/icon.png` (or run
    `npx capacitor-assets`) with your Stockly artwork.
-3. **Release signing:** create a keystore + `signingConfigs` before publishing.
+3. **Release signing:** create a keystore and add the four `ANDROID_*` secrets
+   listed in section 7 (until then releases are debug-signed).
 4. **Play listing** (if publishing): privacy policy, screenshots, data-safety
    form (the app sends inventory data to *your own* Google Sheet).
+
+## 7. Releasing Stockly (automated)
+
+Pushing to `main` runs `.github/workflows/release.yml`: lint → type-check →
+tests → website build → (only for a **new** version) Android APK → GitHub
+Release. Normal pushes stay green without publishing anything.
+
+**To cut a release**, bump the version in **both** places and push:
+
+| File | Field | Example |
+| ---- | ----- | ------- |
+| `package.json` | `version` | `1.1.0` |
+| `android/app/build.gradle` | `versionName` | `"1.1.0"` |
+| `android/app/build.gradle` | `versionCode` | `2` (always increase, never reset) |
+
+The workflow fails fast if the names differ or the tag already exists. Each
+release publishes `stockly-<version>.apk` + `SHA256SUMS.txt` + `release.json`
+(machine-readable metadata: version, code, size, checksum, notes, commit) and
+links them from the release notes.
+
+**Where releases surface (no committed APKs or metadata files):**
+- Website store section (`index.html#store`) and dedicated App Store page
+  (`/app-store`) read the live GitHub Releases API.
+- Settings → App update in the installed app checks the same source.
+- The website itself deploys automatically through the existing Vercel Git
+  integration — no tokens or extra steps needed.
+
+**Release signing secrets** (repo Settings → Secrets and variables → Actions;
+values are never printed in logs — without them the APK is debug-signed and
+labeled as such, which is fine for sideloading but uses a different
+certificate than a future store key, so keep using one keystore forever):
+`ANDROID_KEYSTORE_BASE64`, `ANDROID_KEY_ALIAS`,
+`ANDROID_KEYSTORE_PASSWORD`, `ANDROID_KEY_PASSWORD`.
+
+Verify a release locally any time with `node scripts/release-info.mjs check`.

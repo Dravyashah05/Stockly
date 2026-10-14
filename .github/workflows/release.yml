@@ -1,0 +1,248 @@
+# Stockly automated release pipeline.
+#
+# WHEN IT RUNS
+# - Every push to `main` runs validation + web build (always green unless
+#   something is actually broken).
+# - A GitHub Release is published ONLY when package.json `version` has no
+#   matching `v<version>` tag yet — i.e. releasing = bumping the version.
+#
+# VERSIONING (manual, deliberate — CI never edits versions)
+# - Bump BOTH `package.json` version AND android `versionName` together
+#   (the workflow fails if they differ), and raise android `versionCode`
+#   by at least 1 (Android treats it as the update identity).
+# - Example: 1.0.0 (code 1) -> 1.1.0 (code 2), then push to main.
+#
+# SIGNING
+# - No keystore lives in this repo. Without secrets the workflow publishes a
+#   DEBUG-signed APK, clearly labeled, with setup instructions in the release
+#   notes and job summary.
+# - For store-signed release builds, configure these repository secrets
+#   (Settings → Secrets and variables → Actions); values are never printed:
+#     ANDROID_KEYSTORE_BASE64  — base64 of your release .jks keystore
+#     ANDROID_KEY_ALIAS        — key alias inside the keystore
+#     ANDROID_KEYSTORE_PASSWORD — keystore password
+#     ANDROID_KEY_PASSWORD     — key password
+#   Keep using the SAME keystore for every release: Android refuses updates
+#   signed with a different certificate (users would have to reinstall).
+#
+# METADATA (no commit-backs, no loops)
+# - GitHub Releases are the source of truth. The workflow attaches
+#   `release.json` (machine-readable, see Phase 3 schema) + SHA256SUMS.txt.
+# - The website, store page, and in-app updater read the live Releases API.
+# - Vercel deploys automatically via its existing Git integration.
+#
+# PERMISSIONS: contents:write is the minimum that can create releases.
+
+name: Release
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+concurrency:
+  group: stockly-release-${{ github.ref }}
+  cancel-in-progress: false
+
+jobs:
+  release:
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    env:
+      GH_TOKEN: ${{ github.token }}
+
+    steps:
+      - name: Check out (full history for release notes)
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Read versions and decide (fail fast, no release on mismatch)
+        id: versions
+        run: |
+          node scripts/release-info.mjs check | tee check.out
+          grep -E '^(version|versionCode)=' check.out >> "$GITHUB_OUTPUT"
+          VER=$(grep '^version=' check.out | cut -d= -f2)
+          echo "tag=v$VER" >> "$GITHUB_OUTPUT"
+          if gh release view "v$VER" >/dev/null 2>&1; then
+            echo "publish=false" >> "$GITHUB_OUTPUT"
+            echo "Release v$VER is already published — validation below still runs, nothing will be re-published."
+          else
+            echo "publish=true" >> "$GITHUB_OUTPUT"
+            echo "New version v$VER — a release will be published after successful builds."
+          fi
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '24'
+          cache: 'npm'
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Lint
+        run: npm run lint
+
+      - name: Type-check
+        run: npx tsc -b
+
+      - name: Tests
+        run: npm test
+
+      - name: Build website
+        run: npm run build
+
+      - name: Sync Capacitor assets
+        run: npx cap sync android
+
+      - name: Set up Java 21
+        if: steps.versions.outputs.publish == 'true'
+        uses: actions/setup-java@v4
+        with:
+          distribution: 'temurin'
+          java-version: '21'
+
+      - name: Set up Android SDK
+        if: steps.versions.outputs.publish == 'true'
+        uses: android-actions/setup-android@v3
+
+      - name: Install platform + build-tools
+        if: steps.versions.outputs.publish == 'true'
+        run: |
+          yes | sdkmanager --licenses >/dev/null
+          sdkmanager "platforms;android-36" "build-tools;36.0.0"
+
+      - name: Detect signing mode (never prints secrets)
+        if: steps.versions.outputs.publish == 'true'
+        id: signing
+        env:
+          ANDROID_KEYSTORE_BASE64: ${{ secrets.ANDROID_KEYSTORE_BASE64 }}
+          ANDROID_KEY_ALIAS: ${{ secrets.ANDROID_KEY_ALIAS }}
+          ANDROID_KEYSTORE_PASSWORD: ${{ secrets.ANDROID_KEYSTORE_PASSWORD }}
+          ANDROID_KEY_PASSWORD: ${{ secrets.ANDROID_KEY_PASSWORD }}
+        run: |
+          if [ -n "$ANDROID_KEYSTORE_BASE64" ] && [ -n "$ANDROID_KEY_ALIAS" ] && \
+             [ -n "$ANDROID_KEYSTORE_PASSWORD" ] && [ -n "$ANDROID_KEY_PASSWORD" ]; then
+            echo "mode=release" >> "$GITHUB_OUTPUT"
+          else
+            echo "mode=debug" >> "$GITHUB_OUTPUT"
+            {
+              echo "### Release signing not configured"
+              echo "Publishing a **debug-signed** APK. To ship store-signed releases, configure these repository secrets (values are never shown):"
+              echo "- \`ANDROID_KEYSTORE_BASE64\`, \`ANDROID_KEY_ALIAS\`, \`ANDROID_KEYSTORE_PASSWORD\`, \`ANDROID_KEY_PASSWORD\`"
+            } >> "$GITHUB_STEP_SUMMARY"
+          fi
+
+      - name: Build APK
+        if: steps.versions.outputs.publish == 'true'
+        working-directory: android
+        env:
+          ANDROID_KEYSTORE_BASE64: ${{ secrets.ANDROID_KEYSTORE_BASE64 }}
+          ANDROID_KEY_ALIAS: ${{ secrets.ANDROID_KEY_ALIAS }}
+          ANDROID_KEYSTORE_PASSWORD: ${{ secrets.ANDROID_KEYSTORE_PASSWORD }}
+          ANDROID_KEY_PASSWORD: ${{ secrets.ANDROID_KEY_PASSWORD }}
+        run: |
+          chmod +x gradlew
+          if [ "${{ steps.signing.outputs.mode }}" = "release" ]; then
+            echo "$ANDROID_KEYSTORE_BASE64" | base64 --decode > "$RUNNER_TEMP/stockly-release.jks"
+            test -s "$RUNNER_TEMP/stockly-release.jks"
+            ./gradlew assembleRelease \
+              "-Pandroid.injected.signing.store.file=$RUNNER_TEMP/stockly-release.jks" \
+              "-Pandroid.injected.signing.store.password=$ANDROID_KEYSTORE_PASSWORD" \
+              "-Pandroid.injected.signing.key.alias=$ANDROID_KEY_ALIAS" \
+              "-Pandroid.injected.signing.key.password=$ANDROID_KEY_PASSWORD"
+            "$ANDROID_HOME/build-tools/36.0.0/apksigner" verify --print-certs app/build/outputs/apk/release/app-release.apk
+            cp app/build/outputs/apk/release/app-release.apk "$GITHUB_WORKSPACE/stockly-${{ steps.versions.outputs.version }}.apk"
+          else
+            ./gradlew assembleDebug
+            cp app/build/outputs/apk/debug/app-debug.apk "$GITHUB_WORKSPACE/stockly-${{ steps.versions.outputs.version }}.apk"
+          fi
+          test -s "$GITHUB_WORKSPACE/stockly-${{ steps.versions.outputs.version }}.apk"
+
+      - name: Verify APK identity (fail the build on mismatch)
+        if: steps.versions.outputs.publish == 'true'
+        run: |
+          node --input-type=module -e "
+            import { execFileSync } from 'node:child_process';
+            import { readdirSync, statSync } from 'node:fs';
+            import { parseBadging, readVersions } from './scripts/release-info.mjs';
+            const path = 'stockly-${{ steps.versions.outputs.version }}.apk';
+            if (!statSync(path).size) { throw new Error('APK is empty.'); }
+            const tools = readdirSync(process.env.ANDROID_HOME + '/build-tools').sort().reverse();
+            const line = execFileSync(process.env.ANDROID_HOME + '/build-tools/' + tools[0] + '/aapt', ['dump', 'badging', path], { encoding: 'utf8' }).split('\n')[0];
+            const got = parseBadging(line);
+            const want = readVersions();
+            if (got.applicationId !== 'com.stockly.inventory') throw new Error('Wrong applicationId: ' + got.applicationId);
+            if (got.versionCode !== want.versionCode || got.versionName !== want.versionName) {
+              throw new Error('APK identity mismatch: code=' + got.versionCode + ' name=' + got.versionName + ', expected code=' + want.versionCode + ' name=' + want.versionName + '.');
+            }
+            console.log('APK verified:', JSON.stringify(got));
+          "
+
+      - name: Build release notes + metadata
+        if: steps.versions.outputs.publish == 'true'
+        run: |
+          PREV_TAG=$(git describe --tags --abbrev=0 2>/dev/null || echo "")
+          {
+            echo "## What's new"
+            echo ""
+            node scripts/release-info.mjs notes "$PREV_TAG"
+            echo ""
+            echo "## Details"
+            echo ""
+            echo "- Version: ${{ steps.versions.outputs.version }} (versionCode ${{ steps.versions.outputs.versionCode }})"
+            echo "- Build: ${{ steps.signing.outputs.mode }}-signed"
+            echo "- Commit: ${{ github.sha }}"
+            if [ "${{ steps.signing.outputs.mode }}" = "debug" ]; then
+              echo "- Note: debug-signed sideload build. Configure release-signing secrets for store-signed APKs (see workflow file header)."
+            else
+              echo "- Signed with the official Stockly release key."
+            fi
+          } > NOTES.md
+          APK="stockly-${{ steps.versions.outputs.version }}.apk"
+          TAG="${{ steps.versions.outputs.tag }}"
+          (cd "$GITHUB_WORKSPACE" && sha256sum "$APK" > SHA256SUMS.txt)
+          node scripts/release-info.mjs write \
+            --tag "$TAG" \
+            --apk "$GITHUB_WORKSPACE/$APK" \
+            --apk-url "https://github.com/${{ github.repository }}/releases/download/$TAG/$APK" \
+            --release-url "https://github.com/${{ github.repository }}/releases/tag/$TAG" \
+            --commit "${{ github.sha }}" \
+            --build "${{ steps.signing.outputs.mode }}" \
+            --notes-file NOTES.md \
+            --out "$GITHUB_WORKSPACE/release.json"
+
+      - name: Publish GitHub Release (only fully validated artifacts)
+        if: steps.versions.outputs.publish == 'true'
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: ${{ steps.versions.outputs.tag }}
+          name: Stockly v${{ steps.versions.outputs.version }}
+          body_path: NOTES.md
+          make_latest: true
+          files: |
+            stockly-${{ steps.versions.outputs.version }}.apk
+            SHA256SUMS.txt
+            release.json
+
+      - name: Summarize
+        if: always() && steps.versions.outputs.publish == 'true'
+        run: |
+          {
+            echo "## Stockly release ${{ steps.versions.outputs.tag }}"
+            echo ""
+            echo "- Mode: **${{ steps.signing.outputs.mode }}**-signed"
+            echo "- Release page: https://github.com/${{ github.repository }}/releases/tag/${{ steps.versions.outputs.tag }}"
+            echo "- APK: https://github.com/${{ github.repository }}/releases/download/${{ steps.versions.outputs.tag }}/stockly-${{ steps.versions.outputs.version }}.apk"
+            echo "- Commit: ${{ github.sha }}"
+            echo "- Website + store page deploy automatically through the existing Vercel Git integration."
+          } >> "$GITHUB_STEP_SUMMARY"
+
+      - name: Validation-only summary
+        if: steps.versions.outputs.publish != 'true'
+        run: |
+          echo "No new version to publish (${{ steps.versions.outputs.tag }} already released, or version check ran standalone). Lint, type-check, tests, and the website build above all passed." >> "$GITHUB_STEP_SUMMARY"

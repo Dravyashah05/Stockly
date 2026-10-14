@@ -25,6 +25,7 @@ import {
 import { APP_VERSION, LS_KEYS, UPDATE_CHECK_URL, getApiUrl, isAppsScriptExecUrl, setApiUrl } from '../lib/config';
 import { parseScannedEndpoint, scannedEndpointMessage } from '../lib/qr-link';
 import QRCode from 'react-qr-code';
+import { fetchLatestRelease, formatApkSize } from '../lib/releases';
 import { useStore } from '../lib/store';
 import type { Category } from '../lib/types';
 import { Confirm, Field, Header, Sheet, BrandMark, inputCls } from '../components/ui';
@@ -239,13 +240,14 @@ export default function SettingsScreen() {
   };
 
   // ---- App update (top of Settings) ----
-  // Compares this build against a hosted version.json — nothing is invented:
-  // with no manifest configured the UI says checks aren't set up yet.
-  type UpdateStatus = 'idle' | 'checking' | 'uptodate' | 'available' | 'unsetup' | 'error';
+  // Primary source is the published GitHub release (see src/lib/releases.ts);
+  // a hosted version.json manifest is still honoured when configured.
+  type UpdateStatus = 'idle' | 'checking' | 'uptodate' | 'available' | 'error';
   const [updStatus, setUpdStatus] = useState<UpdateStatus>('idle');
   const [updLatest, setUpdLatest] = useState('');
   const [updApk, setUpdApk] = useState('');
   const [updNotes, setUpdNotes] = useState('');
+  const [updMeta, setUpdMeta] = useState('');
   const [updError, setUpdError] = useState('');
   const [updCheckedAt, setUpdCheckedAt] = useState<number | null>(() => {
     try {
@@ -268,10 +270,6 @@ export default function SettingsScreen() {
   };
   const checkUpdates = async () => {
     if (updStatus === 'checking') return;
-    if (!UPDATE_CHECK_URL) {
-      setUpdStatus('unsetup');
-      return;
-    }
     if (typeof navigator !== 'undefined' && !navigator.onLine) {
       setUpdError('You’re offline — connect and try again.');
       setUpdStatus('error');
@@ -280,13 +278,8 @@ export default function SettingsScreen() {
     setUpdStatus('checking');
     setUpdError('');
     const ctrl = new AbortController();
-    const timer = window.setTimeout(() => ctrl.abort(), 12000);
-    try {
-      const res = await fetch(UPDATE_CHECK_URL, { signal: ctrl.signal, cache: 'no-store' });
-      if (!res.ok) throw new Error(`HTTP ${res.status}`);
-      const data = (await res.json()) as { version?: unknown; apkUrl?: unknown; notes?: unknown };
-      const latest = String(data.version || '').trim();
-      if (!latest) throw new Error('Bad version file.');
+    const timer = window.setTimeout(() => ctrl.abort(), 15000);
+    const remember = (latest: string) => {
       const at = Date.now();
       try {
         localStorage.setItem('stockly.updateCheck', JSON.stringify({ at, latest }));
@@ -294,16 +287,46 @@ export default function SettingsScreen() {
         /* storage unavailable — timestamp simply won't persist */
       }
       setUpdCheckedAt(at);
-      if (cmpVersions(latest, APP_VERSION) > 0) {
-        setUpdLatest(latest);
-        setUpdApk(String(data.apkUrl || ''));
-        setUpdNotes(String(data.notes || ''));
-        setUpdStatus('available');
+    };
+    try {
+      if (UPDATE_CHECK_URL) {
+        const res = await fetch(UPDATE_CHECK_URL, { signal: ctrl.signal, cache: 'no-store' });
+        if (!res.ok) throw new Error(`HTTP ${res.status}`);
+        const data = (await res.json()) as { version?: unknown; apkUrl?: unknown; notes?: unknown };
+        const latest = String(data.version || '').trim();
+        if (!latest) throw new Error('Bad version file.');
+        remember(latest);
+        if (cmpVersions(latest, APP_VERSION) > 0) {
+          setUpdLatest(latest);
+          setUpdApk(String(data.apkUrl || ''));
+          setUpdNotes(String(data.notes || ''));
+          setUpdMeta('');
+          setUpdStatus('available');
+        } else {
+          setUpdStatus('uptodate');
+        }
       } else {
-        setUpdStatus('uptodate');
+        const rel = await fetchLatestRelease({ noCache: true });
+        remember(rel.version);
+        if (cmpVersions(rel.version, APP_VERSION) > 0) {
+          setUpdLatest(rel.version);
+          setUpdApk(rel.apkUrl);
+          setUpdNotes(rel.releaseNotes.join('\n'));
+          const bits = [
+            rel.publishedAt
+              ? new Date(rel.publishedAt).toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' })
+              : '',
+            formatApkSize(rel.apkSize),
+            rel.build === 'debug' ? 'debug build' : '',
+          ].filter(Boolean);
+          setUpdMeta(bits.join(' · '));
+          setUpdStatus('available');
+        } else {
+          setUpdStatus('uptodate');
+        }
       }
-    } catch {
-      setUpdError('Couldn’t reach the update server — try again later.');
+    } catch (e) {
+      setUpdError(e instanceof Error && e.message ? e.message : 'Couldn’t reach the update server — try again later.');
       setUpdStatus('error');
     } finally {
       window.clearTimeout(timer);
@@ -387,8 +410,11 @@ export default function SettingsScreen() {
           </div>
           {updStatus === 'available' && updApk ? (
             <div className="mt-3">
+              {updMeta ? (
+                <p className="tnum mb-2.5 px-1 text-[12px] font-semibold text-(--ink-2)">{updMeta}</p>
+              ) : null}
               {updNotes ? (
-                <p className="mb-2.5 px-1 text-[13px] leading-relaxed text-(--ink-2)">{updNotes}</p>
+                <p className="mb-2.5 whitespace-pre-line px-1 text-[13px] leading-relaxed text-(--ink-2)">{updNotes}</p>
               ) : null}
               <a
                 href={updApk}
@@ -398,12 +424,11 @@ export default function SettingsScreen() {
               >
                 <Download size={16} /> Download v{updLatest}
               </a>
+              <p className="mt-2.5 px-1 text-[12px] leading-relaxed text-(--ink-2)">
+                On Android, opening the file asks you to confirm installation — updates must carry Stockly’s official
+                release signature to install over your current app.
+              </p>
             </div>
-          ) : updStatus === 'unsetup' ? (
-            <p className="mt-3 rounded-2xl bg-(--glass-soft) px-3.5 py-3 text-[12.5px] leading-relaxed text-(--ink-2)">
-              Automatic update checks aren’t set up for this build yet — ask whoever gave you the app for the latest
-              APK.
-            </p>
           ) : (
             <button
               type="button"

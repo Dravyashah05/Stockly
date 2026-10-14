@@ -1,11 +1,14 @@
 import { useEffect, useRef, useState } from 'react';
 import { APP_VERSION } from '../lib/config';
+import { fetchLatestRelease, fetchReleaseHistory, formatApkSize } from '../lib/releases';
+import type { ReleaseInfo, ReleaseSummary } from '../lib/releases';
 import { DashboardMock, Logo, PhoneMock, Reveal, useCountUp, useInView, useParallax } from './visuals';
 
 const NAV = [
   { label: 'Product', href: '#product' },
   { label: 'Features', href: '#features' },
   { label: 'About', href: '#about' },
+  { label: 'App store', href: 'store.html' },
 ];
 
 export default function StoreSite() {
@@ -492,27 +495,51 @@ function Features() {
 
 /* ---------------- store / download ---------------- */
 
+/* ---------------- store / download ----------------
+ * Live release data comes from GitHub Releases (see src/lib/releases.ts):
+ * no committed APKs, no invented versions. History links to real releases. */
+
 function Store() {
-  const [apk, setApk] = useState<'checking' | 'ready' | 'soon'>('checking');
+  const [rel, setRel] = useState<
+    | { status: 'checking' }
+    | { status: 'ready'; info: ReleaseInfo }
+    | { status: 'error'; message: string }
+  >({ status: 'checking' });
+  const [history, setHistory] = useState<ReleaseSummary[] | null>(null);
   const alive = useRef(true);
 
   useEffect(() => {
     alive.current = true;
-    fetch('stockly.apk', { method: 'HEAD' })
-      .then((r) => {
-        if (alive.current) setApk(r.ok ? 'ready' : 'soon');
+    fetchLatestRelease()
+      .then((info) => {
+        if (alive.current) setRel({ status: 'ready', info });
+      })
+      .catch((e: unknown) => {
+        if (alive.current) {
+          setRel({
+            status: 'error',
+            message: e instanceof Error && e.message ? e.message : 'Couldn’t load release info.',
+          });
+        }
+      });
+    fetchReleaseHistory(10)
+      .then((list) => {
+        if (alive.current) setHistory(list);
       })
       .catch(() => {
-        if (alive.current) setApk('soon');
+        if (alive.current) setHistory(null);
       });
     return () => {
       alive.current = false;
     };
   }, []);
 
+  const info = rel.status === 'ready' ? rel.info : null;
+  const prior = (history || []).filter((h) => h.tag !== info?.tag).slice(0, 5);
+
   return (
     <section id="store" className="mx-auto max-w-6xl scroll-mt-20 px-5 py-16 sm:px-8 sm:py-24">
-      <div className="grid gap-10 lg:grid-cols-2 lg:items-center">
+      <div className="grid gap-10 lg:grid-cols-2 lg:items-start">
         <Reveal>
           <p className="text-[11px] font-extrabold uppercase tracking-[0.22em] text-neutral-500">Stockly store</p>
           <h2 className="mt-3 text-5xl font-extrabold leading-[1.0] tracking-tight sm:text-6xl">
@@ -522,13 +549,16 @@ function Store() {
             Free for small businesses. Use your Google Sheet as the shared database across devices.
           </p>
           <ul className="mt-6 space-y-2.5">
-            {['Android phone or tablet', `Version ${APP_VERSION}`, 'No account needed'].map((t) => (
+            {['Android phone or tablet', info ? `Latest: v${info.version}` : `Version ${APP_VERSION}`, 'No account needed'].map((t) => (
               <li key={t} className="flex items-center gap-3 text-[14px] font-bold">
                 <span aria-hidden="true" className="flex h-6 w-6 items-center justify-center rounded-full bg-[#151515] text-[12px] font-extrabold text-[#C7FF4D]">✓</span>
                 {t}
               </li>
             ))}
           </ul>
+          <a href="store.html" className="mt-6 inline-block text-[12px] font-extrabold uppercase tracking-[0.14em] text-neutral-500 underline-offset-4 transition-colors hover:text-[#151515] hover:underline">
+            Open the App Store page →
+          </a>
         </Reveal>
         <Reveal delay="st-d1">
           <div className="rounded-[28px] border border-[#D9D9D0] bg-white p-6 shadow-[0_30px_60px_-30px_rgba(21,21,21,0.35)] sm:p-8">
@@ -536,11 +566,23 @@ function Store() {
               <Logo size={30} light />
             </span>
             <p className="mt-4 text-[22px] font-extrabold tracking-tight">Stockly for Android</p>
-            <p className="tnum mt-1 text-[13px] font-semibold text-neutral-500">v{APP_VERSION} · APK download</p>
-            {apk === 'ready' ? (
+            <p className="tnum mt-1 text-[13px] font-semibold text-neutral-500">
+              {info
+                ? `v${info.version}${info.versionCode > 0 ? ` (${info.versionCode})` : ''} · ${formatApkSize(info.apkSize)}${info.publishedAt ? ` · ${new Date(info.publishedAt).toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' })}` : ''}`
+                : rel.status === 'error'
+                  ? rel.message
+                  : 'Checking the latest release…'}
+            </p>
+            {info?.releaseNotes.length ? (
+              <ul className="mt-3 space-y-1.5">
+                {info.releaseNotes.slice(0, 3).map((n) => (
+                  <li key={n} className="text-[13px] font-medium leading-relaxed text-neutral-600">· {n}</li>
+                ))}
+              </ul>
+            ) : null}
+            {info ? (
               <a
-                href="stockly.apk"
-                download
+                href={info.apkUrl}
                 className="mt-6 block rounded-full bg-[#151515] py-4 text-center text-[13px] font-extrabold uppercase tracking-[0.14em] text-[#C7FF4D] transition-transform hover:scale-[1.02] active:scale-95"
               >
                 Download APK
@@ -549,17 +591,39 @@ function Store() {
               <span
                 aria-disabled="true"
                 className={`mt-6 block rounded-full py-4 text-center text-[13px] font-extrabold uppercase tracking-[0.14em] ${
-                  apk === 'checking' ? 'bg-[#EAEAE4] text-neutral-500' : 'bg-[#151515] text-white/60'
+                  rel.status === 'checking' ? 'bg-[#EAEAE4] text-neutral-500' : 'bg-[#151515] text-white/60'
                 }`}
               >
-                {apk === 'checking' ? 'Checking…' : 'APK coming soon'}
+                {rel.status === 'checking' ? 'Checking…' : 'APK coming soon'}
               </span>
             )}
             <p className="mt-4 text-[12.5px] font-medium leading-relaxed text-neutral-500">
-              {apk === 'ready'
-                ? 'After downloading, open the file and allow “install unknown apps” once when asked.'
-                : 'The install file isn’t published yet — check back soon. The app itself is ready to build from this project.'}
+              After downloading, open the file and allow “install unknown apps” once when asked. Updates install over
+              the existing app as long as they carry Stockly’s official release signature.
             </p>
+            {prior.length > 0 ? (
+              <div className="mt-5 border-t border-[#EAEAE4] pt-4">
+                <p className="text-[11px] font-extrabold uppercase tracking-[0.18em] text-neutral-500">Previous releases</p>
+                <ul className="mt-2 space-y-1.5">
+                  {prior.map((h) => (
+                    <li key={h.tag} className="flex items-center justify-between gap-3 text-[13px]">
+                      <a href={h.releaseUrl} target="_blank" rel="noreferrer" className="font-bold underline-offset-4 hover:underline">
+                        v{h.version}
+                      </a>
+                      <span className="tnum text-neutral-500">
+                        {h.publishedAt ? new Date(h.publishedAt).toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' }) : ''}
+                        {h.apkSize > 0 ? ` · ${formatApkSize(h.apkSize)}` : ''}
+                      </span>
+                      {h.apkUrl ? (
+                        <a href={h.apkUrl} className="shrink-0 font-extrabold text-[#151515] underline-offset-4 hover:underline">
+                          APK
+                        </a>
+                      ) : null}
+                    </li>
+                  ))}
+                </ul>
+              </div>
+            ) : null}
           </div>
         </Reveal>
       </div>
