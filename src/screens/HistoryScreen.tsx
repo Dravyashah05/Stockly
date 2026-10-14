@@ -185,7 +185,7 @@ const TxRow = memo(function TxRow({
 
 function DetailRow({ label, value }: { label: string; value: string }) {
   return (
-    <div className="flex items-start justify-between gap-3 py-3">
+    <div className="flex items-start justify-between gap-3 py-4">
       <span className="shrink-0 text-[12px] font-bold uppercase tracking-wider text-(--ink-2)">{label}</span>
       <span className="min-w-0 flex-1 break-words text-right text-[14px] font-semibold text-(--ink)">{value}</span>
     </div>
@@ -195,15 +195,18 @@ function DetailRow({ label, value }: { label: string; value: string }) {
 /* Full-screen transaction detail. Portal to body so no transformed ancestor
  * traps its fixed positioning. Read-only: history entries are never edited. */
 function TxDetailPage({ t, onClose, onSelect }: { t: StockTransaction; onClose: () => void; onSelect: (id: string) => void }) {
-  const { transactions, products, isPending } = useStore();
+  const { transactions, products, isPending, categoryName } = useStore();
   const pending = isPending(t.id);
   const isIn = t.type === 'IN';
   // Escape + Android Back dismiss; sits below sheets (z-40) so any popup stays on top.
   useDismissable(true, onClose);
-  const liveStock = useMemo(
-    () => products.find((p) => p.id === t.productId)?.currentStock ?? null,
+  const product = useMemo(
+    () => products.find((p) => p.id === t.productId) ?? null,
     [products, t.productId],
   );
+  const liveStock = product?.currentStock ?? null;
+  const unitPrice = product ? (product.sellingPrice > 0 ? product.sellingPrice : product.costPrice) : 0;
+  const productCategory = (product?.categoryName || (product ? categoryName(product.categoryId || '') : '') || '').trim();
   const whenFull = t.createdAt
     ? new Date(t.createdAt).toLocaleString('en-IN', {
         weekday: 'short',
@@ -297,6 +300,24 @@ function TxDetailPage({ t, onClose, onSelect }: { t: StockTransaction; onClose: 
               <DetailRow label="Reference" value={t.idempotencyKey.slice(0, 8)} />
             ) : null}
           </div>
+
+          {/* Product info — live product record, if it still exists */}
+          {product ? (
+            <div className="mt-3 lg:col-span-2 lg:mt-0">
+              <p className="mb-2 flex items-center gap-2 px-1 text-[13px] font-extrabold uppercase tracking-wider text-(--ink-2)">
+                <span aria-hidden="true" className="h-3 w-1 rounded-full bg-[#C7FF4D]" />
+                Product info
+              </p>
+              <div className="glass divide-y divide-(--stroke-dim) rounded-[26px] px-4 py-1">
+                <DetailRow label="Product" value={product.name} />
+                {(product.sku || '').trim() ? <DetailRow label="SKU" value={product.sku.trim()} /> : null}
+                {productCategory ? <DetailRow label="Category" value={productCategory} /> : null}
+                <DetailRow label="In stock" value={String(product.currentStock)} />
+                <DetailRow label="Minimum" value={String(product.minimumStock)} />
+                {unitPrice > 0 ? <DetailRow label="Price" value={formatMoney(unitPrice)} /> : null}
+              </div>
+            </div>
+          ) : null}
 
           {/* Same product, recent first — tap to jump between entries */}
           {related.length > 0 ? (
