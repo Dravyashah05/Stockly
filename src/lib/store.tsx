@@ -10,6 +10,7 @@ import React, {
 import { api, ApiError, isUnknownOutcome, newIdempotencyKey } from './api';
 import { LS_KEYS, AUTO_SYNC_MS, SYNC_FRESH_MS, SYNC_TX_LIMIT, TX_CACHE_CAP, TX_MEMORY_CAP, getApiUrl } from './config';
 import type {
+  Category,
   DashboardStats,
   Product,
   StockTransaction,
@@ -19,6 +20,7 @@ import type {
 
 interface CacheShape {
   products: Product[];
+  categories: Category[];
   transactions: StockTransaction[];
   dashboard: DashboardStats | null;
   savedAt: number;
@@ -37,6 +39,7 @@ export interface FailedOp {
 interface Store {
   // data
   products: Product[];
+  categories: Category[];
   transactions: StockTransaction[];
   dashboard: DashboardStats | null;
   loading: boolean;
@@ -78,6 +81,8 @@ interface Store {
   clearCache: () => void;
   saveProduct: (input: ProductFormInput, editingId?: string) => Promise<boolean>;
   removeProduct: (id: string) => Promise<boolean>;
+  saveCategory: (name: string, editingId?: string) => Promise<boolean>;
+  removeCategory: (id: string) => Promise<boolean>;
   doStockIn: (a: { productId: string; quantity: number; price?: number; note?: string }) => Promise<boolean>;
   doStockOut: (a: { productId: string; quantity: number; reason: string; note?: string }) => Promise<boolean>;
   // optimistic primitives (screens use the wrappers above; these share one engine)
@@ -90,11 +95,14 @@ interface Store {
   reconcileServerResponse: (kind: 'product' | 'transaction', tempId: string, saved: Product | StockTransaction) => void;
   /** Targeted silent re-fetch (no full reload). */
   invalidateAffectedQueries: () => Promise<void>;
+  /** Category display name, or '' when unknown. */
+  categoryName: (id: string) => string;
 }
 
 export interface ProductFormInput {
   name: string;
   sku: string;
+  categoryId: string;
   description: string;
   image: string;
   costPrice: number;
@@ -224,6 +232,7 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
   const [initial] = useState<CacheShape | null>(() => readCache());
 
   const [products, setProducts] = useState<Product[]>(initial?.products || []);
+  const [categories, setCategories] = useState<Category[]>(initial?.categories || []);
   const [transactions, setTransactions] = useState<StockTransaction[]>(initial?.transactions || []);
   const [dashboard, setDashboard] = useState<DashboardStats | null>(initial?.dashboard || null);
   const [loading, setLoading] = useState(false);
@@ -320,7 +329,7 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
   const setTheme = useCallback((t: ThemeMode) => setThemeState(t), []);
 
   const persistCache = useCallback(
-    (d: DashboardStats | null, p: Product[], t: StockTransaction[]) => {
+    (d: DashboardStats | null, p: Product[], c: Category[], t: StockTransaction[]) => {
       // Perf: JSON.stringify of the whole cache on the UI thread drops frames
       // on 60/90Hz phones during scroll + commit. Defer to idle.
       const write = () => {
@@ -330,6 +339,7 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
           const shape: CacheShape = {
             dashboard: d,
             products: p.filter((x) => !isTempId(x.id)),
+            categories: c.filter((x) => !isTempId(x.id)),
             transactions: t.filter((x) => !isTempId(x.id)),
             savedAt: Date.now(),
           };
@@ -354,9 +364,9 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
   // Last successful sync (ms epoch). Drives the SYNC_FRESH_MS background gate.
   const lastSyncAt = useRef<number>(initial?.savedAt || 0);
   // Fresh snapshot mirror for event handlers (foreground/resume listeners).
-  const live = useRef({ products, transactions });
+  const live = useRef({ products, transactions, categories });
   useEffect(() => {
-    live.current = { products, transactions };
+    live.current = { products, transactions, categories };
   });
 
   const markSynced = useCallback(() => {
@@ -373,16 +383,19 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
     (next: {
       products?: Product[];
       transactions?: StockTransaction[];
+      categories?: Category[];
     }) => {
       const cur = live.current;
       const p = next.products ?? cur.products;
       const t = next.transactions ?? cur.transactions;
+      const c = next.categories ?? cur.categories;
       const d = computeDashboard(p, t);
-      live.current = { products: p, transactions: t };
+      live.current = { products: p, transactions: t, categories: c };
       setProducts(p);
       setTransactions(t);
+      setCategories(c);
       setDashboard(d);
-      persistCache(d, p, t.slice(0, TX_CACHE_CAP));
+      persistCache(d, p, c, t.slice(0, TX_CACHE_CAP));
     },
     [persistCache],
   );
@@ -398,6 +411,7 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
     (next: {
       products?: Product[];
       transactions?: StockTransaction[];
+      categories?: Category[];
     }) => {
       applyLocal(next);
       markSynced();
@@ -536,6 +550,7 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
     return (
       p.name === input.name &&
       p.sku === input.sku &&
+      (p.categoryId || '') === (input.categoryId || '') &&
       (p.description || '') === (input.description || '') &&
       (p.image || '') === (input.image || '') &&
       Number(p.costPrice) === Number(input.costPrice) &&
@@ -598,6 +613,7 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
       const t0 = typeof performance !== 'undefined' ? performance.now() : 0;
       try {
         let d: DashboardStats, p: Product[], t: StockTransaction[];
+        let c: Category[] = [];
         let freshTx = 0;
         let txRequested = SYNC_TX_LIMIT;
         try {
@@ -607,19 +623,28 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
           const sync = await api.sync(SYNC_TX_LIMIT);
           d = sync.dashboard;
           p = sync.products;
+          // Older backends return no categories — tolerate the missing field.
+          c = Array.isArray(sync.categories) ? sync.categories : [];
           freshTx = sync.transactions.length;
           t = mergeTransactions(live.current.transactions, sync.transactions, TX_MEMORY_CAP);
         } catch (e) {
-          // Older deployments lack the sync action — fall back to 5 parallel reads.
+          // Older deployments lack the sync action — fall back to parallel reads.
           const msg = e instanceof ApiError ? e.message : '';
           if (!/unknown action/i.test(msg)) throw e;
           txRequested = 200;
           let fetched: StockTransaction[];
+          let fetchedCats: Category[] = [];
           [d, p, fetched] = await Promise.all([
             api.dashboard(),
             api.listProducts(),
             api.listTransactions(200),
           ]);
+          try {
+            fetchedCats = await api.listCategories();
+          } catch {
+            fetchedCats = [];
+          }
+          c = fetchedCats;
           freshTx = fetched.length;
           t = mergeTransactions(live.current.transactions, fetched, TX_MEMORY_CAP);
         }
@@ -631,7 +656,8 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
           const cur = live.current;
           if (
             sigProducts(cur.products) === sigProducts(p) &&
-            sigTx(cur.transactions) === sigTx(t)
+            sigTx(cur.transactions) === sigTx(t) &&
+            sigCategories(cur.categories) === sigCategories(c)
           ) {
             setTxExhausted(freshTx < txRequested);
             markSynced();
@@ -657,12 +683,13 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
         }
         setDashboard(d);
         setProducts(p);
+        setCategories(c);
         setTransactions(t);
         // Fewer rows than requested ⇒ server has nothing older.
         setTxExhausted(freshTx < txRequested);
-        live.current = { products: p, transactions: t };
+        live.current = { products: p, transactions: t, categories: c };
         markSynced();
-        persistCache(d, p, t.slice(0, TX_CACHE_CAP));
+        persistCache(d, p, c, t.slice(0, TX_CACHE_CAP));
         if (typeof performance !== 'undefined' && import.meta.env.DEV) {
           console.debug(`[sync] refresh ok in ${Math.round(performance.now() - t0)}ms (${p.length} products, ${t.length} tx)`);
         }
@@ -826,8 +853,9 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
   }, []);
 
   const clearCache = useCallback(() => {
-    live.current = { products: [], transactions: [] };
+    live.current = { products: [], transactions: [], categories: [] };
     setProducts([]);
+    setCategories([]);
     setTransactions([]);
     setDashboard(null);
     setTxExhausted(false);
@@ -910,6 +938,8 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
         id: tempId('prd'),
         name: input.name.trim(),
         sku: input.sku.trim(),
+        categoryId: input.categoryId || '',
+        categoryName: cur.categories.find((c) => c.id === input.categoryId)?.name || '',
         description: input.description || '',
         image: input.image || '',
         costPrice: Number(input.costPrice),
@@ -994,6 +1024,8 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
         ...prev,
         name: input.name.trim(),
         sku: input.sku.trim(),
+        categoryId: input.categoryId || '',
+        categoryName: cur.categories.find((c) => c.id === input.categoryId)?.name || prev.categoryName || '',
         description: input.description || '',
         image: input.image || '',
         costPrice: Number(input.costPrice),
@@ -1065,6 +1097,66 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
         : addProductOptimistically(input);
     },
     [addProductOptimistically, updateProductOptimistically],
+  );
+
+  /* ---------------- categories ----------------
+   * Simple confirmed writes (no optimistic temp records): the list is tiny,
+   * so save → silent refresh → toast keeps every screen consistent. */
+  const saveCategory = useCallback(
+    async (name: string, editingId?: string): Promise<boolean> => {
+      const trimmed = String(name || '').trim().replace(/\s+/g, ' ');
+      if (!trimmed) {
+        notify('Category name is required.', 'error');
+        return false;
+      }
+      const dup = live.current.categories.some(
+        (c) => String(c.id) !== String(editingId || '') && c.name.trim().toLowerCase() === trimmed.toLowerCase(),
+      );
+      if (dup) {
+        notify(`Category "${trimmed}" already exists.`, 'error');
+        return false;
+      }
+      const key = `cat-${editingId || trimmed.toLowerCase()}`;
+      if (!claimSubmit(key)) return false;
+      try {
+        if (editingId) await api.updateCategory(editingId, trimmed);
+        else await api.createCategory(trimmed);
+        await refresh({ silent: true });
+        notify(editingId ? 'Category updated.' : 'Category added.');
+        return true;
+      } catch (e) {
+        notify(e instanceof ApiError ? e.message : 'Save failed.', 'error');
+        return false;
+      }
+    },
+    [claimSubmit, notify, refresh],
+  );
+
+  const removeCategory = useCallback(
+    async (id: string): Promise<boolean> => {
+      const prev = live.current.categories.find((c) => c.id === id);
+      if (!prev) {
+        notify('Category not found — syncing latest data.', 'error');
+        void refresh({ silent: true });
+        return false;
+      }
+      const key = `del-cat-${id}`;
+      if (!claimSubmit(key)) return false;
+      try {
+        const res = await api.deleteCategory(id);
+        await refresh({ silent: true });
+        notify(
+          res.cleared > 0
+            ? `Category deleted. ${res.cleared} product${res.cleared === 1 ? '' : 's'} moved to Uncategorized.`
+            : 'Category deleted.',
+        );
+        return true;
+      } catch (e) {
+        notify(e instanceof ApiError ? e.message : 'Delete failed.', 'error');
+        return false;
+      }
+    },
+    [claimSubmit, notify, refresh],
   );
 
   const deleteProductOptimistically = useCallback(
@@ -1631,9 +1723,18 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
     void verifyPendingStock();
   }, [ready, configured, notify, saveOutbox, runOutboxOp, verifyPendingStock]);
 
+  // O(1) category display-name lookup for product rows.
+  const catMap = useMemo(() => {
+    const m = new Map<string, string>();
+    for (const c of categories) m.set(String(c.id), c.name);
+    return m;
+  }, [categories]);
+  const categoryName = useCallback((id: string) => catMap.get(String(id)) || '', [catMap]);
+
   const value = useMemo<Store>(
     () => ({
       products,
+      categories,
       transactions,
       dashboard,
       loading,
@@ -1663,6 +1764,8 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
       clearCache,
       saveProduct,
       removeProduct,
+      saveCategory,
+      removeCategory,
       doStockIn,
       doStockOut,
       addProductOptimistically,
@@ -1672,17 +1775,19 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
       submitStockOut,
       reconcileServerResponse,
       invalidateAffectedQueries,
+      categoryName,
     }),
     [
-      products, transactions, dashboard, loading,
+      products, categories, transactions, dashboard, loading,
       refreshing, ready, error, lastSync, online, configured,
       pendingIds, failedOps, isPending, retryFailedOp, dismissFailedOp,
       theme, setTheme,
       dark, toasts, notify, dismissToast, refresh, ensureFresh,
       loadMoreTransactions, txLoadingMore, txExhausted, setConfiguredFlag, clearCache,
-      saveProduct, removeProduct, doStockIn, doStockOut,
+      saveProduct, removeProduct, saveCategory, removeCategory, doStockIn, doStockOut,
       addProductOptimistically, updateProductOptimistically, deleteProductOptimistically,
       submitStockIn, submitStockOut, reconcileServerResponse, invalidateAffectedQueries,
+      categoryName,
     ],
   );
 
@@ -1740,6 +1845,14 @@ function sigProducts(list: Product[]): string {
     const p = list[i];
     s += p.id + '#' + p.currentStock + '#' + (p.updatedAt || '') + ';';
     if (s.length > 30000) break;
+  }
+  return s;
+}
+function sigCategories(list: Category[]): string {
+  let s = list.length + '|';
+  for (let i = 0; i < list.length; i++) {
+    s += list[i].id + '#' + list[i].name + ';';
+    if (s.length > 10000) break;
   }
   return s;
 }

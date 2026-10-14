@@ -115,7 +115,6 @@ export default function HomeScreen({
         icon: <AlertTriangle size={18} />,
         iconCls: 'bg-amber-500/14 text-amber-600 dark:text-amber-300',
         ringCls: 'hover:border-amber-500/40',
-        dot: stats.lowStockCount > 0 ? 'bg-amber-500' : undefined,
         onClick: () => goProducts('low'),
       },
       {
@@ -125,7 +124,6 @@ export default function HomeScreen({
         icon: <PackageX size={18} />,
         iconCls: 'bg-rose-500/12 text-rose-600 dark:text-rose-300',
         ringCls: 'hover:border-rose-500/40',
-        dot: stats.outOfStockCount > 0 ? 'bg-rose-500' : undefined,
         onClick: () => goProducts('out'),
       },
     ],
@@ -186,7 +184,7 @@ export default function HomeScreen({
             {today}
           </span>
           <div className="mt-2 flex items-center justify-between gap-3">
-            <h2 className="min-w-0 flex-1 text-[28px] font-extrabold leading-[1.05] tracking-tight text-(--ink)">
+            <h2 className="min-w-0 flex-1 text-[28px] font-extrabold leading-[1.05] tracking-tight text-(--ink) lg:text-[32px]">
               {greet}
               <Sparkles size={24} className="ml-2 inline-block -translate-y-1 text-(--accent)" />
             </h2>
@@ -231,22 +229,24 @@ export default function HomeScreen({
         <div aria-hidden="true" className="dashboard-divider mx-1 h-px bg-(--stroke-dim)" />
 
         {!online ? (
-          <div className="glass flex items-center gap-2 rounded-2xl border-amber-500/25 px-4 py-3 text-[13px] font-medium text-amber-600 dark:text-amber-300">
+          <div className="dashboard-banner glass flex items-center gap-2 rounded-2xl border-amber-500/25 px-4 py-3 text-[13px] font-medium text-amber-600 dark:text-amber-300">
             <WifiOff size={16} /> Offline — showing last synced data
             {lastSync ? ` from ${lastSync.toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit' })}` : ''}.
           </div>
         ) : null}
         {error && products.length === 0 && !loading ? (
-          <ErrorState message={error} onRetry={() => void refresh()} retrying={refreshing} />
+          <div className="dashboard-banner">
+            <ErrorState message={error} onRetry={() => void refresh()} retrying={refreshing} />
+          </div>
         ) : null}
         {error && products.length > 0 ? (
-          <div className="glass flex items-center gap-2 rounded-2xl border-amber-500/25 px-4 py-3 text-[13px] font-medium text-amber-600 dark:text-amber-300">
+          <div className="dashboard-banner glass flex items-center gap-2 rounded-2xl border-amber-500/25 px-4 py-3 text-[13px] font-medium text-amber-600 dark:text-amber-300">
             <WifiOff size={16} /> Sync failed — showing cached data.
           </div>
         ) : null}
 
         {loading && products.length === 0 ? (
-          <div className="dashboard-loading space-y-3">
+          <div className="dashboard-banner dashboard-loading space-y-3">
             <SkeletonRow h={190} />
             <div className="grid grid-cols-2 gap-3">
               <SkeletonRow h={110} />
@@ -267,7 +267,6 @@ export default function HomeScreen({
                 >
                   <div className="flex items-center justify-between">
                     <span className={`flex h-10 w-10 items-center justify-center rounded-2xl ${c.iconCls}`}>{c.icon}</span>
-                    {c.dot ? <span className={`h-2 w-2 rounded-full ${c.dot}`} /> : null}
                     {c.onClick ? <ChevronRight size={16} className="text-(--ink-3)" /> : null}
                   </div>
                   <p className="tnum mt-3 text-[26px] font-extrabold leading-none tracking-tight text-(--ink)">{c.value}</p>

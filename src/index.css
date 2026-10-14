@@ -142,8 +142,24 @@ button, a {
   .app-page-viewport { width: 100%; max-width: none; }
   .app-page-viewport > .mx-auto.max-w-md { max-width: none; }
   .app-page-viewport > .safe-top .mx-auto.max-w-md { max-width: none; }
-  .dashboard-stats-grid { grid-template-columns: repeat(4, minmax(0, 1fr)); }
+  .dashboard-stats-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
 }
+
+/* Large phones (landscape) + tablets: product cards in two columns instead
+ * of one stretched full-width list. The desktop table takes over ≥1024px. */
+@media (min-width: 640px) and (max-width: 1023px) {
+  .desktop-product-table > .divide-y { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px; }
+  .desktop-product-table > .divide-y > :not([hidden]) { border-top-width: 0; }
+}
+
+/* Narrow screens: let the status filter + sort + clear wrap instead of
+ * squeezing or overflowing. */
+.products-filter-row { flex-wrap: wrap; }
+.products-filter-row > div:first-child { flex: 1 1 240px; min-width: 0; }
+
+/* Product detail content children must never force their grid/flex track
+ * wider (long names, SKUs, big numbers). Page-scoped, all sizes. */
+.product-detail-content > * { min-width: 0; }
 
 @media (min-width: 1024px) {
   .app-shell {
@@ -171,6 +187,7 @@ button, a {
   .desktop-brand-mark { display: grid; width: 34px; height: 34px; place-items: center; border-radius: 12px; background: var(--st-lime); color: var(--st-ink); font-size: 18px; font-weight: 900; }
   .desktop-nav-caption { padding: 0 12px 9px; color: var(--ink-3); font-size: 10px; font-weight: 800; letter-spacing: .12em; text-transform: uppercase; }
   .desktop-side-links { display: grid; gap: 4px; }
+  .desktop-side-links + .desktop-nav-caption { margin-top: 20px; }
   .desktop-side-link { display: flex; min-height: 44px; align-items: center; gap: 12px; padding: 0 12px; border: 0; border-radius: 13px; background: transparent; color: var(--ink-2); cursor: pointer; text-align: left; font: inherit; font-size: 13px; font-weight: 650; transition: color .15s ease, background .15s ease; }
   .desktop-side-link:hover { background: var(--glass-soft); color: var(--ink); }
   .desktop-side-link.is-active { background: var(--primary); color: var(--primary-foreground); }
@@ -199,24 +216,34 @@ button, a {
   .animate-page-in { height: 100%; }
   .dashboard-content { display: grid; grid-template-columns: repeat(12, minmax(0, 1fr)); align-items: start; gap: 22px; }
   .dashboard-content > * { margin: 0 !important; }
-  .dashboard-greeting { grid-column: span 8; }
-  .dashboard-actions { grid-column: span 4; align-self: center; }
+  .dashboard-greeting { grid-column: span 7; }
+  .dashboard-actions { grid-column: span 5; align-self: center; }
   .dashboard-divider { display: none; }
-  .dashboard-stats-grid { grid-column: 1 / -1; grid-template-columns: repeat(4, minmax(0, 1fr)); }
-  .dashboard-attention, .dashboard-activity { grid-column: span 6; min-width: 0; }
-  .settings-content { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); align-items: start; gap: 20px; }
+  .dashboard-stats-grid { grid-column: 1 / -1; grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  /* Status banners + loading skeleton are direct grid children: without an
+   * explicit span they collapse into a single narrow track. */
+  .dashboard-banner { grid-column: 1 / -1; }
+  .dashboard-attention, .dashboard-activity { grid-column: 1 / -1; min-width: 0; }
+  .settings-content { display: flex; flex-direction: column; gap: 20px; align-items: stretch; }
   .settings-content > * { margin: 0 !important; min-width: 0; }
   .settings-content > :first-child { grid-column: 1 / -1; }
+  .settings-footnote { grid-column: 1 / -1; }
+  /* Single centered list: readable card widths on very wide screens. */
+  .app-page-viewport .settings-content.mx-auto.max-w-md { max-width: 720px; }
   .desktop-products-heading { display: flex !important; }
-  .products-controls { display: grid; grid-template-columns: minmax(280px, 1.2fr) minmax(320px, 2fr); align-items: center; gap: 14px 20px; padding-inline: 0 !important; }
-  .desktop-products-heading { grid-column: 1 / -1; }
-  .products-controls > .no-scrollbar { grid-column: 1 / -1; }
-  .products-controls > .products-filter-row { grid-column: 1 / -1; max-width: 680px; }
+  /* Desktop toolbar: heading row, then search beside filters. The margin
+   * reset neutralises the mobile `space-y-3` rhythm inside the grid. */
+  .products-controls { display: grid; grid-template-columns: minmax(240px, 460px) minmax(0, 1fr); align-items: center; gap: 12px 16px; padding-inline: 0 !important; }
+  .products-controls > * { margin-top: 0 !important; }
+  .desktop-products-heading { grid-column: 1 / -1; grid-row: 1; }
+  .products-search { grid-column: 1; grid-row: 2; min-width: 0; }
+  .products-controls > .no-scrollbar { grid-column: 1 / -1; grid-row: 3; }
+  .products-controls > .products-filter-row { grid-column: 2; grid-row: 2; max-width: 720px; align-self: center; }
   .products-results { padding-inline: 0 !important; }
-  .desktop-product-table { min-width: 940px; }
-  .desktop-product-table-head, .product-list-row { display: grid; grid-template-columns: minmax(185px, 1.6fr) minmax(100px, 1fr) minmax(110px, 1fr) 84px 68px 90px 105px 44px; align-items: center; gap: 14px; }
+  .desktop-product-table { min-width: 0; width: 100%; }
+  .desktop-product-table-head, .product-list-row { display: grid; grid-template-columns: minmax(140px, 1.7fr) minmax(80px, 1fr) 58px 58px 70px minmax(92px, auto) 44px; align-items: center; gap: 10px; }
   .desktop-product-table-head { position: sticky; z-index: 1; top: 0; padding: 13px 14px; border-bottom: 1px solid var(--stroke-dim); background: var(--glass-strong); color: var(--ink-2); font-size: 10px; font-weight: 800; letter-spacing: .07em; text-transform: uppercase; }
-  .product-list-row { min-height: 68px; border-radius: 0 !important; padding: 10px 14px !important; cursor: default; }
+  .product-list-row { min-height: 68px; border-radius: 0 !important; padding: 10px 14px !important; cursor: pointer; }
   .product-identity { display: flex; min-width: 0; align-items: center; gap: 11px; }
   .product-mobile-details { display: none !important; }
   .product-desktop-cell { display: block !important; min-width: 0; overflow: hidden; color: var(--ink-2); font-size: 12px; text-overflow: ellipsis; white-space: nowrap; }
@@ -225,20 +252,71 @@ button, a {
   .product-desktop-status { width: fit-content; border-radius: 99px; padding: 5px 9px; background: var(--accent-soft); color: var(--accent); font-size: 11px; font-weight: 750; }
   .product-desktop-status.is-low { background: color-mix(in srgb, var(--warning) 14%, transparent); color: var(--warning); }
   .product-desktop-status.is-out { background: color-mix(in srgb, var(--destructive) 13%, transparent); color: var(--destructive); }
-  .product-desktop-actions { display: flex !important; justify-content: end; }
+  .product-desktop-actions { display: flex !important; justify-content: center; background: var(--glass-soft); border: 1px solid var(--stroke-dim); }
   .history-controls, .history-results { max-width: none !important; padding-inline: 0 !important; }
   .history-results { padding-top: 18px !important; }
-  .history-table-head { display: grid; grid-template-columns: 140px minmax(220px, 1.2fr) minmax(220px, 2fr) 120px; gap: 14px; padding: 13px 14px; border-bottom: 1px solid var(--stroke-dim); color: var(--ink-2); font-size: 10px; font-weight: 800; letter-spacing: .07em; text-transform: uppercase; }
-  .history-row { display: grid !important; grid-template-columns: 140px minmax(220px, 1.2fr) minmax(220px, 2fr) 120px; align-items: center; gap: 14px; min-height: 58px; border-radius: 0 !important; padding: 10px 14px !important; }
+  .history-table-head { display: grid; grid-template-columns: minmax(105px, 0.8fr) minmax(120px, 1.2fr) minmax(140px, 2fr) minmax(75px, 0.7fr); gap: 12px; padding: 13px 14px; border-bottom: 1px solid var(--stroke-dim); color: var(--ink-2); font-size: 10px; font-weight: 800; letter-spacing: .07em; text-transform: uppercase; }
+  .history-row { display: grid !important; grid-template-columns: minmax(105px, 0.8fr) minmax(120px, 1.2fr) minmax(140px, 2fr) minmax(75px, 0.7fr); align-items: center; gap: 12px; min-height: 58px; border-radius: 0 !important; padding: 10px 14px !important; }
   .history-row-main { display: contents !important; }
   .history-type { grid-column: 1; grid-row: 1; display: flex; align-items: center; gap: 7px; }
   .history-pending { display: none; }
   .history-row-meta { grid-column: 3; grid-row: 1; margin: 0 !important; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
   .history-row .history-product { grid-column: 2; grid-row: 1; }
   .history-row .history-quantity { grid-column: 4; grid-row: 1; justify-self: start; }
-  .sheet-dialog-panel { width: min(720px, calc(100vw - 48px)); max-height: 90dvh !important; border: 1px solid var(--stroke); border-radius: 26px !important; }
+  .sheet-dialog-panel { width: min(720px, calc(100vw - 296px)); max-height: 90dvh !important; border: 1px solid var(--stroke); border-radius: 26px !important; }
+  .sheet-dialog-panel:has(.product-form-grid) { height: auto !important; min-height: min(560px, 90dvh); }
   .sheet-dialog-position { position: fixed !important; inset: 0; display: flex !important; align-items: center; justify-content: center; padding: 24px; }
   .sheet-dialog-position > .sheet-dialog-panel { position: relative; bottom: auto; margin: auto; flex: none; }
+  /* Centered desktop dialogs scale/fade in; the bottom slide-up stays mobile-only. */
+  .sheet-dialog-panel { animation: pop-in 0.16s cubic-bezier(0.32, 0.9, 0.35, 1); }
+  /* Desktop keeps a subtle scroll cue (hidden globally for the mobile shell). */
+  .app-page-viewport { scrollbar-width: thin; scrollbar-color: var(--ink-3) transparent; }
+  .app-page-viewport::-webkit-scrollbar { display: block; width: 10px; }
+  .app-page-viewport::-webkit-scrollbar-thumb { background: color-mix(in srgb, var(--ink-3) 55%, transparent); border-radius: 999px; border: 3px solid transparent; background-clip: content-box; }
+  .sheet-dialog-panel { max-height: calc(100dvh - 124px) !important; }
+  .fixed[data-sheet-title="Stock In"] .sheet-dialog-panel,
+  .fixed[data-sheet-title="Stock Out"] .sheet-dialog-panel { width: min(600px, calc(100vw - 296px)); }
+  .fixed[data-sheet-title="Choose product"] .sheet-dialog-panel { width: min(520px, calc(100vw - 296px)); }
+  .fixed[data-sheet-title="Cloud database"] .sheet-dialog-panel { width: min(760px, calc(100vw - 296px)); }
+  .product-form-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); align-items: start; gap: 14px; }
+  .product-form-grid > * { min-width: 0; margin: 0 !important; }
+  .product-form-image { grid-column: 1; }
+  .product-form-name { grid-column: 2; }
+  .product-form-stock, .product-form-description, .product-form-category { grid-column: 1 / -1; }
+  .product-form-grid > .animate-pop-in { grid-column: 1 / -1; }
+  /* Stock In / Out: quantity beside price-or-reason on desktop; product,
+   * note, error, confirm and footnote span full width. */
+  .stock-form-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); align-items: start; gap: 14px; }
+  .stock-form-grid > * { min-width: 0; margin: 0 !important; }
+  .stock-mode, .stock-picker, .stock-note, .stock-error, .stock-confirm, .stock-foot { grid-column: 1 / -1; }
+  /* Compact the hero stepper so it fits a half-width card. */
+  .stock-qty-stepper { gap: 12px; }
+  .stock-qty-input { width: 5rem; font-size: 44px; }
+  .desktop-sidebar { overflow-y: auto; }
+  .desktop-toolbar-heading { min-width: 0; }
+  .desktop-sync-indicator { min-width: 0; }
+  .desktop-sync-indicator span:last-child { max-width: 190px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .app-page-viewport, .swipe-zone, .animate-page-in { min-width: 0; }
+  .dashboard-content > *, .settings-content > * { min-width: 0; }
+  .desktop-product-table .divide-y { min-width: 0; }
+  .history-results .glass { min-width: 0; }
+  .safe-bottom.fixed { left: 248px; right: 0; padding-bottom: 0; }
+  .safe-bottom.fixed.bottom-28 { bottom: 1.5rem; }
+  .safe-bottom.fixed.bottom-40 { bottom: 2rem; }
+  .safe-bottom.fixed.bottom-24 { bottom: 1.5rem; }
+  .sheet-dialog-position { inset: 76px 0 0 248px; max-width: none !important; margin: 0 !important; padding: 24px; box-sizing: border-box; }
+  .product-detail-overlay, .history-detail-overlay { inset: 76px 0 0 248px; }
+  .product-detail-overlay > .product-detail-layout,
+  .history-detail-overlay > div.relative { max-width: none; min-height: 100%; padding-inline: 32px; }
+}
+
+/* Compact desktop (1024–1279): stack search above filters instead of
+ * squeezing the filter row beside a wide search box. */
+@media (min-width: 1024px) and (max-width: 1279px) {
+  .products-controls { grid-template-columns: minmax(0, 1fr); }
+  .products-search { grid-column: 1 / -1; grid-row: auto; max-width: 640px; }
+  .products-controls > .no-scrollbar { grid-column: 1 / -1; grid-row: auto; }
+  .products-controls > .products-filter-row { grid-column: 1 / -1; grid-row: auto; max-width: 640px; }
 }
 
 @media (min-width: 1280px) {
@@ -247,6 +325,71 @@ button, a {
   .desktop-toolbar { padding-inline: 40px; }
   .app-page-viewport { padding-inline: 40px; }
   .backend-banner { left: 292px; right: 36px; }
+  .safe-bottom.fixed { left: 264px; }
+  .sheet-dialog-position { left: 264px; }
+  .product-detail-overlay, .history-detail-overlay { left: 264px; }
+  /* Dashboard: four metrics in one row, balanced two-column sections, and
+   * compact horizontal quick-action rows once the content area is wide
+   * enough. All selectors are dashboard-scoped. */
+  .dashboard-stats-grid { grid-template-columns: repeat(4, minmax(0, 1fr)); }
+  .dashboard-attention, .dashboard-activity { grid-column: span 6; }
+  .dashboard-actions { display: flex; gap: 12px; }
+  .dashboard-actions > button { flex: 1 1 0; min-width: 0; min-height: 84px; flex-direction: row; align-items: center; gap: 12px; }
+  .dashboard-actions > button > span:first-child { flex-shrink: 0; }
+}
+
+@media (min-width: 1280px) {
+  .sheet-dialog-panel { width: min(720px, calc(100vw - 312px)); }
+  .fixed[data-sheet-title="Stock In"] .sheet-dialog-panel,
+  .fixed[data-sheet-title="Stock Out"] .sheet-dialog-panel { width: min(600px, calc(100vw - 312px)); }
+  .fixed[data-sheet-title="Choose product"] .sheet-dialog-panel { width: min(520px, calc(100vw - 312px)); }
+  .fixed[data-sheet-title="Cloud database"] .sheet-dialog-panel { width: min(760px, calc(100vw - 312px)); }
+}
+
+/* Side-by-side hero + content needs a wide viewport: below this the detail
+ * page uses the full-width hero card with two-column content instead. */
+@media (min-width: 1440px) {
+  .product-detail-overlay > .product-detail-layout {
+    display: grid;
+    grid-template-columns: minmax(320px, 440px) minmax(0, 1fr);
+    align-content: start;
+    align-items: start;
+    gap: 28px;
+    padding: 32px 40px;
+  }
+  .product-detail-hero {
+    grid-column: 1;
+    grid-row: 1;
+    position: sticky;
+    top: 32px;
+    height: min(620px, calc(100dvh - 140px));
+    min-height: 380px;
+    margin: 0 !important;
+  }
+  .product-detail-hero > img,
+  .product-detail-hero > div:not(.absolute) { height: 100% !important; }
+  .product-detail-hero > div:not(.absolute) > span { height: 7rem; width: 7rem; font-size: 56px; }
+  .product-detail-content {
+    grid-column: 2;
+    grid-row: 1;
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    align-items: start;
+    gap: 14px;
+    padding: 0 !important;
+  }
+  .product-detail-content > * { min-width: 0; margin: 0 !important; }
+  .product-detail-overview, .product-detail-stats, .product-detail-actions { grid-column: 1 / -1; }
+  .product-detail-content > .sticky { position: static; }
+  /* Actions sit right after the stock summary so Stock In / Out stay
+   * reachable without scrolling past the full history list. */
+  .product-detail-overview { order: 0; }
+  .product-detail-stats { order: 1; }
+  .product-detail-actions { order: 2; max-width: 720px; }
+  .product-detail-desc { order: 3; }
+  .product-detail-history { order: 4; }
+  /* Primary value reads first at a glance. */
+  .product-detail-stats > div:first-child > p:first-child { font-size: 24px; }
 }
 
 /* ---------------- Solid surfaces ----------------

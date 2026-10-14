@@ -8,26 +8,56 @@ import {
   Download,
   Link2,
   Moon,
+  Pencil,
+  Plus,
   RefreshCw,
   ShieldCheck,
   Sun,
   Sunset,
+  Tag,
+  Trash2,
   X,
 } from 'lucide-react';
 import { APP_VERSION, LS_KEYS, UPDATE_CHECK_URL, getApiUrl, isAppsScriptExecUrl, setApiUrl } from '../lib/config';
 import { useStore } from '../lib/store';
-import { Field, Header, Sheet, BrandMark, inputCls } from '../components/ui';
+import type { Category } from '../lib/types';
+import { Confirm, Field, Header, Sheet, BrandMark, inputCls } from '../components/ui';
 
 export default function SettingsScreen() {
   const {
-    theme, setTheme, products, refresh, refreshing,
-    setConfiguredFlag, clearCache, notify,
+    theme, setTheme, products, categories, refresh, refreshing,
+    saveCategory, removeCategory, setConfiguredFlag, clearCache, notify,
     failedOps, lastSync, retryFailedOp,
   } = useStore();
 
   const [url, setUrl] = useState(getApiUrl());
   const [savedTick, setSavedTick] = useState(false);
   const [cloudOpen, setCloudOpen] = useState(false);
+  // Categories manager
+  const [catListOpen, setCatListOpen] = useState(false);
+  const [quickCat, setQuickCat] = useState('');
+  const [quickBusy, setQuickBusy] = useState(false);
+  const [editingCat, setEditingCat] = useState<Category | null>(null);
+  const [delCat, setDelCat] = useState<Category | null>(null);
+  const [delBusy, setDelBusy] = useState(false);
+  const submitQuickCat = async () => {
+    const name = quickCat.trim();
+    if (!name) return notify('Category name is required.', 'error');
+    setQuickBusy(true);
+    const ok = await saveCategory(name, editingCat?.id);
+    setQuickBusy(false);
+    if (ok) {
+      setQuickCat('');
+      setEditingCat(null);
+    }
+  };
+  const confirmDelCat = async () => {
+    if (!delCat) return;
+    setDelBusy(true);
+    const ok = await removeCategory(delCat.id);
+    setDelBusy(false);
+    if (ok) setDelCat(null);
+  };
 
   const connected = useMemo(() => (url.trim() || getApiUrl()).length > 10, [url]);
 
@@ -273,6 +303,40 @@ export default function SettingsScreen() {
           </button>
         </section>
 
+        {/* Categories — full list lives in a popup sheet */}
+        <section className="glass rounded-[24px] p-4">
+          <button
+            type="button"
+            onClick={() => setCatListOpen(true)}
+            className="press flex w-full items-center gap-3 text-left"
+          >
+            <span className="flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl bg-[#EAEAE4] text-[#151515] dark:bg-white/10 dark:text-[#C7FF4D]">
+              <Tag size={20} />
+            </span>
+            <span className="min-w-0 flex-1">
+              <span className="block text-[15px] font-extrabold tracking-tight text-(--ink)">Categories</span>
+              <span className="block text-[12px] font-medium text-(--ink-2)">
+                {categories.length === 0 ? 'Group products for faster search' : `${categories.length} group${categories.length === 1 ? '' : 's'} — tap to manage`}
+              </span>
+            </span>
+            <ChevronRight size={18} className="shrink-0 text-(--ink-3)" />
+          </button>
+          <div className="mt-3 grid grid-cols-2 gap-2">
+            <button
+              onClick={() => setCatListOpen(true)}
+              className="press glass-soft flex min-h-[48px] items-center justify-center gap-1.5 rounded-2xl text-[14px] font-extrabold text-(--ink)"
+            >
+              <Tag size={16} /> Manage
+            </button>
+            <button
+              onClick={() => { setEditingCat(null); setQuickCat(''); setCatListOpen(true); }}
+              className="press flex min-h-[48px] items-center justify-center gap-1 rounded-2xl bg-[#151515] text-[14px] font-extrabold text-white dark:bg-[#C7FF4D] dark:text-[#151515]"
+            >
+              <Plus size={16} /> Add
+            </button>
+          </div>
+        </section>
+
         {/* Sync status — durable outbox at a glance */}
         <section className="glass rounded-[24px] p-4">
           <div className="flex items-center gap-3">
@@ -372,7 +436,7 @@ export default function SettingsScreen() {
           </div>
         </section>
 
-        <p className="px-2 pb-2 text-center text-[11.5px] font-medium text-(--ink-3)">
+        <p className="settings-footnote px-2 pb-2 text-center text-[11.5px] font-medium text-(--ink-3)">
           Made for small businesses · your data stays yours
         </p>
       </div>
@@ -451,6 +515,80 @@ export default function SettingsScreen() {
           idempotency keys, so retries and two phones updating at once stay consistent.
         </p>
       </Sheet>
+
+      {/* Categories popup — add / rename / delete in one place */}
+      <Sheet open={catListOpen} onClose={() => { setCatListOpen(false); setEditingCat(null); setQuickCat(''); }} title={`Categories${categories.length ? ` (${categories.length})` : ''}`}>
+        <div className="mb-3 flex gap-2">
+          <input
+            value={quickCat}
+            onChange={(e) => setQuickCat(e.target.value)}
+            onKeyDown={(e) => {
+              if (e.key === 'Enter') void submitQuickCat();
+            }}
+            placeholder={editingCat ? `Rename “${editingCat.name}”…` : 'New category name…'}
+            aria-label={editingCat ? 'Rename category' : 'New category name'}
+            className={inputCls}
+          />
+          <button
+            type="button"
+            onClick={() => void submitQuickCat()}
+            disabled={quickBusy}
+            className="press flex min-h-[48px] shrink-0 items-center gap-1 rounded-2xl bg-[#151515] px-4 text-[14px] font-extrabold text-white disabled:opacity-50 dark:bg-[#C7FF4D] dark:text-[#151515]"
+          >
+            {quickBusy ? (editingCat ? 'Saving…' : 'Adding…') : editingCat ? 'Save' : 'Add'}
+          </button>
+        </div>
+        {editingCat ? (
+          <button
+            type="button"
+            onClick={() => { setEditingCat(null); setQuickCat(''); }}
+            className="press mb-3 text-[13px] font-bold text-(--ink-2)"
+          >
+            Cancel rename
+          </button>
+        ) : null}
+        {categories.length === 0 ? (
+          <div className="rounded-[20px] border border-dashed border-(--stroke-dim) px-4 py-6 text-center">
+            <p className="text-[14px] font-bold text-(--ink)">No categories yet</p>
+            <p className="mx-auto mt-1 max-w-[30ch] text-[12.5px] text-(--ink-2)">Type a name above and tap Add — e.g. Beverages, Snacks, Essentials.</p>
+          </div>
+        ) : (
+          <div className="space-y-1.5 pb-2">
+            {categories.map((c) => {
+              const count = products.filter((p) => p.categoryId === c.id).length;
+              const editing = editingCat?.id === c.id;
+              return (
+                <div key={c.id} className={`flex items-center gap-3 rounded-[18px] px-2.5 py-2 ${editing ? 'bg-(--accent-soft)' : 'bg-(--glass-soft)'}`}>
+                  <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-2xl bg-(--accent-soft) text-[15px] font-extrabold text-(--ink) dark:text-(--accent)">
+                    {c.name.slice(0, 1).toUpperCase()}
+                  </span>
+                  <span className="min-w-0 flex-1">
+                    <span className="block truncate text-[14px] font-bold text-(--ink)">{c.name}</span>
+                    <span className="tnum block text-[11.5px] font-medium text-(--ink-2)">
+                      {count} product{count === 1 ? '' : 's'}
+                    </span>
+                  </span>
+                  <button type="button" onClick={() => { setEditingCat(c); setQuickCat(c.name); }} aria-label={`Rename ${c.name}`} className="press flex h-10 w-10 shrink-0 items-center justify-center rounded-2xl bg-(--bg-elev)/60 text-(--ink-2) shadow-sm">
+                    <Pencil size={16} />
+                  </button>
+                  <button type="button" onClick={() => setDelCat(c)} aria-label={`Delete ${c.name}`} className="press flex h-10 w-10 shrink-0 items-center justify-center rounded-2xl bg-rose-500/10 text-rose-500 dark:text-rose-400">
+                    <Trash2 size={16} />
+                  </button>
+                </div>
+              );
+            })}
+          </div>
+        )}
+      </Sheet>
+
+      <Confirm
+        open={!!delCat}
+        title="Delete category?"
+        body={delCat ? `“${delCat.name}” will be removed. Its products stay in stock as Uncategorized. This cannot be undone.` : ''}
+        busy={delBusy}
+        onCancel={() => setDelCat(null)}
+        onConfirm={() => void confirmDelCat()}
+      />
 
     </div>
   );

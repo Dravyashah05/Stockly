@@ -207,6 +207,7 @@ export async function apiPost<T>(
 /* ---------- Typed endpoints ---------- */
 
 import type {
+  Category,
   DashboardStats,
   Product,
   StockTransaction,
@@ -222,6 +223,13 @@ export const api = {
   updateProduct: (id: string, p: Record<string, unknown>) =>
     apiPost<Product>('updateProduct', { id, ...p }, { dedupe: false }),
   deleteProduct: (id: string) => apiPost<{ deleted: string }>('deleteProduct', { id }, { dedupe: false }),
+
+  listCategories: () => apiGet<Category[]>('listCategories'),
+  createCategory: (name: string) => apiPost<Category>('createCategory', { name }, { dedupe: false }),
+  updateCategory: (id: string, name: string) =>
+    apiPost<Category>('updateCategory', { id, name }, { dedupe: false }),
+  deleteCategory: (id: string) =>
+    apiPost<{ deleted: string; cleared: number }>('deleteCategory', { id }, { dedupe: false }),
 
   stockIn: (args: {
     productId: string;

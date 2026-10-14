@@ -119,7 +119,7 @@ export default function StockSheet({
     <>
       <Sheet open={open} onClose={onClose} title={isIn ? 'Stock In' : 'Stock Out'}>
         {/* Mode toggle */}
-        <div className="mb-3 grid grid-cols-2 gap-2.5">
+        <div className="stock-mode mb-3 grid grid-cols-2 gap-2.5">
           <ModeCard
             active={isIn}
             onClick={() => {
@@ -151,14 +151,14 @@ export default function StockSheet({
             hint="Add a product first, then record stock movements."
           />
         ) : (
-          <div className="space-y-3 pb-2">
+          <div className="stock-form-grid space-y-3 pb-2">
             {/* Product picker */}
             <button
               onClick={() => {
                 setQ('');
                 setPickerOpen(true);
               }}
-              className="glass press flex w-full items-center gap-3 rounded-[26px] p-3.5 text-left"
+              className="stock-picker glass press flex w-full items-center gap-3 rounded-[26px] p-3.5 text-left"
             >
               {selected ? (
                 <>
@@ -199,7 +199,7 @@ export default function StockSheet({
             </button>
 
             {/* Quantity */}
-            <div className={`glass rounded-[26px] p-5 ${overdraw ? 'border-rose-500/30' : ''}`}>
+            <div className={`stock-qty glass rounded-[26px] p-5 ${overdraw ? 'border-rose-500/30' : ''}`}>
               <div className="flex flex-wrap items-center justify-between gap-x-3 gap-y-2">
                 <p className="text-[12px] font-bold uppercase tracking-wider text-(--ink-2)">Quantity</p>
                 <div className="flex gap-1.5">
@@ -214,7 +214,7 @@ export default function StockSheet({
                   ))}
                 </div>
               </div>
-              <div className="mt-4 flex items-center justify-center gap-6">
+              <div className="stock-qty-stepper mt-4 flex items-center justify-center gap-6">
                 <button
                   onClick={() => bump(-1)}
                   aria-label="Decrease quantity"
@@ -228,7 +228,7 @@ export default function StockSheet({
                   inputMode="numeric"
                   placeholder="0"
                   aria-label="Quantity"
-                  className="tnum w-28 bg-transparent text-center text-[56px] font-bold leading-none tracking-tight text-(--ink) outline-none placeholder:text-(--ink-3)"
+                  className="stock-qty-input tnum w-28 bg-transparent text-center text-[56px] font-bold leading-none tracking-tight text-(--ink) outline-none placeholder:text-(--ink-3)"
                 />
                 <button
                   onClick={() => bump(1)}
@@ -274,8 +274,8 @@ export default function StockSheet({
               </div>
             </div>
 
-            {/* Price / Reason + Note */}
-            <div className="glass space-y-3.5 rounded-[26px] p-4">
+            {/* Price / Reason */}
+            <div className="stock-context glass rounded-[26px] p-4">
               {isIn ? (
                 <Field label="Price (optional)" hint="Updates the product cost price.">
                   <input
@@ -304,6 +304,10 @@ export default function StockSheet({
                   </div>
                 </Field>
               )}
+            </div>
+
+            {/* Note (full width) */}
+            <div className="stock-note glass rounded-[26px] p-4">
               <Field label="Note (optional)">
                 <textarea
                   value={note}
@@ -316,13 +320,13 @@ export default function StockSheet({
             </div>
 
             {err ? (
-              <div className="animate-pop-in rounded-2xl border border-rose-500/25 bg-rose-500/10 px-4 py-3 text-[13.5px] font-medium text-rose-600 dark:text-rose-300">
+              <div className="stock-error animate-pop-in rounded-2xl border border-rose-500/25 bg-rose-500/10 px-4 py-3 text-[13.5px] font-medium text-rose-600 dark:text-rose-300">
                 {err}
               </div>
             ) : null}
 
             {/* Confirm */}
-            <div className="glass-strong rounded-3xl p-2">
+            <div className="stock-confirm glass-strong rounded-3xl p-2">
               <PrimaryBtn onClick={submit} disabled={busy || overdraw}>
                 {busy
                   ? 'Saving…'
@@ -335,7 +339,7 @@ export default function StockSheet({
                       : 'Remove from stock'}
               </PrimaryBtn>
             </div>
-            <p className="px-2 text-center text-xs leading-relaxed text-(--ink-2)">
+            <p className="stock-foot px-2 text-center text-xs leading-relaxed text-(--ink-2)">
               {isIn ? 'Stock In increases inventory.' : 'Stock Out never goes below zero.'} Duplicate taps are
               safely ignored.
             </p>

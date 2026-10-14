@@ -53,8 +53,19 @@ export default defineConfig({
 
           const upstream = await fetch(target, init);
           console.log(`[stockly-proxy] ${req.method} ${target.pathname} action=${target.searchParams.get('action') || '?'} → upstream ${upstream.status}`);
+          let upstreamHost = '';
+          try {
+            upstreamHost = new URL(upstream.url).hostname;
+          } catch {
+            upstreamHost = target.hostname;
+          }
           res.statusCode = upstream.status;
           res.setHeader('Content-Type', upstream.headers.get('content-type') || 'application/json; charset=utf-8');
+          // Same contract as the Vercel proxy (api/stockly.ts): the frontend
+          // detects Google sign-in/access pages via these headers + body sniffing.
+          if (upstreamHost) res.setHeader('X-Stockly-Upstream-Host', upstreamHost);
+          res.setHeader('X-Stockly-Upstream-Redirected', String(upstream.redirected));
+          res.setHeader('X-Stockly-Upstream-Status', String(upstream.status));
           res.end(Buffer.from(await upstream.arrayBuffer()));
         } catch (error) {
           const message = error instanceof Error ? error.message : 'Apps Script proxy request failed.';

@@ -234,14 +234,14 @@ function TxDetailPage({ t, onClose, onSelect }: { t: StockTransaction; onClose: 
   );
   return createPortal(
     <div
-      className="animate-detail-in fixed inset-0 z-40 overflow-y-auto bg-(--bg)"
+      className="history-detail-overlay animate-detail-in fixed inset-0 z-40 overflow-y-auto bg-(--bg)"
       role="dialog"
       aria-modal="true"
       aria-label={`${isIn ? 'Stock in' : 'Stock out'} — ${t.productName}`}
     >
       <div className="ambient" aria-hidden="true" />
-      <div className="relative z-[1] mx-auto min-h-dvh max-w-md pb-10">
-        <div className="safe-top flex items-center justify-between px-4 pt-4">
+      <div className="relative z-[1] mx-auto min-h-dvh max-w-md pb-10 lg:max-w-4xl lg:px-8">
+        <div className="safe-top flex items-center justify-between px-4 pt-4 lg:px-0 lg:pt-6">
           <button
             onClick={onClose}
             aria-label="Back to history"
@@ -252,7 +252,7 @@ function TxDetailPage({ t, onClose, onSelect }: { t: StockTransaction; onClose: 
           <StockBadge kind={t.type} />
         </div>
 
-        <div className="px-4 pt-3">
+        <div className="px-4 pt-3 lg:grid lg:grid-cols-2 lg:items-start lg:gap-5 lg:px-0 lg:pt-5">
           {/* Hero: type-tinted card with status icon, quantity, product */}
           <div
             className={`rounded-[26px] border p-6 text-center ${
@@ -286,7 +286,7 @@ function TxDetailPage({ t, onClose, onSelect }: { t: StockTransaction; onClose: 
           </div>
 
           {/* Facts */}
-          <div className="glass mt-3 divide-y divide-(--stroke-dim) rounded-[26px] px-4 py-1">
+          <div className="glass mt-3 divide-y divide-(--stroke-dim) rounded-[26px] px-4 py-1 lg:mt-0">
             <DetailRow label="Date" value={whenFull} />
             {t.reason ? <DetailRow label="Reason" value={t.reason} /> : null}
             {t.note ? <DetailRow label="Note" value={t.note} /> : null}
@@ -299,7 +299,7 @@ function TxDetailPage({ t, onClose, onSelect }: { t: StockTransaction; onClose: 
 
           {/* Same product, recent first — tap to jump between entries */}
           {related.length > 0 ? (
-            <div className="mt-3">
+            <div className="mt-3 lg:col-span-2 lg:mt-0">
               <p className="mb-2 flex items-center gap-2 px-1 text-[13px] font-extrabold uppercase tracking-wider text-(--ink-2)">
                 <span aria-hidden="true" className="h-3 w-1 rounded-full bg-[#C7FF4D]" />
                 More for this product

@@ -225,6 +225,27 @@ export function DesktopSidebar({
   onNavigate: (tab: TabKey) => void;
   onStock: (mode: 'IN' | 'OUT') => void;
 }) {
+  const renderLinks = (items: typeof SIDE_LINKS) =>
+    items.map((item) => {
+      const selected = item.key === 'stock-in' || item.key === 'stock-out' ? false : tab === item.key;
+      return (
+        <button
+          key={item.key}
+          type="button"
+          title={item.label}
+          aria-current={selected ? 'page' : undefined}
+          onClick={() => {
+            if (item.key === 'stock-in') onStock('IN');
+            else if (item.key === 'stock-out') onStock('OUT');
+            else onNavigate(item.key);
+          }}
+          className={`desktop-side-link ${selected ? 'is-active' : ''}`}
+        >
+          {item.icon}
+          <span className="desktop-side-label">{item.label}</span>
+        </button>
+      );
+    });
   return (
     <aside className="desktop-sidebar" aria-label="Main navigation">
       <div className="desktop-brand">
@@ -232,27 +253,12 @@ export function DesktopSidebar({
         <span>Stockly</span>
       </div>
       <p className="desktop-nav-caption">Workspace</p>
-      <nav className="desktop-side-links">
-        {SIDE_LINKS.map((item) => {
-          const selected = item.key === 'stock-in' || item.key === 'stock-out' ? false : tab === item.key;
-          return (
-            <button
-              key={item.key}
-              type="button"
-              title={item.label}
-              aria-current={selected ? 'page' : undefined}
-              onClick={() => {
-                if (item.key === 'stock-in') onStock('IN');
-                else if (item.key === 'stock-out') onStock('OUT');
-                else onNavigate(item.key);
-              }}
-              className={`desktop-side-link ${selected ? 'is-active' : ''}`}
-            >
-              {item.icon}
-              <span className="desktop-side-label">{item.label}</span>
-            </button>
-          );
-        })}
+      <nav className="desktop-side-links" aria-label="Workspace">
+        {renderLinks(SIDE_LINKS.filter((i) => i.key !== 'stock-in' && i.key !== 'stock-out'))}
+      </nav>
+      <p className="desktop-nav-caption">Actions</p>
+      <nav className="desktop-side-links" aria-label="Quick stock actions">
+        {renderLinks(SIDE_LINKS.filter((i) => i.key === 'stock-in' || i.key === 'stock-out'))}
       </nav>
       <div className="desktop-sidebar-foot">
         <span className="desktop-sidebar-foot-icon"><PackagePlus size={18} /></span>
@@ -373,7 +379,7 @@ export function Sheet({
   // Portal to body: an ancestor with transform/will-change would trap
   // `position: fixed` and collapse the sheet at the content bottom.
   return createPortal(
-    <div className="fixed inset-0 z-50" role="dialog" aria-modal="true" aria-label={label || title}>
+    <div className="fixed inset-0 z-50" data-sheet-title={title} role="dialog" aria-modal="true" aria-label={label || title}>
       <button aria-label="Close dialog" onClick={onClose} className="animate-fade-in absolute inset-0 bg-black/45" />
       <div className="sheet-dialog-position absolute inset-x-0 bottom-0 mx-auto flex max-w-md justify-center">
         <div
@@ -384,6 +390,17 @@ export function Sheet({
             className="shrink-0 cursor-grab touch-none select-none px-5 pb-2.5 pt-2.5 active:cursor-grabbing"
             onPointerDown={(e) => {
               if (!e.isPrimary) return;
+              // The X close button lives inside this drag zone. Capturing the
+              // pointer here would retarget pointerup/click to this div, so
+              // the button's click would never fire and the sheet wouldn't
+              // close. Leave interactive descendants alone.
+              if (
+                (e.target as HTMLElement | null)?.closest?.(
+                  'button, a, input, select, textarea, [contenteditable="true"]',
+                )
+              ) {
+                return;
+              }
               e.currentTarget.setPointerCapture?.(e.pointerId);
               dragState.current = { active: true, startY: e.clientY, startT: performance.now(), dy: 0 };
               setPanelY(0, false);

@@ -13,14 +13,13 @@
  * All responses are JSON: { success: true, data } or
  * { success: false, error }.
  *
- * NOTE: categories and suppliers were removed in v1.1.0. Products carry
- * no category/supplier fields; old Categories/Suppliers tabs (if any)
- * are simply left unused.
+ * NOTE v1.2.0: products carry an optional categoryId (Categories tab).
+ * Suppliers remain removed; an old Suppliers tab (if any) is left unused.
  */
 
 /* ------------------------------ schema ------------------------------ */
 
-var VERSION = '1.1.0';
+var VERSION = '1.2.0';
 
 /** Bound sheet ID override for standalone projects (set via configureSpreadsheet). */
 var PROP_SHEET_ID = 'SPREADSHEET_ID';
@@ -28,7 +27,8 @@ var PROP_SHEET_ID = 'SPREADSHEET_ID';
 var HEADERS = {
   Products: ['id', 'name', 'sku', 'description', 'image',
     'costPrice', 'sellingPrice', 'currentStock', 'minimumStock',
-    'status', 'createdAt', 'updatedAt'],
+    'status', 'createdAt', 'updatedAt', 'categoryId'],
+  Categories: ['id', 'name', 'createdAt'],
   StockTransactions: ['id', 'productId', 'productName', 'type', 'quantity',
     'price', 'reason', 'note', 'idempotencyKey', 'createdAt'],
   Settings: ['key', 'value']
@@ -105,8 +105,23 @@ function ensureHeaders_(sh, headers) {
     if (sh.getFrozenRows() === 0) sh.setFrozenRows(1);
     return 'ok';
   }
-  // NEVER wipe a tab that holds data: refuse and explain instead.
+  // Safe auto-migration: when the existing headers match the new schema
+  // positionally and the schema only APPENDS columns, extend the header row
+  // in place (old rows read '' for the new columns). Anything else still
+  // refuses rather than risking data.
   if (sh.getLastRow() > 1) {
+    var existingCols = sh.getLastColumn();
+    if (existingCols > 0 && existingCols < headers.length) {
+      var prefixOk = true;
+      for (var i = 0; i < existingCols; i++) {
+        if (String(first[i]) !== headers[i]) { prefixOk = false; break; }
+      }
+      if (prefixOk) {
+        sh.getRange(1, 1, 1, headers.length).setValues([headers]);
+        if (sh.getFrozenRows() === 0) sh.setFrozenRows(1);
+        return 'migrated';
+      }
+    }
     throw new Error(
       'Tab "' + sh.getName() + '" has data rows but different headers — refusing to clear it. ' +
       'Rename this tab (or back it up and empty it) and run setupDatabase again.');
@@ -261,17 +276,23 @@ function setupDatabase() {
 function setupDemoData() {
   return withLock_(function () {
     var t = nowIso_();
+    var catIds = {};
+    ['Groceries', 'Beverages', 'Household'].forEach(function (name) {
+      var id = uid_('cat');
+      sheet_('Categories').appendRow([id, name, t]);
+      catIds[name] = id;
+    });
     var demo = [
-      ['Basmati Rice 5kg', 'RICE-001', 'Premium long-grain rice', '', 240, 320, 40, 10],
-      ['Whole Wheat Atta 10kg', 'ATTA-010', 'Stone-ground atta', '', 380, 460, 25, 8],
-      ['Milk 1L', 'MILK-001', 'Toned milk, daily stock', '', 55, 65, 30, 12],
-      ['Brown Bread', 'BREAD-002', '', '', 35, 45, 4, 6],
-      ['Dish Soap 500ml', 'SOAP-005', '', '', 80, 110, 0, 5]
+      ['Basmati Rice 5kg', 'RICE-001', 'Premium long-grain rice', '', 240, 320, 40, 10, 'Groceries'],
+      ['Whole Wheat Atta 10kg', 'ATTA-010', 'Stone-ground atta', '', 380, 460, 25, 8, 'Groceries'],
+      ['Milk 1L', 'MILK-001', 'Toned milk, daily stock', '', 55, 65, 30, 12, 'Beverages'],
+      ['Brown Bread', 'BREAD-002', '', '', 35, 45, 4, 6, 'Beverages'],
+      ['Dish Soap 500ml', 'SOAP-005', '', '', 80, 110, 0, 5, 'Household']
     ];
     demo.forEach(function (d) {
       sheet_('Products').appendRow([
         uid_('prd'), d[0], d[1], d[2], d[3],
-        d[4], d[5], d[6], d[7], 'active', t, t
+        d[4], d[5], d[6], d[7], 'active', t, t, catIds[d[8]] || ''
       ]);
     });
     return 'Demo data inserted.';
@@ -280,11 +301,23 @@ function setupDemoData() {
 
 /* ------------------------------ lookups ------------------------------ */
 
-function decorateProduct_(p) {
+function categoryMap_() {
+  try {
+    var m = {};
+    rows_('Categories').forEach(function (c) { m[c.id] = c.name; });
+    return m;
+  } catch (e) {
+    return {}; // tab predates Categories — treat every product as uncategorised
+  }
+}
+
+function decorateProduct_(p, cats) {
+  if (!cats) cats = categoryMap_();
   p.costPrice = num_(p.costPrice, 0);
   p.sellingPrice = num_(p.sellingPrice, 0);
   p.currentStock = Math.floor(num_(p.currentStock, 0));
   p.minimumStock = Math.floor(num_(p.minimumStock, 0));
+  p.categoryName = (cats || {})[p.categoryId] || '';
   if (p.createdAt instanceof Date) p.createdAt = p.createdAt.toISOString();
   if (p.updatedAt instanceof Date) p.updatedAt = p.updatedAt.toISOString();
   return p;
@@ -293,7 +326,16 @@ function decorateProduct_(p) {
 /* ------------------------------ reads ------------------------------ */
 
 function listProducts_() {
-  return rows_('Products').map(function (p) { return decorateProduct_(p); });
+  var cats = categoryMap_();
+  return rows_('Products').map(function (p) { return decorateProduct_(p, cats); });
+}
+
+function listCategories_() {
+  try {
+    return rows_('Categories');
+  } catch (e) {
+    return [];
+  }
 }
 
 function listTransactions_(limit) {
@@ -345,6 +387,7 @@ function sync_(txLimit) {
   var tx = listTransactions_(lim);
   return {
     products: products,
+    categories: listCategories_(),
     transactions: tx,
     dashboard: dashboard_(products, tx)
   };
@@ -363,6 +406,14 @@ function checkProduct_(b, isNew) {
     throw new Error('Opening stock must be a whole number ≥ 0.');
   if (!isFinite(min) || Math.floor(min) !== min || min < 0)
     throw new Error('Minimum stock must be a whole number ≥ 0.');
+  if (b.categoryId && String(b.categoryId)) {
+    try {
+      if (rowIndexById_('Categories', b.categoryId) === -1) throw new Error('Unknown category.');
+    } catch (e) {
+      if (/Unknown category/.test(e && e.message ? e.message : '')) throw e;
+      // No Categories tab yet — accept the value rather than blocking saves.
+    }
+  }
   // Image may be an http(s) URL, blank, or a small base64 data URL produced
   // by the app's photo upload (JPEG/PNG/WebP/GIF). Sheet cells hold max
   // 50k chars, so data URLs are capped well under that.
@@ -388,6 +439,7 @@ function createProduct_(b) {
       id: uid_('prd'),
       name: String(b.name).trim(),
       sku: sku,
+      categoryId: String(b.categoryId || ''),
       description: String(b.description || ''),
       image: String(b.image || '').trim(),
       costPrice: Number(b.costPrice),
@@ -416,6 +468,7 @@ function updateProduct_(b) {
     var next = {
       name: b.name !== undefined ? String(b.name).trim() : cur.name,
       sku: b.sku !== undefined ? String(b.sku).trim() : cur.sku,
+      categoryId: b.categoryId !== undefined ? String(b.categoryId || '') : cur.categoryId,
       description: b.description !== undefined ? String(b.description || '') : cur.description,
       image: b.image !== undefined ? String(b.image || '').trim() : cur.image,
       costPrice: b.costPrice !== undefined ? Number(b.costPrice) : num_(cur.costPrice, 0),
@@ -448,6 +501,79 @@ function deleteProduct_(id) {
     if (idx === -1) throw new Error('Product not found.');
     sheet_('Products').deleteRow(idx);
     return { deleted: String(id) };
+  });
+}
+
+/**
+ * Normalised category name: trimmed, internal whitespace collapsed.
+ * Duplicates compare case-insensitively.
+ */
+function normCatName_(name) {
+  return String(name || '').trim().replace(/\s+/g, ' ');
+}
+
+function catNameTaken_(name, excludeId) {
+  var want = normCatName_(name).toLowerCase();
+  var rows = rows_('Categories');
+  for (var i = 0; i < rows.length; i++) {
+    if (String(rows[i].name).trim().toLowerCase() === want &&
+        String(rows[i].id) !== String(excludeId || '')) {
+      return true;
+    }
+  }
+  return false;
+}
+
+function createCategory_(name) {
+  return withLock_(function () {
+    name = normCatName_(name);
+    if (!name) throw new Error('Category name is required.');
+    if (catNameTaken_(name, null)) throw new Error('Category already exists.');
+    var c = { id: uid_('cat'), name: name, createdAt: nowIso_() };
+    sheet_('Categories').appendRow(objToRow_('Categories', c));
+    return c;
+  });
+}
+
+function updateCategory_(id, name) {
+  return withLock_(function () {
+    if (!id) throw new Error('Category id is required.');
+    name = normCatName_(name);
+    if (!name) throw new Error('Category name is required.');
+    var idx = rowIndexById_('Categories', id);
+    if (idx === -1) throw new Error('Category not found.');
+    if (catNameTaken_(name, id)) throw new Error('Category already exists.');
+    sheet_('Categories').getRange(idx, 2).setValue(name);
+    return { id: String(id), name: name };
+  });
+}
+
+/**
+ * Delete a category and move its products to Uncategorized (blank
+ * categoryId). categoryId lives in the last Products column.
+ */
+function deleteCategory_(id) {
+  return withLock_(function () {
+    if (!id) throw new Error('Category id is required.');
+    var idx = rowIndexById_('Categories', id);
+    if (idx === -1) throw new Error('Category not found.');
+    var cleared = 0;
+    var sh = sheet_('Products');
+    var last = sh.getLastRow();
+    var catCol = HEADERS.Products.length; // categoryId is appended last
+    if (last >= 2) {
+      var col = sh.getRange(2, catCol, last - 1, 1).getValues();
+      var targets = [];
+      for (var r = 0; r < col.length; r++) {
+        if (String(col[r][0]) === String(id)) targets.push(r + 2);
+      }
+      if (targets.length) {
+        targets.forEach(function (row) { sh.getRange(row, catCol).setValue(''); });
+        cleared = targets.length;
+      }
+    }
+    sheet_('Categories').deleteRow(idx);
+    return { deleted: String(id), cleared: cleared };
   });
 }
 
@@ -566,6 +692,9 @@ function doGet(e) {
         data = all[0];
         break;
       }
+      case 'listCategories':
+        data = listCategories_();
+        break;
       case 'listTransactions':
         data = listTransactions_(num_(e.parameter.limit, 200));
         break;
@@ -598,6 +727,9 @@ function doPost(e) {
       case 'createProduct': data = createProduct_(body); break;
       case 'updateProduct': data = updateProduct_(body); break;
       case 'deleteProduct': data = deleteProduct_(body.id); break;
+      case 'createCategory': data = createCategory_(body.name); break;
+      case 'updateCategory': data = updateCategory_(body.id, body.name); break;
+      case 'deleteCategory': data = deleteCategory_(body.id); break;
       case 'stockIn': data = stockIn_(body); break;
       case 'stockOut': data = stockOut_(body); break;
       default:

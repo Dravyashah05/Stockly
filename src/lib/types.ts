@@ -4,6 +4,9 @@ export interface Product {
   id: string;
   name: string;
   sku: string;
+  categoryId: string;
+  /** Denormalised for display (backend joins it) */
+  categoryName?: string;
   description: string;
   image: string;
   costPrice: number;
@@ -13,6 +16,12 @@ export interface Product {
   status: 'active' | 'inactive';
   createdAt: string;
   updatedAt: string;
+}
+
+export interface Category {
+  id: string;
+  name: string;
+  createdAt: string;
 }
 
 export type StockType = 'IN' | 'OUT';
@@ -45,6 +54,7 @@ export interface DashboardStats {
 /** Everything the app needs in one round trip (see `sync` Apps Script action). */
 export interface SyncData {
   products: Product[];
+  categories: Category[];
   transactions: StockTransaction[];
   dashboard: DashboardStats;
 }

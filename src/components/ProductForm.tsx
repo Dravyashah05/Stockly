@@ -138,7 +138,7 @@ export default function ProductForm({
   onClose: () => void;
   editing: Product | null;
 }) {
-  const { products, saveProduct, notify } = useStore();
+  const { products, saveProduct, categories, notify } = useStore();
   const [name, setName] = useState('');
   const [image, setImage] = useState('');
   const [upload, setUpload] = useState('');
@@ -148,6 +148,7 @@ export default function ProductForm({
   const [stockQty, setStockQty] = useState('0');
   const [price, setPrice] = useState('');
   const [description, setDescription] = useState('');
+  const [categoryId, setCategoryId] = useState('');
   const [err, setErr] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
 
@@ -169,6 +170,7 @@ export default function ProductForm({
         const p = editing.sellingPrice > 0 ? editing.sellingPrice : editing.costPrice;
         setPrice(p > 0 ? String(p) : '');
         setDescription(editing.description || '');
+        setCategoryId(editing.categoryId || '');
       } else {
         setName('');
         setImage('');
@@ -176,6 +178,7 @@ export default function ProductForm({
         setStockQty('0');
         setPrice('');
         setDescription('');
+        setCategoryId('');
       }
     }
   }, [open, editing]);
@@ -232,6 +235,7 @@ export default function ProductForm({
       {
         name: trimmedName,
         sku,
+        categoryId,
         description: description.trim(),
         image: imageValue,
         costPrice: unitPrice,
@@ -252,6 +256,7 @@ export default function ProductForm({
       {
         name: trimmedName,
         sku,
+        categoryId,
         description: description.trim(),
         image: imageValue,
         costPrice: unitPrice,
@@ -279,9 +284,9 @@ export default function ProductForm({
         </div>
       )}
     >
-      <div className="space-y-3">
+      <div className="product-form-grid space-y-3">
         {/* 1 — Image */}
-        <div className="glass rounded-3xl p-4">
+        <div className="product-form-image glass rounded-3xl p-4">
           <Field label="Product image">
             <div className="flex items-center gap-3">
               {imageOk ? (
@@ -352,7 +357,7 @@ export default function ProductForm({
         </div>
 
         {/* 2 — Product name */}
-        <div className="glass rounded-3xl p-4">
+        <div className="product-form-name glass rounded-3xl p-4">
           <Field
             label="Product name *"
             hint={editing ? `SKU: ${editing.sku}` : `SKU auto-generated: ${autoSku}`}
@@ -366,9 +371,9 @@ export default function ProductForm({
           </Field>
         </div>
 
-        {/* 3 + 4 — Minimum stock & stock qty */}
-        <div className="glass rounded-3xl p-4">
-          <div className="grid grid-cols-2 gap-3">
+        {/* Min / qty / price — one related group with equal-width fields */}
+        <div className="product-form-stock glass rounded-3xl p-4">
+          <div className="grid grid-cols-2 gap-3 sm:grid-cols-3">
             <Field label="Minimum stock *" hint="Low-stock alert level">
               <input
                 value={minStock}
@@ -387,24 +392,22 @@ export default function ProductForm({
                 className={inputCls}
               />
             </Field>
+            <div className="col-span-2 sm:col-span-1">
+              <Field label="Price (optional)" hint="Saved as both cost & selling price.">
+                <input
+                  value={price}
+                  onChange={(e) => setPrice(e.target.value.replace(/[^0-9.]/g, ''))}
+                  inputMode="decimal"
+                  placeholder="e.g. 120"
+                  className={inputCls}
+                />
+              </Field>
+            </div>
           </div>
         </div>
 
-        {/* 5 — Price (optional) */}
-        <div className="glass rounded-3xl p-4">
-          <Field label="Price (optional)" hint="Saved as both cost & selling price.">
-            <input
-              value={price}
-              onChange={(e) => setPrice(e.target.value.replace(/[^0-9.]/g, ''))}
-              inputMode="decimal"
-              placeholder="e.g. 120"
-              className={inputCls}
-            />
-          </Field>
-        </div>
-
-        {/* 6 — Description */}
-        <div className="glass rounded-3xl p-4">
+        {/* 4 — Description */}
+        <div className="product-form-description glass rounded-3xl p-4">
           <Field label="Description">
             <textarea
               value={description}
@@ -413,6 +416,27 @@ export default function ProductForm({
               placeholder="Optional details…"
               className={`${inputCls} resize-none`}
             />
+          </Field>
+        </div>
+
+        {/* 5 — Category */}
+        <div className="product-form-category glass rounded-3xl p-4">
+          <Field
+            label="Category"
+            hint={categories.length === 0 ? 'No categories yet — add them in Settings.' : undefined}
+          >
+            <select
+              value={categoryId}
+              onChange={(e) => setCategoryId(e.target.value)}
+              className={inputCls}
+            >
+              <option value="">Uncategorized</option>
+              {categories.map((c) => (
+                <option key={c.id} value={c.id}>
+                  {c.name}
+                </option>
+              ))}
+            </select>
           </Field>
         </div>
 
