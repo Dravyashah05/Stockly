@@ -245,14 +245,15 @@ function TxDetailPage({ t, onClose, onSelect }: { t: StockTransaction; onClose: 
           <button
             onClick={onClose}
             aria-label="Back to history"
-            className="glass-strong press flex h-11 w-11 items-center justify-center rounded-full text-(--ink)"
+            className="glass-strong press flex h-11 w-11 items-center justify-center rounded-full text-(--ink) lg:w-auto lg:gap-1.5 lg:px-4"
           >
             <ArrowLeft size={20} />
+            <span className="hidden text-[14px] font-bold lg:inline">Back</span>
           </button>
           <StockBadge kind={t.type} />
         </div>
 
-        <div className="px-4 pt-3 lg:grid lg:grid-cols-2 lg:items-start lg:gap-5 lg:px-0 lg:pt-5">
+        <div className="px-4 pt-3 lg:grid lg:grid-cols-2 lg:items-start lg:gap-5 lg:px-0 lg:pt-6">
           {/* Hero: type-tinted card with status icon, quantity, product */}
           <div
             className={`rounded-[26px] border p-6 text-center ${
