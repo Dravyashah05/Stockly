@@ -259,26 +259,26 @@ function TxDetailPage({ t, onClose, onSelect }: { t: StockTransaction; onClose: 
         <div className="px-4 pt-3 lg:grid lg:grid-cols-2 lg:items-start lg:gap-5 lg:px-0 lg:pt-6">
           {/* Hero: type-tinted card with status icon, quantity, product */}
           <div
-            className={`rounded-[26px] border p-6 text-center ${
+            className={`rounded-[26px] border p-6 text-center lg:p-8 ${
               isIn ? 'border-emerald-500/25 bg-emerald-500/[0.07]' : 'border-rose-500/25 bg-rose-500/[0.07]'
             }`}
           >
             <span
-              className={`mx-auto flex h-14 w-14 items-center justify-center rounded-2xl text-white ${
+              className={`mx-auto flex h-14 w-14 items-center justify-center rounded-2xl text-white lg:h-16 lg:w-16 ${
                 isIn ? 'bg-[#1E7B3C]' : 'bg-[#C2332D]'
               }`}
             >
               {isIn ? <ArrowDownToLine size={24} /> : <ArrowUpFromLine size={24} />}
             </span>
             <p
-              className={`tnum mt-3 text-[52px] font-extrabold leading-none tracking-tight ${
+              className={`tnum mt-3 text-[52px] font-extrabold leading-none tracking-tight lg:text-[60px] ${
                 isIn ? 'text-emerald-600 dark:text-emerald-300' : 'text-rose-600 dark:text-rose-300'
               }`}
             >
               {isIn ? '+' : '−'}
               {t.quantity}
             </p>
-            <p className="mt-2 truncate text-[17px] font-bold text-(--ink)">{t.productName}</p>
+            <p className="mx-auto mt-2 max-w-[32ch] break-words text-[17px] font-bold leading-snug text-(--ink)">{t.productName}</p>
             {liveStock != null ? (
               <p className="tnum mt-1 text-[12.5px] font-semibold text-(--ink-2)">{liveStock} in stock now</p>
             ) : null}
@@ -332,7 +332,7 @@ function TxDetailPage({ t, onClose, onSelect }: { t: StockTransaction; onClose: 
                     key={x.id}
                     type="button"
                     onClick={() => onSelect(x.id)}
-                    className="press cv-row flex w-full items-center gap-2.5 rounded-[20px] px-2.5 py-2.5 text-left hover:bg-(--accent-soft)/50"
+                    className="press cv-row flex w-full items-center gap-2.5 rounded-[20px] px-2.5 py-3 text-left hover:bg-(--accent-soft)/50"
                   >
                     <StockBadge kind={x.type} />
                     <span className="min-w-0 flex-1">
@@ -340,10 +340,13 @@ function TxDetailPage({ t, onClose, onSelect }: { t: StockTransaction; onClose: 
                         {x.reason || (x.type === 'IN' ? 'Stock in' : 'Stock out')}
                       </span>
                       <span className="block truncate text-[11.5px] font-medium text-(--ink-2)">{when}</span>
+                      {x.note ? (
+                        <span className="mt-0.5 block truncate text-[12.5px] text-(--ink-2)">{x.note}</span>
+                      ) : null}
                     </span>
                     <span
-                      className={`tnum shrink-0 text-[15px] font-bold ${
-                        x.type === 'IN' ? 'text-emerald-600 dark:text-emerald-300' : 'text-rose-600 dark:text-rose-300'
+                      className={`tnum shrink-0 rounded-full px-2.5 py-1 text-[14px] font-extrabold ${
+                        x.type === 'IN' ? 'bg-emerald-500/12 text-emerald-600 dark:text-emerald-300' : 'bg-rose-500/12 text-rose-600 dark:text-rose-300'
                       }`}
                     >
                       {x.type === 'IN' ? '+' : '−'}
