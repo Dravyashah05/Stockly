@@ -241,7 +241,7 @@ function TxDetailPage({ t, onClose, onSelect }: { t: StockTransaction; onClose: 
     >
       <div className="ambient" aria-hidden="true" />
       <div className="relative z-[1] mx-auto min-h-dvh max-w-md pb-10 lg:max-w-4xl lg:px-8">
-        <div className="safe-top flex items-center justify-between px-4 pt-4 lg:px-0 lg:pt-6">
+        <div className="safe-top flex items-center justify-between px-4 pt-4 lg:px-0 lg:pt-8">
           <button
             onClick={onClose}
             aria-label="Back to history"
