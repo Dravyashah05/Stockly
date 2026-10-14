@@ -1,16 +1,20 @@
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import {
+  Camera,
   Check,
   CheckCircle2,
   ChevronRight,
   Cloud,
+  Copy,
   Database,
   Download,
   Link2,
   Moon,
   Pencil,
   Plus,
+  QrCode,
   RefreshCw,
+  ScanLine,
   ShieldCheck,
   Sun,
   Sunset,
@@ -19,6 +23,8 @@ import {
   X,
 } from 'lucide-react';
 import { APP_VERSION, LS_KEYS, UPDATE_CHECK_URL, getApiUrl, isAppsScriptExecUrl, setApiUrl } from '../lib/config';
+import { parseScannedEndpoint, scannedEndpointMessage } from '../lib/qr-link';
+import QRCode from 'react-qr-code';
 import { useStore } from '../lib/store';
 import type { Category } from '../lib/types';
 import { Confirm, Field, Header, Sheet, BrandMark, inputCls } from '../components/ui';
@@ -57,6 +63,149 @@ export default function SettingsScreen() {
     const ok = await removeCategory(delCat.id);
     setDelBusy(false);
     if (ok) setDelCat(null);
+  };
+
+  /* ---- QR device linking (shares ONLY the database endpoint) ---- */
+  const [qrOpen, setQrOpen] = useState(false);
+  const [qrUrl, setQrUrl] = useState('');
+  const openQr = () => {
+    const v = getApiUrl();
+    if (!isAppsScriptExecUrl(v)) {
+      notify('Save a valid Apps Script /exec URL first, then share it.', 'error');
+      return;
+    }
+    setQrUrl(v);
+    setQrOpen(true);
+  };
+  const copyQrUrl = async () => {
+    try {
+      if (!navigator.clipboard?.writeText) throw new Error('no clipboard');
+      await navigator.clipboard.writeText(qrUrl);
+      notify('Link copied — paste it in Stockly on the other device.');
+    } catch {
+      notify('Couldn’t copy automatically — select the link text to copy it.', 'error');
+    }
+  };
+
+  /* ---- Scan to connect (camera optional; paste always works) ---- */
+  const [scanOpen, setScanOpen] = useState(false);
+  const [scanNonce, setScanNonce] = useState(0);
+  const [scanStatus, setScanStatus] = useState<'idle' | 'starting' | 'ready' | 'denied' | 'unavailable' | 'error'>('idle');
+  const [scanError, setScanError] = useState('');
+  const [pasted, setPasted] = useState('');
+  const [discovered, setDiscovered] = useState<string | null>(null);
+  const [confirmBusy, setConfirmBusy] = useState(false);
+  const scannerRef = useRef<{ stop: () => Promise<unknown>; clear: () => unknown } | null>(null);
+
+  // Camera lifecycle: lazy-loads the scanner bundle, starts on open, always
+  // stops on close. The paste fallback below works with no camera at all.
+  useEffect(() => {
+    if (!scanOpen) return;
+    let cancelled = false;
+    setScanStatus('starting');
+    setScanError('');
+    setDiscovered(null);
+    setPasted('');
+    (async () => {
+      try {
+        const { Html5Qrcode } = await import('html5-qrcode');
+        if (cancelled) return;
+        let cameras: { id: string }[] = [];
+        try {
+          cameras = (await Html5Qrcode.getCameras()) as { id: string }[];
+        } catch {
+          cameras = [];
+        }
+        if (cancelled) return;
+        if (cameras.length === 0) {
+          setScanStatus('unavailable');
+          return;
+        }
+        const scanner = new Html5Qrcode('stockly-qr-reader');
+        scannerRef.current = scanner;
+        await scanner.start(
+          { facingMode: 'environment' },
+          { fps: 10, qrbox: { width: 250, height: 250 } },
+          (text) => {
+            const r = parseScannedEndpoint(text);
+            if (r.ok === true) {
+              setDiscovered(r.url);
+              setScanError('');
+              void scanner.stop().catch(() => undefined);
+            } else {
+              setScanError(scannedEndpointMessage(r.reason));
+            }
+          },
+          () => { /* per-frame misses are routine — stay silent */ },
+        );
+        if (cancelled) {
+          await scanner.stop().catch(() => undefined);
+          return;
+        }
+        setScanStatus('ready');
+      } catch (e) {
+        if (cancelled) return;
+        const msg = e instanceof Error ? `${e.name} ${e.message}` : '';
+        if (/NotAllowedError|permission/i.test(msg)) setScanStatus('denied');
+        else {
+          setScanStatus('error');
+          setScanError('The camera couldn’t start here — paste the link below instead.');
+        }
+      }
+    })();
+    return () => {
+      cancelled = true;
+      const s = scannerRef.current;
+      scannerRef.current = null;
+      if (s) {
+        void (async () => {
+          try {
+            await s.stop();
+          } catch {
+            /* already stopped */
+          }
+          try {
+            s.clear();
+          } catch {
+            /* already torn down */
+          }
+        })();
+      }
+    };
+  }, [scanOpen, scanNonce]);
+
+  const submitPasted = () => {
+    const r = parseScannedEndpoint(pasted);
+    if (r.ok === false) {
+      setScanError(scannedEndpointMessage(r.reason));
+      return;
+    }
+    setScanError('');
+    setDiscovered(r.url);
+    const s = scannerRef.current;
+    if (s) void s.stop().catch(() => undefined);
+  };
+
+  const confirmDiscovered = async () => {
+    if (!discovered || confirmBusy) return;
+    const v = discovered.trim();
+    if (!isAppsScriptExecUrl(v)) {
+      notify('That link is no longer a valid backend URL.', 'error');
+      return;
+    }
+    setConfirmBusy(true);
+    try {
+      // Same persistence path as Save & sync — never overwrites before confirm.
+      if (v !== getApiUrl()) clearCache();
+      setApiUrl(v);
+      setConfiguredFlag();
+      setUrl(v);
+      setScanOpen(false);
+      if (v) await refresh();
+      notify('Backend updated — synced.');
+    } finally {
+      setConfirmBusy(false);
+    }
   };
 
   const connected = useMemo(() => (url.trim() || getApiUrl()).length > 10, [url]);
@@ -494,6 +643,25 @@ export default function SettingsScreen() {
           </button>
         </div>
 
+        {/* Link another device — QR shares only the database endpoint */}
+        <p className="mt-3 px-1 text-[12px] font-bold uppercase tracking-wider text-(--ink-2)">Link another device</p>
+        <div className="mt-1.5 grid grid-cols-2 gap-2 pb-2">
+          <button
+            type="button"
+            onClick={openQr}
+            className="glass-soft press flex min-h-[48px] items-center justify-center gap-1.5 rounded-2xl text-[14px] font-extrabold text-(--ink)"
+          >
+            <QrCode size={16} /> Show QR
+          </button>
+          <button
+            type="button"
+            onClick={() => setScanOpen(true)}
+            className="glass-soft press flex min-h-[48px] items-center justify-center gap-1.5 rounded-2xl text-[14px] font-extrabold text-(--ink)"
+          >
+            <ScanLine size={16} /> Scan
+          </button>
+        </div>
+
         {/* How syncing works — merged into the Cloud popup */}
         <p className="mt-3 px-1 text-[12px] font-bold uppercase tracking-wider text-(--ink-2)">How syncing works</p>
         <ol className="mt-1.5 list-decimal space-y-2 pl-5 text-[13.5px] leading-relaxed text-(--ink)">
@@ -514,6 +682,126 @@ export default function SettingsScreen() {
           Data lives in your Google Sheet — this phone only caches it. Stock changes apply inside a sheet lock with
           idempotency keys, so retries and two phones updating at once stay consistent.
         </p>
+      </Sheet>
+
+      {/* Link device — QR encodes ONLY the saved /exec URL */}
+      <Sheet open={qrOpen} onClose={() => setQrOpen(false)} title="Link a new device">
+        <p className="mb-3 text-[13px] leading-relaxed text-(--ink-2)">
+          On the new phone, open Stockly → Settings → Cloud database → <b className="text-(--ink)">Scan</b>, then point
+          its camera at this code.
+        </p>
+        <div className="mx-auto w-fit rounded-[24px] bg-white p-4">
+          {qrUrl ? <QRCode value={qrUrl} size={200} bgColor="#FFFFFF" fgColor="#151515" /> : null}
+        </div>
+        <p className="mt-3 break-all rounded-2xl bg-(--glass-soft) px-3.5 py-3 text-[12px] font-medium leading-relaxed text-(--ink-2) select-all">
+          {qrUrl}
+        </p>
+        <button
+          type="button"
+          onClick={() => void copyQrUrl()}
+          className="glass-soft press mt-2.5 flex min-h-[48px] w-full items-center justify-center gap-1.5 rounded-2xl text-[14px] font-extrabold text-(--ink)"
+        >
+          <Copy size={16} /> Copy link
+        </button>
+        <p className="mt-2.5 flex items-start gap-2 rounded-[20px] bg-amber-500/10 px-3.5 py-3 text-[12.5px] leading-relaxed text-(--ink-2)">
+          <ShieldCheck size={16} className="mt-0.5 shrink-0 text-amber-600 dark:text-amber-300" />
+          This code shares only your database address so another device can connect to the same Sheet. It contains no
+          passwords or private data — anyone holding it can point their app at your database.
+        </p>
+      </Sheet>
+
+      {/* Scan to connect — camera optional, paste always available */}
+      <Sheet open={scanOpen} onClose={() => setScanOpen(false)} title="Scan to connect">
+        {discovered ? (
+          <div>
+            <p className="flex items-start gap-2 rounded-[20px] bg-emerald-500/10 px-3.5 py-3 text-[13px] font-medium leading-relaxed text-(--ink)">
+              <CheckCircle2 size={16} className="mt-0.5 shrink-0 text-emerald-600 dark:text-emerald-300" />
+              A Stockly database link was found. Confirm to switch this device to it — your current backend is kept
+              until you confirm.
+            </p>
+            <p className="mt-2.5 break-all rounded-2xl bg-(--glass-soft) px-3.5 py-3 text-[12px] font-medium leading-relaxed text-(--ink-2)">
+              {discovered}
+            </p>
+            <div className="mt-3 grid grid-cols-2 gap-2 pb-1">
+              <button
+                type="button"
+                onClick={() => { setDiscovered(null); setScanNonce((n) => n + 1); }}
+                className="press glass-soft min-h-[52px] rounded-2xl py-3.5 text-[15px] font-bold text-(--ink)"
+              >
+                Rescan
+              </button>
+              <button
+                type="button"
+                onClick={() => void confirmDiscovered()}
+                disabled={confirmBusy}
+                className="press min-h-[52px] rounded-2xl bg-[#151515] py-3.5 text-[15px] font-extrabold text-white disabled:opacity-50 dark:bg-[#C7FF4D] dark:text-[#151515]"
+              >
+                {confirmBusy ? 'Saving…' : 'Confirm'}
+              </button>
+            </div>
+          </div>
+        ) : (
+          <div>
+            <p className="mb-3 text-[13px] leading-relaxed text-(--ink-2)">
+              Point the camera at the QR code shown on the other device (Settings → Cloud database → Show QR).
+            </p>
+            {scanStatus === 'unavailable' ? (
+              <div className="mb-3 flex items-start gap-2.5 rounded-[20px] bg-(--glass-soft) px-3.5 py-3 text-[13px] leading-relaxed text-(--ink-2)">
+                <Camera size={16} className="mt-0.5 shrink-0" />
+                No camera was found on this device — paste the link below instead.
+              </div>
+            ) : scanStatus === 'denied' ? (
+              <div className="mb-3 flex items-start gap-2.5 rounded-[20px] bg-amber-500/10 px-3.5 py-3 text-[13px] leading-relaxed text-(--ink-2)">
+                <Camera size={16} className="mt-0.5 shrink-0 text-amber-600 dark:text-amber-300" />
+                Camera access was denied. Allow camera access for this app/site and reopen this sheet — or paste the
+                link below instead.
+              </div>
+            ) : null}
+            {scanStatus === 'error' && scanError ? (
+              <p className="mb-3 rounded-2xl border border-rose-500/25 bg-rose-500/10 px-3.5 py-2.5 text-[13px] font-medium text-rose-600 dark:text-rose-300">
+                {scanError}
+              </p>
+            ) : null}
+            {scanStatus !== 'unavailable' ? (
+              <div id="stockly-qr-reader" className="mb-3 min-h-[48px] overflow-hidden rounded-[20px] bg-(--glass-soft)" />
+            ) : null}
+            {scanStatus === 'starting' ? (
+              <p className="mb-3 px-1 text-[12.5px] font-medium text-(--ink-2)">Starting camera…</p>
+            ) : null}
+            {scanStatus === 'ready' && scanError ? (
+              <p className="mb-3 rounded-2xl border border-rose-500/25 bg-rose-500/10 px-3.5 py-2.5 text-[13px] font-medium text-rose-600 dark:text-rose-300">
+                {scanError}
+              </p>
+            ) : null}
+            <Field label="Or paste the database link">
+              <div className="flex gap-2">
+                <input
+                  value={pasted}
+                  onChange={(e) => setPasted(e.target.value)}
+                  onKeyDown={(e) => {
+                    if (e.key === 'Enter') submitPasted();
+                  }}
+                  placeholder="https://script.google.com/macros/s/…/exec"
+                  inputMode="url"
+                  autoCapitalize="off"
+                  autoCorrect="off"
+                  aria-label="Paste database link"
+                  className={inputCls}
+                />
+                <button
+                  type="button"
+                  onClick={submitPasted}
+                  className="press flex min-h-[48px] shrink-0 items-center rounded-2xl bg-[#151515] px-4 text-[14px] font-extrabold text-white dark:bg-[#C7FF4D] dark:text-[#151515]"
+                >
+                  Use
+                </button>
+              </div>
+            </Field>
+            <p className="mt-2.5 px-1 text-[12px] leading-relaxed text-(--ink-2)">
+              Only links from a working Stockly setup are accepted — anything else is rejected before anything is saved.
+            </p>
+          </div>
+        )}
       </Sheet>
 
       {/* Categories popup — add / rename / delete in one place */}

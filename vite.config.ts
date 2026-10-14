@@ -100,6 +100,9 @@ export default defineConfig({
       output: {
         manualChunks(id) {
           if (id.includes('node_modules')) {
+            // The QR scanner is loaded lazily only when the Scan sheet opens —
+            // keep it out of the shared upfront chunk.
+            if (id.includes('html5-qrcode')) return undefined;
             if (id.includes('react') || id.includes('react-dom')) return 'vendor';
             return 'libs';
           }
