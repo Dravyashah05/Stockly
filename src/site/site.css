@@ -75,10 +75,21 @@ body {
   transform-origin: left center;
 }
 
+/* ---------- app screen tour ---------- */
+@keyframes st-tour-bar {
+  from { transform: scaleX(0); }
+  to { transform: scaleX(1); }
+}
+.st-tour-bar {
+  transform-origin: left center;
+  animation: st-tour-bar 5s linear forwards;
+}
+
 /* ---------- reduced motion: static, fully readable ---------- */
 @media (prefers-reduced-motion: reduce) {
   html { scroll-behavior: auto; }
   .st-reveal { opacity: 1; transform: none; transition: none; }
   .st-enter { opacity: 1; animation: none; }
   .st-float, .st-float-2, .st-blink { animation: none; }
+  .st-tour-bar { animation: none; }
 }

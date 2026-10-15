@@ -9,11 +9,13 @@ import {
   CircleCheck,
   PackagePlus,
   PackageX,
+  Plus,
+  Minus,
   Sparkles,
-  TrendingUp,
   WifiOff,
 } from 'lucide-react';
 import { stockStatus, useStore } from '../lib/store';
+import type { Product } from '../lib/types';
 import { Header, ErrorState, SkeletonRow } from '../components/ui';
 
 function greeting(): string {
@@ -27,12 +29,16 @@ export default function HomeScreen({
   onAddProduct,
   onStockIn,
   onStockOut,
+  onStockInProduct,
+  onStockOutProduct,
   goProducts,
   goHistory,
 }: {
   onAddProduct: () => void;
   onStockIn: () => void;
   onStockOut: () => void;
+  onStockInProduct: (p: Product) => void;
+  onStockOutProduct: (p: Product) => void;
   goProducts: (filter?: 'low' | 'out') => void;
   goHistory: () => void;
 }) {
@@ -71,7 +77,7 @@ export default function HomeScreen({
       {
         label: 'Stock In',
         sub: 'Receive goods',
-        icon: <ArrowDownToLine size={28} />,
+        icon: <ArrowDownToLine size={24} />,
         grad: 'bg-[#151515] dark:bg-[#C7FF4D]',
         iconCls: 'text-[#C7FF4D] dark:text-[#151515]',
         onClick: onStockIn,
@@ -79,7 +85,7 @@ export default function HomeScreen({
       {
         label: 'Stock Out',
         sub: 'Sell / issue goods',
-        icon: <ArrowUpFromLine size={28} />,
+        icon: <ArrowUpFromLine size={24} />,
         grad: 'bg-[#151515] dark:bg-[#C7FF4D]',
         iconCls: 'text-[#C7FF4D] dark:text-[#151515]',
         onClick: onStockOut,
@@ -98,15 +104,6 @@ export default function HomeScreen({
         iconCls: 'bg-(--accent-soft) text-(--ink) dark:text-(--accent)',
         ringCls: 'hover:border-(--accent)/40',
         onClick: () => goProducts(),
-      },
-      {
-        label: 'Stock units',
-        value: stats.totalUnits.toLocaleString('en-IN'),
-        foot: 'across catalogue',
-        icon: <TrendingUp size={18} />,
-        iconCls: 'bg-(--accent-soft) text-(--ink) dark:text-(--accent)',
-        ringCls: 'hover:border-(--accent)/40',
-        onClick: undefined,
       },
       {
         label: 'Low stock',
@@ -170,7 +167,7 @@ export default function HomeScreen({
   return (
     <div className="app-page-viewport mx-auto max-w-md">
       <Header
-        title="Stockly"
+        title="Overview"
         subtitle={
           lastSync ? `Synced ${lastSync.toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit' })}` : 'Inventory dashboard'
         }
@@ -193,13 +190,13 @@ export default function HomeScreen({
               onClick={onAddProduct}
               aria-label="Add product"
               title="Add product"
-              className="press flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl bg-[#151515] text-white dark:bg-[#C7FF4D] dark:text-[#151515]"
+              className="press flex min-h-11 shrink-0 items-center justify-center gap-2 rounded-xl bg-[#151515] px-3 text-[13px] font-bold text-white dark:bg-[#C7FF4D] dark:text-[#151515] sm:px-4"
             >
-              <PackagePlus size={24} />
+              <PackagePlus size={19} /><span>Add Product</span>
             </button>
           </div>
           <p className="mt-1 text-[13.5px] leading-relaxed text-(--ink-2)">
-            Here&apos;s your business at a glance.
+              Your inventory, at a glance.
           </p>
         </div>
 
@@ -213,7 +210,7 @@ export default function HomeScreen({
               className="glass press group flex min-h-[104px] flex-col items-start justify-between gap-2 rounded-[24px] border border-transparent p-4 text-left transition-colors hover:border-(--accent)/30"
             >
               <span
-                className={`flex h-13 w-13 items-center justify-center rounded-2xl p-3.5 ${a.grad} ${a.iconCls} transition-transform group-active:scale-95`}
+                className={`flex h-12 w-12 items-center justify-center rounded-2xl ${a.grad} ${a.iconCls} transition-transform group-active:scale-95`}
               >
                 {a.icon}
               </span>
@@ -256,22 +253,33 @@ export default function HomeScreen({
           </div>
         ) : (
           <>
-            {/* Bento stats */}
+            {/* Primary inventory metric */}
+            <div className="dashboard-hero relative overflow-hidden rounded-[28px] bg-[#151515] p-5 text-white dark:bg-[#C7FF4D] dark:text-[#151515]">
+              <div className="relative flex items-end justify-between gap-3">
+                <div className="min-w-0">
+                  <p className="text-[11px] font-extrabold uppercase tracking-[0.18em] text-white/60 dark:text-[#151515]/65">
+                    Total stock units
+                  </p>
+                  <p className="tnum mt-2 truncate text-[clamp(2.25rem,7vw,4.5rem)] font-extrabold leading-[0.95] tracking-[-0.06em]">
+                    {stats.totalUnits.toLocaleString('en-IN')}
+                  </p>
+                </div>
+              </div>
+              <p className="relative mt-3 border-t border-white/15 pt-3 text-[12px] font-semibold text-white/65 dark:border-[#151515]/15 dark:text-[#151515]/65">Across your catalogue</p>
+            </div>
+
+            {/* Uneven metrics give urgent stock levels a faster visual read. */}
             <div className="dashboard-stats-grid grid grid-cols-2 gap-2.5">
-              {bentoStats.map((c) => (
+              {bentoStats.map((c, index) => (
                 <button
                   key={c.label}
                   onClick={c.onClick}
                   disabled={!c.onClick}
-                  className={`glass press rounded-[24px] border border-transparent p-4 text-left transition-all hover:-translate-y-0.5 ${c.ringCls} ${!c.onClick ? 'cursor-default' : ''}`}
+                  className={`dashboard-metric dashboard-metric-${index} press text-left transition-colors ${c.ringCls} ${!c.onClick ? 'cursor-default' : ''}`}
                 >
-                  <div className="flex items-center justify-between">
-                    <span className={`flex h-10 w-10 items-center justify-center rounded-2xl ${c.iconCls}`}>{c.icon}</span>
-                    {c.onClick ? <ChevronRight size={16} className="text-(--ink-3)" /> : null}
-                  </div>
-                  <p className="tnum mt-3 text-[26px] font-extrabold leading-none tracking-tight text-(--ink)">{c.value}</p>
-                  <p className="mt-1 text-[12px] font-bold text-(--ink)">{c.label}</p>
-                  <p className="text-[11px] font-medium text-(--ink-2)">{c.foot}</p>
+                  <span className="dashboard-metric-label">{c.label}{c.onClick ? <ChevronRight size={14} /> : null}</span>
+                  <span className="dashboard-metric-value tnum">{c.value}</span>
+                  <span className="dashboard-metric-foot">{c.foot}</span>
                 </button>
               ))}
             </div>
@@ -303,40 +311,27 @@ export default function HomeScreen({
                   <p className="mt-0.5 text-[12.5px] text-(--ink-2)">No low-stock items right now.</p>
                 </div>
               ) : (
-                <div className="glass space-y-1 rounded-[24px] p-2">
+                <div className="dashboard-attention-list">
                   {attentionRows.map(({ p, isOut, fillPct, meta }) => (
-                    <button
-                      key={p.id}
-                      onClick={() => goProducts(isOut ? 'out' : 'low')}
-                      className="press flex w-full items-center gap-3 rounded-[18px] px-2.5 py-2.5 text-left transition-colors hover:bg-(--accent-soft)/60"
-                    >
-                      <span
-                        className={`flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl text-[16px] font-extrabold text-white ${
-                          isOut ? 'bg-[#C2332D]' : 'bg-[#B45309]'
-                        }`}
-                      >
-                        {p.name.slice(0, 1).toUpperCase()}
-                      </span>
-                      <span className="min-w-0 flex-1">
-                        <span className="block truncate text-[14px] font-bold text-(--ink)">{p.name}</span>
-                        <span className="mb-1.5 block text-[11.5px] font-medium text-(--ink-2)">{meta}</span>
-                        <span className="block h-1.5 w-full overflow-hidden rounded-full bg-(--stroke-dim)">
-                          <span
-                            className={`block h-full rounded-full ${isOut ? 'bg-[#C2332D]' : 'bg-[#B45309]'}`}
-                            style={{ width: `${fillPct}%` }}
-                          />
+                    <div key={p.id} className="dashboard-attention-row">
+                      <button type="button" onClick={() => goProducts(isOut ? 'out' : 'low')} className="dashboard-attention-item press">
+                        <span className={`dashboard-attention-mark ${isOut ? 'is-out' : 'is-low'}`}>{isOut ? '!' : '↘'}</span>
+                        <span className="min-w-0 flex-1">
+                          <span className="block truncate text-[14px] font-bold text-(--ink)">{p.name}</span>
+                          <span className="block text-[11.5px] text-(--ink-2)">
+                            <b className={isOut ? 'font-bold text-(--destructive)' : 'font-bold text-(--warning)'}>{isOut ? 'Out of stock' : 'Low stock'}</b>
+                            {' · '}{p.currentStock} on hand · {meta}
+                          </span>
+                          <span className="mt-1.5 block h-1 overflow-hidden rounded-full bg-(--stroke-dim)">
+                            <span className={`block h-full ${isOut ? 'bg-(--destructive)' : 'bg-(--warning)'}`} style={{ width: `${fillPct}%` }} />
+                          </span>
                         </span>
-                      </span>
-                      <span
-                        className={`tnum shrink-0 rounded-full px-2.5 py-1 text-[11px] font-extrabold ${
-                          isOut
-                            ? 'bg-rose-500/14 text-rose-600 dark:text-rose-300'
-                            : 'bg-amber-500/16 text-amber-700 dark:text-amber-300'
-                        }`}
-                      >
-                        {p.currentStock} left
-                      </span>
-                    </button>
+                      </button>
+                      <div className="dashboard-attention-actions">
+                        <button type="button" onClick={() => onStockInProduct(p)} aria-label={`Stock in ${p.name}`} title="Stock in" className="press"><Plus size={16} /></button>
+                        <button type="button" onClick={() => onStockOutProduct(p)} aria-label={`Stock out ${p.name}`} title="Stock out" disabled={p.currentStock <= 0} className="press"><Minus size={16} /></button>
+                      </div>
+                    </div>
                   ))}
                 </div>
               )}

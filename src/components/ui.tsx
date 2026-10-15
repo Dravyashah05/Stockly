@@ -11,6 +11,8 @@ import {
   Info,
   LayoutGrid,
   PackagePlus,
+  PanelLeftClose,
+  PanelLeftOpen,
   RefreshCw,
   RotateCcw,
   Search,
@@ -19,7 +21,6 @@ import {
   XCircle,
 } from 'lucide-react';
 import type { ToastMsg } from '../lib/types';
-import type { ThemeMode } from '../lib/types';
 
 /* ---------- Dismiss plumbing shared by every overlay ----------
  * - Escape key closes the topmost overlay (web / desktop).
@@ -220,10 +221,12 @@ export function DesktopSidebar({
   tab,
   onNavigate,
   onStock,
+  collapsed,
 }: {
   tab: TabKey;
   onNavigate: (tab: TabKey) => void;
   onStock: (mode: 'IN' | 'OUT') => void;
+  collapsed?: boolean;
 }) {
   const renderLinks = (items: typeof SIDE_LINKS) =>
     items.map((item) => {
@@ -247,9 +250,13 @@ export function DesktopSidebar({
       );
     });
   return (
-    <aside className="desktop-sidebar" aria-label="Main navigation">
+    <aside
+      className={`desktop-sidebar ${collapsed ? 'is-collapsed' : ''}`}
+      aria-label="Main navigation"
+      aria-hidden={collapsed || undefined}
+    >
       <div className="desktop-brand">
-        <span aria-hidden="true" className="desktop-brand-mark">S</span>
+        <span aria-hidden="true" className="desktop-brand-mark"><BrandMark size={22} /></span>
         <span>Stockly</span>
       </div>
       <p className="desktop-nav-caption">Workspace</p>
@@ -270,39 +277,45 @@ export function DesktopSidebar({
 
 export function DesktopToolbar({
   title,
+  online,
   pending,
   failed,
   lastSync,
-  theme,
-  setTheme,
+  sideCollapsed,
+  onToggleSidebar,
 }: {
   title: string;
+  online: boolean;
   pending: number;
   failed: number;
   lastSync: Date | null;
-  theme: ThemeMode;
-  setTheme: (theme: ThemeMode) => void;
+  sideCollapsed?: boolean;
+  onToggleSidebar?: () => void;
 }) {
-  const syncLabel = failed > 0 ? `${failed} sync issue${failed === 1 ? '' : 's'}` : pending > 0 ? `${pending} changes syncing` : lastSync ? `Synced ${lastSync.toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit' })}` : 'Sync status';
+  const syncLabel = failed > 0 ? `${failed} sync issue${failed === 1 ? '' : 's'}` : !online ? 'Offline' : pending > 0 ? `${pending} changes syncing` : lastSync ? `Synced ${lastSync.toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit' })}` : 'Not synced yet';
   return (
     <header className="desktop-toolbar">
+      {onToggleSidebar ? (
+        <button
+          type="button"
+          onClick={onToggleSidebar}
+          aria-expanded={!sideCollapsed}
+          aria-label={sideCollapsed ? 'Show sidebar' : 'Hide sidebar'}
+          title={sideCollapsed ? 'Show sidebar' : 'Hide sidebar'}
+          className="desktop-sidebar-toggle"
+        >
+          {sideCollapsed ? <PanelLeftOpen size={18} /> : <PanelLeftClose size={18} />}
+        </button>
+      ) : null}
       <div className="desktop-toolbar-heading">
         <span className="desktop-toolbar-eyebrow">Stockly / Workspace</span>
         <h1>{title}</h1>
       </div>
-      <div className={`desktop-sync-indicator ${failed ? 'has-error' : ''}`}>
+      <div className={`desktop-sync-indicator ${failed ? 'has-error' : !online ? 'is-offline' : ''}`} role="status" aria-live="polite">
         <Cloud size={16} />
         <span className="desktop-sync-dot" />
         <span>{syncLabel}</span>
       </div>
-      <label className="desktop-theme-control">
-        <span>Theme</span>
-        <select aria-label="Color theme" value={theme} onChange={(e) => setTheme(e.target.value as ThemeMode)}>
-          <option value="light">Light</option>
-          <option value="dark">Dark</option>
-          <option value="system">System</option>
-        </select>
-      </label>
     </header>
   );
 }
@@ -317,18 +330,24 @@ export function Sheet({
   open,
   onClose,
   title,
+  subtitle,
   children,
   footer,
   label,
+  backdropCls,
 }: {
   open: boolean;
   onClose: () => void;
   title: string;
+  /** Small supporting line under the title. */
+  subtitle?: string;
   children: React.ReactNode;
   /** Optional actions kept outside the scrollable sheet body. */
   footer?: React.ReactNode;
   /** Accessible name override (defaults to title). */
   label?: string;
+  /** Backdrop styling override (defaults to bg-black/45). */
+  backdropCls?: string;
 }) {
   useDismissable(open, onClose);
   // Swipe-down-to-close: drag ONLY from the header/handle zone (never the
@@ -380,11 +399,11 @@ export function Sheet({
   // `position: fixed` and collapse the sheet at the content bottom.
   return createPortal(
     <div className="fixed inset-0 z-50" data-sheet-title={title} role="dialog" aria-modal="true" aria-label={label || title}>
-      <button aria-label="Close dialog" onClick={onClose} className="animate-fade-in absolute inset-0 bg-black/45" />
+      <button aria-label="Close dialog" onClick={onClose} className={`animate-fade-in absolute inset-0 ${backdropCls || 'bg-black/45'}`} />
       <div className="sheet-dialog-position absolute inset-x-0 bottom-0 mx-auto flex max-w-md justify-center">
         <div
           ref={panelRef}
-          className={`sheet-dialog-panel glass-strong animate-sheet-up flex max-h-[86dvh] w-full flex-col overflow-hidden rounded-t-[28px] border-b-0 border-x-0 ${footer ? 'h-[86dvh]' : ''}`}
+          className="sheet-dialog-panel glass-strong animate-sheet-up flex max-h-[86dvh] w-full flex-col overflow-hidden rounded-t-[28px] border-b-0 border-x-0"
         >
           <div
             className="shrink-0 cursor-grab touch-none select-none px-5 pb-2.5 pt-2.5 active:cursor-grabbing"
@@ -420,12 +439,17 @@ export function Sheet({
             <div
               role="presentation"
               onPointerDown={tapHandle}
-              className={`mx-auto mb-2 h-1.5 rounded-full transition-all duration-200 ease-out ${
+              className={`sheet-handle mx-auto mb-2 h-1.5 rounded-full transition-all duration-200 ease-out ${
                 handleTap ? 'w-16 bg-(--accent)' : 'w-10 bg-(--ink-3)/40'
               }`}
             />
             <div className="flex items-center justify-between gap-3">
-              <h2 className="min-w-0 flex-1 truncate text-[16px] font-bold tracking-tight text-(--ink)">{title}</h2>
+              <div className="min-w-0 flex-1">
+                <h2 className="truncate text-[16px] font-bold tracking-tight text-(--ink)">{title}</h2>
+                {subtitle ? (
+                  <p className="truncate text-[12.5px] font-medium text-(--ink-2)">{subtitle}</p>
+                ) : null}
+              </div>
               <button
                 type="button"
                 onClick={onClose}
@@ -482,8 +506,7 @@ export const SearchBar = memo(function SearchBar({
   label?: string;
 }) {
   return (
-    <div className="glass rounded-3xl p-1.5">
-      <div className="relative">
+    <div className="search-field relative">
         <Search
           size={16}
           aria-hidden="true"
@@ -495,9 +518,8 @@ export const SearchBar = memo(function SearchBar({
           placeholder={placeholder}
           aria-label={label || placeholder}
           role="searchbox"
-          className="w-full rounded-[20px] bg-transparent py-2.5 pl-10 pr-4 text-[16px] text-(--ink) outline-none placeholder:text-(--ink-3)"
+          className="min-h-12 w-full rounded-xl border border-(--stroke) bg-(--field) py-2.5 pl-10 pr-4 text-[16px] text-(--ink) outline-none transition focus:border-(--accent) focus:ring-[3px] focus:ring-(--accent-soft) placeholder:text-(--ink-3)"
         />
-      </div>
     </div>
   );
 });
@@ -576,18 +598,21 @@ export function PrimaryBtn({
   onClick,
   disabled,
   type = 'button',
+  dense,
 }: {
   children: React.ReactNode;
   onClick?: () => void;
   disabled?: boolean;
   type?: 'button' | 'submit';
+  /** Compact ~48px height for tight modal footers. */
+  dense?: boolean;
 }) {
   return (
     <button
       type={type}
       disabled={disabled}
       onClick={onClick}
-      className={`press flex w-full items-center justify-center gap-2 rounded-2xl bg-(--primary) py-4 text-[15px] font-bold text-(--primary-foreground) disabled:opacity-50`}
+      className={`press flex min-h-12 w-full items-center justify-center gap-2 rounded-xl bg-(--primary) text-[15px] font-bold text-(--primary-foreground) disabled:opacity-50 ${dense ? 'py-3' : 'py-4'}`}
     >
       {children}
     </button>

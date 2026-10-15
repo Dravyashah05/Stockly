@@ -1,7 +1,7 @@
 # Stockly — Mobile Stock Management
 
 A premium, mobile-first inventory app for small business: products, Stock In/Out,
-low-stock alerts, transaction history, categories, suppliers, and a dashboard —
+low-stock alerts, transaction history, categories, and a dashboard —
 with **Google Sheets as the cloud database** (via Google Apps Script) so stock
 syncs across multiple devices.
 
@@ -37,59 +37,34 @@ Useful scripts:
 
 ## 2. Connect the Google Sheets database (required for real data)
 
-The backend is **one file**: [`apps-script/Code.gs`](apps-script/Code.gs).
-No API keys or secrets live in the app — the Web-App URL is public-by-design
-(access is enforced inside the script + your Sheet's sharing settings).
+The Google Sheets backend is [`apps-script/Code.gs`](apps-script/Code.gs).
+Deploy the Apps Script Web App as **Execute as: Me** and **Who has access:
+Anyone**, then paste its `/exec` URL into Settings. The app stores that URL on
+the device and uses it for inventory reads and writes.
 
-1. **Create a Google Sheet** (any name, e.g. `Stockly DB`).
-2. Open **Extensions → Apps Script**, delete the default code, paste the full
-   contents of `apps-script/Code.gs`, and **Save**.
-3. In the Apps Script toolbar, run **`setupDatabase`** once
-   (authorise with your Google account when asked). This creates the tabs:
-   `Products`, `Categories`, `Suppliers`, `StockTransactions`, `Settings`.
-4. Optionally run **`setupDemoData`** to insert sample categories, suppliers
-   and products.
-5. **Deploy → New deployment → type: Web app** with:
-   - *Execute as:* **Me**
-   - *Who has access:* **Anyone**
-   - Click **Deploy** and copy the Web-App URL (`https://script.google.com/macros/s/…/exec`).
-6. Open **Stockly → Settings → Cloud database**, paste the URL, tap
-   **Save & sync**. Repeat step 6 on every device — all phones share the same Sheet.
+1. Create a Google Sheet and open **Extensions → Apps Script**.
+2. Paste the full contents of `apps-script/Code.gs` and save.
+3. Run `setupDatabase` once. It creates missing inventory tabs and validates
+   headers without clearing existing data. `setupDemoData` is optional.
+4. Deploy as a Web App and copy the URL ending in `/exec`.
+5. In Stockly Settings, paste the URL and save.
 
-The URL is stored in the current app/browser’s `localStorage` key
-`stockly.apiUrl`; Vercel domains and local development origins have separate
-settings. Use the deployed Web App URL ending in `/exec`, not an Apps Script
-editor URL or `/dev` test URL.
+Stockly does not provide user accounts, administrator management, or device
+pairing. The Apps Script endpoint is public; anyone who obtains its URL can
+access the connected Sheet through the inventory API. Use a Sheet and deployment
+only for data you are comfortable making accessible to holders of that URL.
 
-> **Updating the backend later:** edit `Code.gs`, then
-> **Deploy → Manage deployments → Edit → New version**. The URL stays the same.
-> (The app now fetches everything via a single `sync` call — redeploy to enable
-> it; older deployments keep working through an automatic fallback.)
->
-> **Backend troubleshooting:** if the Web App shows an error instead of data —
-> 1. In Apps Script, run **`diagnose`** and check it names your spreadsheet.
-> 2. If the script is standalone (not created inside the Sheet), run
->    **`configureSpreadsheet("PASTE_SHEET_ID_HERE")`** once, then redeploy.
-> 3. Re-run **`setupDatabase`** — it only ever writes headers to empty tabs and
->    will refuse (with an explicit message) rather than touch tabs holding data.
-> 4. In **Deploy → Manage deployments**, confirm the active version includes your
->    latest code and access is still **Anyone**.
+> **Updating the backend later:** edit `Code.gs`, then choose **Deploy → Manage
+deployments → Edit → New version**. `setupDatabase` is safe to rerun; it does
+not clear existing data.
 
-### How syncing stays safe
+### How syncing works
 
-- Every write is validated server-side; responses are always
-  `{ success: true, data }` or `{ success: false, error }`.
-- **Stock In/Out** run inside `LockService.getScriptLock()`: the product row
-  update and the transaction row are written in **one atomic operation**, so two
-  phones updating at once can't corrupt stock.
-- Each stock request carries an **`idempotencyKey`** — retried requests return
-  the original result instead of double-adding.
-- Stock Out is rejected when quantity exceeds available stock; negative stock
-  is impossible.
-- On-device `localStorage` is **only a cache** (last synced snapshot) plus the
-  backend URL and theme. The app never treats it as the source of truth and
-  never shows a success message unless the server confirms.
-
+- Stock In/Out run inside `LockService.getScriptLock()`: the product row update
+  and transaction row are written in one atomic operation.
+- Each stock request carries an `idempotencyKey`; retries do not double-add.
+- Stock Out is rejected when quantity exceeds available stock.
+- On-device `localStorage` stores a cache, the backend URL, and theme preference.
 ## 3. Generate the Android APK
 
 Prerequisites: Android Studio + SDK installed (this machine already has the SDK
@@ -131,7 +106,7 @@ src/
   lib/
     config.ts               THE single API config (backend URL, currency, formats)
     api.ts                  reusable GET/POST service, timeouts, de-duplication
-    types.ts                Product / Category / Supplier / Transaction / Stats
+    types.ts                Product / Category / Transaction / Stats
     store.tsx               global state, sync, mutations, toasts, theme, offline
   components/
     ui.tsx                  Header, BottomNav, Sheet, inputs, EmptyState, Toasts
@@ -139,9 +114,9 @@ src/
   screens/
     HomeScreen.tsx          dashboard stats, value card, quick actions, alerts
     ProductsScreen.tsx      search, sort, category/status filters, CRUD
-    StockScreen.tsx         Stock In / Stock Out forms
+    StockSheet.tsx          Stock In / Stock Out transaction form
     HistoryScreen.tsx       transaction list + filters
-    SettingsScreen.tsx      backend URL, theme, categories, suppliers, guide
+    SettingsScreen.tsx      backend URL, theme, categories, sync, app settings
 apps-script/
   Code.gs                   complete backend: doGet/doPost/setupDatabase/
                             setupDemoData/CRUD/stockIn/stockOut/dashboard

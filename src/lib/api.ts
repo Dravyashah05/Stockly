@@ -1,50 +1,24 @@
-/* Reusable API service for the Google Apps Script backend.
+/* Reusable API service for the Stockly inventory backend.
  *
- * - All requests go through `apiRequest(action, payload)`.
- * - GET is used for reads, POST (JSON body) for writes — avoids CORS
- *   preflight issues with Apps Script.
+ * ALL traffic goes through the trusted same-origin gateway (`/api/sheets`),
+ * which resolves the caller's verified spreadsheet server-side from the
+ * authenticated session. The browser never holds an Apps Script URL, so a
+ * modified request cannot reach another user's spreadsheet.
+ * - GET is used for reads, POST (JSON body) for writes at the gateway.
  * - Duplicate-submission protection: callers pass an `idempotencyKey`
  *   for stock mutations; in-flight identical requests are de-duplicated.
  * - Never resolves "success" when the request failed — errors throw.
  */
 
-import { getApiUrl, isAppsScriptExecUrl } from './config';
+import { SHEETS_API_ROUTE, apiUrl } from './config';
+import { getDeviceSession } from './devices';
+import { getAuthSession } from './auth';
 import { interpretApiResponse } from './api-response';
 
 const IN_FLIGHT = new Map<string, Promise<unknown>>();
 
-/** Same-origin API proxy for browser builds. Apps Script's ContentService
- * redirect drops CORS headers, so browsers can't call Google directly:
- * - Vite dev serves it via middleware;
- * - Vercel rewrites it to the serverless function (see vercel.json).
- * Same URL and contract (`?target=&action=&…`, JSON POST bodies) in both
- * places. Installed native builds (Capacitor) call Google directly. */
-function proxyUrl(base: string): URL {
-  const url = new URL('/__stockly_api', window.location.origin);
-  url.searchParams.set('target', base);
-  return url;
-}
-
-function isNativeApp(): boolean {
-  try {
-    return typeof window !== 'undefined' && !!(window as unknown as { Capacitor?: unknown }).Capacitor;
-  } catch {
-    return false;
-  }
-}
-
-function requestUrl(base: string): URL {
-  if (!isAppsScriptExecUrl(base)) {
-    throw new ApiError('The saved backend URL is not a deployed Apps Script Web App /exec URL. Update it in Settings.', undefined, false);
-  }
-  if (!import.meta.env.DEV && isNativeApp()) return new URL(base);
-  return proxyUrl(base);
-}
-
 function networkFailureMessage(): string {
-  return isNativeApp()
-    ? 'Could not read the Apps Script response. Check the device connection and Web App access; the browser may report network and CORS failures the same way.'
-    : 'Could not reach Stockly’s Vercel API route. Check the connection and /__stockly_api deployment; browser CORS failures can look like network errors.';
+  return 'Could not reach Stockly’s sheet gateway. Check the connection and /api/sheets deployment, then retry.';
 }
 
 /** FIFO lane for write POSTs — see apiPost. Never rejects (errors are
@@ -101,6 +75,13 @@ function withTimeout<T>(p: Promise<T>, ms = 25000): Promise<T> {
 }
 
 async function responseData<T>(res: Response): Promise<T> {
+  if (res.status === 401 || res.status === 403) {
+    try {
+      window.dispatchEvent(new CustomEvent('stockly:forbidden', { detail: { status: res.status } }));
+    } catch {
+      /* non-DOM runtime */
+    }
+  }
   let text: string;
   try {
     text = await res.text();
@@ -123,17 +104,10 @@ async function responseData<T>(res: Response): Promise<T> {
 }
 
 export async function apiGet<T>(action: string, params: Record<string, string> = {}): Promise<T> {
-  const base = getApiUrl();
-  if (!base) throw new ApiError('Backend not connected. Open Settings and paste your Apps Script Web-App URL.');
-
-  const url = requestUrl(base);
-  url.searchParams.set('action', action);
-  for (const [k, v] of Object.entries(params)) url.searchParams.set(k, v);
-
   // Deduplicate identical concurrent reads (StrictMode remounts, refresh
   // bursts, reconnect + foreground firing together). Writes are NOT
   // deduped here — apiPost has its own idempotency-key handling.
-  const key = `GET:${url.toString()}`;
+  const key = `GET:${action}:${JSON.stringify(params)}`;
   if (IN_FLIGHT.has(key)) {
     return IN_FLIGHT.get(key) as Promise<T>;
   }
@@ -141,7 +115,13 @@ export async function apiGet<T>(action: string, params: Record<string, string> =
   const run = (async (): Promise<T> => {
     let res: Response;
     try {
-      res = await withTimeout(fetch(url.toString(), { method: 'GET', redirect: 'follow' }));
+      res = await withTimeout(
+        fetch(apiUrl(SHEETS_API_ROUTE), {
+          method: 'POST',
+          headers: gatewayHeaders(),
+          body: JSON.stringify({ action: 'proxy', gsAction: action, method: 'GET', params }),
+        }),
+      );
     } catch (e) {
       if (e instanceof ApiError) throw e;
       throw new ApiError(networkFailureMessage(), undefined, true);
@@ -162,9 +142,6 @@ export async function apiPost<T>(
   payload: Record<string, unknown> = {},
   opts: { dedupe?: boolean } = {},
 ): Promise<T> {
-  const base = getApiUrl();
-  if (!base) throw new ApiError('Backend not connected. Open Settings and paste your Apps Script Web-App URL.');
-
   const key = `${action}:${(payload.idempotencyKey as string) || JSON.stringify(payload)}`;
   if (opts.dedupe !== false && IN_FLIGHT.has(key)) {
     return IN_FLIGHT.get(key) as Promise<T>;
@@ -174,10 +151,10 @@ export async function apiPost<T>(
     let res: Response;
     try {
       res = await withTimeout(
-        fetch(requestUrl(base).toString(), {
+        fetch(apiUrl(SHEETS_API_ROUTE), {
           method: 'POST',
-          headers: { 'Content-Type': 'text/plain;charset=utf-8' },
-          body: JSON.stringify({ action, ...payload }),
+          headers: gatewayHeaders(),
+          body: JSON.stringify({ action: 'proxy', gsAction: action, method: 'POST', body: payload }),
         }),
         30000,
       );
@@ -206,12 +183,31 @@ export async function apiPost<T>(
 
 /* ---------- Typed endpoints ---------- */
 
+/** Auth + device credentials for the sheet gateway. The gateway resolves
+ *  the verified spreadsheet server-side; identity comes from these
+ *  headers, never from request fields the client could forge. */
+function gatewayHeaders(): Record<string, string> {
+  const headers: Record<string, string> = { 'Content-Type': 'application/json' };
+  const session = getAuthSession();
+  if (session) headers.Authorization = `Bearer ${session}`;
+  const deviceSession = getDeviceSession();
+  if (deviceSession) headers['X-Device-Session'] = deviceSession;
+  return headers;
+}
+
+/** Identity fields are injected server-side by the gateway; payloads pass
+ *  through unchanged. */
+function withUser<T extends Record<string, unknown>>(payload: T): T {
+  return payload;
+}
+
 import type {
   Category,
   DashboardStats,
   Product,
   StockTransaction,
   SyncData,
+  UserProfile,
 } from './types';
 
 export const api = {
@@ -219,17 +215,18 @@ export const api = {
 
   listProducts: () => apiGet<Product[]>('listProducts'),
   getProduct: (id: string) => apiGet<Product>('getProduct', { id }),
-  createProduct: (p: Record<string, unknown>) => apiPost<Product>('createProduct', p, { dedupe: false }),
+  createProduct: (p: Record<string, unknown>) =>
+    apiPost<Product>('createProduct', withUser(p), { dedupe: false }),
   updateProduct: (id: string, p: Record<string, unknown>) =>
-    apiPost<Product>('updateProduct', { id, ...p }, { dedupe: false }),
-  deleteProduct: (id: string) => apiPost<{ deleted: string }>('deleteProduct', { id }, { dedupe: false }),
+    apiPost<Product>('updateProduct', withUser({ id, ...p }), { dedupe: false }),
+  deleteProduct: (id: string) => apiPost<{ deleted: string }>('deleteProduct', withUser({ id }), { dedupe: false }),
 
   listCategories: () => apiGet<Category[]>('listCategories'),
-  createCategory: (name: string) => apiPost<Category>('createCategory', { name }, { dedupe: false }),
+  createCategory: (name: string) => apiPost<Category>('createCategory', withUser({ name }), { dedupe: false }),
   updateCategory: (id: string, name: string) =>
-    apiPost<Category>('updateCategory', { id, name }, { dedupe: false }),
+    apiPost<Category>('updateCategory', withUser({ id, name }), { dedupe: false }),
   deleteCategory: (id: string) =>
-    apiPost<{ deleted: string; cleared: number }>('deleteCategory', { id }, { dedupe: false }),
+    apiPost<{ deleted: string; cleared: number }>('deleteCategory', withUser({ id }), { dedupe: false }),
 
   stockIn: (args: {
     productId: string;
@@ -237,7 +234,7 @@ export const api = {
     price?: number;
     note?: string;
     idempotencyKey: string;
-  }) => apiPost<{ product: Product; transaction: StockTransaction }>('stockIn', args),
+  }) => apiPost<{ product: Product; transaction: StockTransaction }>('stockIn', withUser(args)),
 
   stockOut: (args: {
     productId: string;
@@ -245,7 +242,7 @@ export const api = {
     reason: string;
     note?: string;
     idempotencyKey: string;
-  }) => apiPost<{ product: Product; transaction: StockTransaction }>('stockOut', args),
+  }) => apiPost<{ product: Product; transaction: StockTransaction }>('stockOut', withUser(args)),
 
   listTransactions: (limit = 200) => apiGet<StockTransaction[]>('listTransactions', { limit: String(limit) }),
   dashboard: () => apiGet<DashboardStats>('dashboard'),
@@ -256,4 +253,16 @@ export const api = {
    * the extra param and return their default window.
    */
   sync: (txLimit = 200) => apiGet<SyncData>('sync', { txLimit: String(txLimit) }),
+
+  /* ---------- User profiles (user database, Apps Script Users tab) ---------- */
+  registerUser: (args: { name: string; email: string; userId?: string }) =>
+    apiPost<UserProfile>('registerUser', args as Record<string, unknown>, { dedupe: false }),
+  getUser: (userId: string) => apiGet<UserProfile>('getUser', { userId }),
+  getUserByEmail: (email: string) => apiGet<UserProfile>('getUserByEmail', { email }),
+  updateUserProfile: (args: { userId: string; name?: string; email?: string }) =>
+    apiPost<UserProfile>('updateUserProfile', args as Record<string, unknown>, { dedupe: false }),
+  reportLogin: (userId: string) =>
+    apiPost<UserProfile>('reportLogin', { userId }, { dedupe: false }),
+  mirrorStatus: (env: { userId: string; accountStatus: string; issuedAt: string; signature: string }) =>
+    apiPost<UserProfile>('mirrorStatus', env as Record<string, unknown>, { dedupe: false }),
 };

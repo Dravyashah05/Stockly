@@ -1,16 +1,15 @@
-/* Stockly App Store (/app-store → store.html) — editorial redesign.
+/* Stockly App Store (/app-store → store.html) — minimal creative redesign.
  *
- * Premium download experience in the exact Stockly site language
- * (bg #F7F7F2, ink #151515, lime #C7FF4D, fine borders, extrabold
- * editorial type). All release data stays live from GitHub Releases
- * (see src/lib/releases.ts): no hardcoded versions, no invented
- * screenshots — the phone frame below shows a real app screen and the
- * QR code encodes the real public store URL.
+ * Minimal editorial launch page in the exact Stockly site language
+ * (bg #F7F7F2, ink #151515, lime #C7FF4D). Short text, oversized type,
+ * one real app screenshot, live GitHub release data only — no hardcoded
+ * versions, no invented screenshots, no fake QR.
  */
 
 import { StrictMode, useEffect, useRef, useState } from 'react';
 import { createRoot } from 'react-dom/client';
 import QRCode from 'react-qr-code';
+import { ArrowDown, ArrowUpRight, Barcode, Package, ShieldCheck, Zap } from 'lucide-react';
 import './site.css';
 import { Logo, Reveal } from './visuals';
 import { APP_VERSION } from '../lib/config';
@@ -18,10 +17,8 @@ import { fetchLatestRelease, fetchReleaseChecksum, fetchReleaseHistory, formatAp
 import type { ReleaseInfo, ReleaseSummary } from '../lib/releases';
 import settingsShot from './stockly-settings.png';
 
-/** Stable public URL of this page — the single payload of the QR code.
- *  Uses the canonical /app-store route (rewritten to store.html) so the
- *  code keeps pointing at the latest release after every publish. */
-const STORE_URL = 'https://stocklybydns.vercel.app/app-store';
+/** Stable public URL of this page — the single payload of the QR code. */
+const STORE_URL = 'https://stocklybydns.vercel.app/store.html';
 
 type LoadState =
   | { status: 'checking' }
@@ -46,35 +43,7 @@ function isDetailLine(n: string): boolean {
   return /^(version|build|commit|note|signed with)\s*:/i.test(n);
 }
 
-/** Group cleaned release-note lines for the §4 Features / Improvements /
- *  Bug Fixes card. Pure keyword classifier over live metadata only — when
- *  nothing matches a group, that group is omitted (never invented). */
-export interface GroupedNotes {
-  features: string[];
-  improvements: string[];
-  fixes: string[];
-}
-
-export function groupReleaseNotes(cleaned: string[]): GroupedNotes {
-  const features: string[] = [];
-  const improvements: string[] = [];
-  const fixes: string[] = [];
-  for (const n of cleaned) {
-    if (isDetailLine(n)) continue;
-    if (/\b(fix|fixes|fixed|bug|crash|resolve[sd]?|correct|patch)\b/i.test(n)) fixes.push(n);
-    else if (
-      /\b(improv|polish|faster|performance|refactor|replac|updat|validat|diagnos|workflow|pipeline|vercel|proxy|responsive|accessib|a11y)\b/i.test(
-        n,
-      )
-    )
-      improvements.push(n);
-    else features.push(n);
-  }
-  return { features, improvements, fixes };
-}
-
-function useCopyFeedback(timeoutMs = 2000): [boolean, string | null, () => void] {
-  const [copied, setCopied] = useState(false);
+function useCopyFeedback(timeoutMs = 2000): [boolean, string | null, () => void] {  const [copied, setCopied] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const timer = useRef(0);
   useEffect(() => () => window.clearTimeout(timer.current), []);
@@ -88,18 +57,13 @@ function useCopyFeedback(timeoutMs = 2000): [boolean, string | null, () => void]
         window.clearTimeout(timer.current);
         timer.current = window.setTimeout(() => setCopied(false), timeoutMs);
       };
-      const fail = () => {
-        setError('Copy failed — long-press the link below to copy it manually.');
-        window.clearTimeout(timer.current);
-        timer.current = window.setTimeout(() => setError(null), timeoutMs * 2);
-      };
-      const text = STORE_URL;
+      const fail = () => setError('Copy failed — long-press the link to copy it.');
       if (navigator.clipboard?.writeText) {
-        navigator.clipboard.writeText(text).then(done).catch(fail);
+        navigator.clipboard.writeText(STORE_URL).then(done).catch(fail);
       } else {
         try {
           const ta = document.createElement('textarea');
-          ta.value = text;
+          ta.value = STORE_URL;
           document.body.appendChild(ta);
           ta.select();
           document.execCommand('copy');
@@ -113,12 +77,193 @@ function useCopyFeedback(timeoutMs = 2000): [boolean, string | null, () => void]
   ];
 }
 
+/* App screen gallery. Each slide points at a real capture — today every
+ * slide tours a genuine region of the Settings screenshot; when new app
+ * screenshots land in src/site/, just add { img, kicker, caption } entries
+ * below and the gallery, counter, and progress pick them up. Nothing here
+ * is fabricated: every caption names something truly visible. */
+interface TourSlide {
+  img: string;
+  scale: number;
+  origin: string;
+  kicker: string;
+  caption: string;
+  alt: string;
+}
+
+const TOUR_SLIDES: TourSlide[] = [
+  {
+    img: settingsShot,
+    scale: 1,
+    origin: '50% 0%',
+    kicker: 'Settings',
+    caption: 'Everything in one place.',
+    alt: 'Stockly app on Android — real Settings screen',
+  },
+  {
+    img: settingsShot,
+    scale: 2.1,
+    origin: '50% 20%',
+    kicker: 'Cloud database',
+    caption: 'Connected, on every device.',
+    alt: 'Stockly app close-up — cloud database card showing connected state',
+  },
+  {
+    img: settingsShot,
+    scale: 2.1,
+    origin: '50% 50%',
+    kicker: 'Sync status',
+    caption: 'Fresh data in one tap.',
+    alt: 'Stockly app close-up — sync status card with Sync now button',
+  },
+  {
+    img: settingsShot,
+    scale: 2.1,
+    origin: '50% 72%',
+    kicker: 'Appearance',
+    caption: 'Dark mode, done right.',
+    alt: 'Stockly app close-up — appearance controls with Dark mode selected',
+  },
+  {
+    img: settingsShot,
+    scale: 2.1,
+    origin: '50% 92%',
+    kicker: 'Navigate',
+    caption: 'Home, products, history.',
+    alt: 'Stockly app close-up — bottom navigation bar',
+  },
+];
+
+function ScreenTour() {
+  const [index, setIndex] = useState(0);
+  const [paused, setPaused] = useState(false);
+  const touchX = useRef<number | null>(null);
+  const reduceMotion =
+    typeof window !== 'undefined' && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+  const total = TOUR_SLIDES.length;
+  const go = (dir: 1 | -1) => setIndex((i) => (i + dir + total) % total);
+
+  useEffect(() => {
+    if (paused || reduceMotion) return;
+    const t = window.setInterval(() => setIndex((i) => (i + 1) % total), 5000);
+    return () => window.clearInterval(t);
+  }, [paused, total, reduceMotion]);
+
+  const slide = TOUR_SLIDES[index];
+  const num = String(index + 1).padStart(2, '0');
+  return (
+    <figure
+      className="relative mx-auto w-full max-w-[340px]"
+      onMouseEnter={() => setPaused(true)}
+      onMouseLeave={() => setPaused(false)}
+      onFocus={() => setPaused(true)}
+      onBlur={() => setPaused(false)}
+    >
+      {/* gallery backdrop */}
+      <span aria-hidden="true" className="tnum pointer-events-none absolute -top-10 left-1/2 -translate-x-1/2 select-none text-[7rem] font-extrabold leading-none tracking-tight text-[#EAEAE4]">
+        {num}
+      </span>
+      <span aria-hidden="true" className="absolute left-1/2 top-24 -z-10 h-72 w-72 -translate-x-1/2 rounded-full bg-[#C7FF4D]/50 blur-3xl" />
+      <span aria-hidden="true" className="absolute -right-4 top-1/3 -z-10 h-28 w-28 rounded-full border-[10px] border-[#C7FF4D]" />
+
+      {/* device */}
+      <div className="relative -rotate-2 rounded-[48px] bg-[#151515] p-3 shadow-[0_60px_100px_-40px_rgba(21,21,21,0.6)] ring-1 ring-black transition-transform duration-500 hover:rotate-0">
+        <div
+          className="overflow-hidden rounded-[38px] bg-black"
+          onTouchStart={(e) => {
+            touchX.current = e.touches[0].clientX;
+          }}
+          onTouchEnd={(e) => {
+            if (touchX.current === null) return;
+            const dx = e.changedTouches[0].clientX - touchX.current;
+            if (dx < -40) go(1);
+            else if (dx > 40) go(-1);
+            touchX.current = null;
+          }}
+        >
+          <img
+            key={slide.img}
+            src={slide.img}
+            alt={slide.alt}
+            className="block aspect-[9/19.5] w-full object-cover object-top"
+            style={{
+              transform: `scale(${slide.scale})`,
+              transformOrigin: slide.origin,
+              transition: reduceMotion ? 'none' : 'transform 0.9s cubic-bezier(0.22, 0.9, 0.3, 1)',
+            }}
+            loading="lazy"
+          />
+        </div>
+        <span aria-hidden="true" className="absolute -left-1.5 top-24 h-10 w-1 rounded-full bg-[#C7FF4D]" />
+        <span aria-hidden="true" className="absolute -right-1.5 top-28 h-14 w-1 rounded-full bg-white/25" />
+      </div>
+
+      {/* caption deck */}
+      <div className="mt-8 flex items-end justify-between gap-4">
+        <div className="min-w-0">
+          <p aria-live="polite" className="text-[11px] font-extrabold uppercase tracking-[0.28em] text-neutral-400">
+            {slide.kicker} · {num} / {String(total).padStart(2, '0')}
+          </p>
+          <p aria-live="polite" className="mt-1.5 truncate text-[19px] font-extrabold tracking-tight" title={slide.caption}>
+            {slide.caption}
+          </p>
+        </div>
+        <div className="flex shrink-0 items-center gap-2">
+          <button
+            type="button"
+            onClick={() => go(-1)}
+            aria-label="Previous app view"
+            className="flex h-11 w-11 items-center justify-center rounded-full border border-[#151515] transition-all hover:bg-[#151515] hover:text-white active:scale-95"
+          >
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+              <path d="M19 12H5m0 0l6-6m-6 6l6 6" />
+            </svg>
+          </button>
+          <button
+            type="button"
+            onClick={() => go(1)}
+            aria-label="Next app view"
+            className="flex h-11 w-11 items-center justify-center rounded-full bg-[#C7FF4D] text-[#151515] transition-transform hover:scale-105 active:scale-95"
+          >
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+              <path d="M5 12h14m0 0l-6-6m6 6l-6 6" />
+            </svg>
+          </button>
+        </div>
+      </div>
+      {/* autoplay progress, in sync with the 5s interval */}
+      <div className="mt-4 h-[3px] overflow-hidden rounded-full bg-[#EAEAE4]" aria-hidden="true">
+        {!reduceMotion && !paused ? (
+          <div key={index} className="st-tour-bar h-full w-full bg-[#151515]" />
+        ) : (
+          <div className="h-full w-full bg-[#151515]" style={{ transform: `scaleX(${(index + 1) / total})`, transformOrigin: 'left center' }} />
+        )}
+      </div>
+      <div className="mt-3 flex items-center gap-2" role="tablist" aria-label="App views">
+        {TOUR_SLIDES.map((s, i) => (
+          <button
+            key={`${s.kicker}-${i}`}
+            type="button"
+            role="tab"
+            aria-selected={i === index}
+            aria-label={`Show: ${s.kicker} — ${s.caption}`}
+            onClick={() => setIndex(i)}
+            className={`h-1.5 rounded-full transition-all ${
+              i === index ? 'w-6 bg-[#151515]' : 'w-1.5 bg-[#D9D9D0] hover:bg-neutral-400'
+            }`}
+          />
+        ))}
+      </div>
+      <figcaption className="sr-only">Real Stockly app screens.</figcaption>
+    </figure>
+  );
+}
+
 function StoreApp() {
   const [rel, setRel] = useState<LoadState>({ status: 'checking' });
   const [history, setHistory] = useState<ReleaseSummary[] | null>(null);
   const [sha, setSha] = useState<string | null>(null);
-  const [showAll, setShowAll] = useState(false);
-  const [allNotes, setAllNotes] = useState(false);
+  const [notesOpen, setNotesOpen] = useState(false);
   const [copied, copyError, copyLink] = useCopyFeedback();
   const alive = useRef(true);
 
@@ -165,27 +310,10 @@ function StoreApp() {
 
   const info = rel.status === 'ready' ? rel.info : null;
   const prior = (history || []).filter((h) => h.tag !== info?.tag);
-  const notes = info ? cleanNotes(info.releaseNotes) : [];
-  const nonDetail = notes.filter((n) => !isDetailLine(n));
-  const groupCount = nonDetail.length;
-  const visibleNotes = allNotes ? nonDetail : nonDetail.slice(0, 4);
-  const visibleGroups = groupReleaseNotes(visibleNotes);
-  const groupedSections = (
-    [
-      ['Features', visibleGroups.features],
-      ['Improvements', visibleGroups.improvements],
-      ['Bug fixes', visibleGroups.fixes],
-    ] as [string, string[]][]
-  ).filter(([, items]) => items.length > 0);
-  const detailLines = notes.filter((n) => isDetailLine(n));
-  const extraHighlights = nonDetail.slice(4);
-  const visiblePrior = showAll ? prior.slice(0, 10) : prior.slice(0, 4);
+  const notes = info ? cleanNotes(info.releaseNotes).filter((n) => !isDetailLine(n)) : [];
   const versionLabel = info ? `v${info.version}` : `v${APP_VERSION}`;
-  const metaLine = info
-    ? `${versionLabel}${info.versionCode > 0 ? ` (${info.versionCode})` : ''}${
-        info.apkSize > 0 ? ` · ${formatApkSize(info.apkSize)}` : ''
-      }${info.publishedAt ? ` · ${fmtDate(info.publishedAt)}` : ''}`
-    : null;
+  const sizeLabel = info && info.apkSize > 0 ? formatApkSize(info.apkSize) : '';
+  const dateLabel = info && info.publishedAt ? fmtDate(info.publishedAt) : '';
 
   return (
     <div className="min-h-screen overflow-x-clip bg-[#F7F7F2] text-[#151515]">
@@ -196,15 +324,15 @@ function StoreApp() {
         Skip to download
       </a>
 
-      {/* ---------------- compact header ---------------- */}
+      {/* ---------------- nav ---------------- */}
       <header className="sticky top-0 z-50 border-b border-[#D9D9D0] bg-[#F7F7F2]/90 backdrop-blur-md">
         <nav aria-label="Primary" className="mx-auto flex h-16 max-w-6xl items-center justify-between px-5 sm:px-8">
           <a href="index.html" className="flex items-center gap-2.5" aria-label="Back to Stockly home">
             <Logo />
             <span className="text-[17px] font-extrabold tracking-tight">Stockly</span>
           </a>
-          <div className="flex items-center gap-5">
-            <div className="hidden items-center gap-7 md:flex">
+          <div className="flex items-center gap-4 sm:gap-6">
+            <div className="hidden items-center gap-6 md:flex">
               <a href="#download" className="text-[12px] font-bold uppercase tracking-[0.14em] text-neutral-500 transition-colors hover:text-[#151515]">
                 Latest
               </a>
@@ -215,20 +343,15 @@ function StoreApp() {
                 Install
               </a>
             </div>
-            <span className="hidden text-[12px] font-extrabold uppercase tracking-[0.14em] text-neutral-400 sm:inline" aria-hidden="true">
-              ·
+            <span className="hidden text-[12px] font-extrabold uppercase tracking-[0.14em] text-neutral-500 md:inline">
+              App Store
             </span>
-            <span className="text-[12px] font-extrabold uppercase tracking-[0.14em] text-neutral-500">App Store</span>
             <a
               href="#download"
               aria-label="Download app"
-              title="Download app"
               className="flex h-10 w-10 items-center justify-center rounded-full bg-[#C7FF4D] text-[#151515] transition-transform hover:scale-105 active:scale-95"
             >
-              <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
-                <path d="M12 3v12m0 0l-4.5-4.5M12 15l4.5-4.5" />
-                <path d="M4 20h16" />
-              </svg>
+              <ArrowDown size={17} strokeWidth={2.5} aria-hidden="true" />
             </a>
           </div>
         </nav>
@@ -236,560 +359,358 @@ function StoreApp() {
 
       <main>
         {/* ---------------- hero ---------------- */}
-        <section className="mx-auto grid max-w-6xl gap-10 px-5 pb-14 pt-12 sm:px-8 sm:pt-16 lg:grid-cols-[1.1fr_0.9fr] lg:items-center lg:gap-14 lg:pb-20">
+        <section className="mx-auto grid max-w-6xl gap-12 px-5 pb-20 pt-14 sm:px-8 sm:pt-20 lg:grid-cols-2 lg:items-center lg:gap-8 lg:pb-28">
           <div>
-            <p className="st-enter inline-block rounded-full border border-[#D9D9D0] px-3.5 py-1.5 text-[11px] font-extrabold uppercase tracking-[0.22em]">
-              Official Stockly releases
+            <p className="st-enter inline-flex items-center gap-2 text-[11px] font-extrabold uppercase tracking-[0.28em] text-neutral-500">
+              <span className="h-1.5 w-1.5 rounded-full bg-[#151515]" aria-hidden="true" />
+              Official release
             </p>
             <h1
-              className="st-enter mt-5 text-[13vw] font-extrabold leading-[0.98] tracking-tight sm:text-6xl lg:text-[4.6rem]"
+              className="st-enter mt-5 text-[17vw] font-extrabold leading-[0.95] tracking-tight sm:text-7xl lg:text-[5.5rem]"
               style={{ animationDelay: '0.08s' }}
             >
-              Your inventory.
+              Stock up.
               <br />
+              Stay{' '}
               <span className="relative inline-block">
-                Under control.
-                <span aria-hidden="true" className="absolute -bottom-1 left-0 h-[5px] w-full rounded-full bg-[#C7FF4D]" />
+                ahead.
+                <span aria-hidden="true" className="absolute -bottom-1 left-0 h-[6px] w-full rounded-full bg-[#C7FF4D]" />
               </span>
             </h1>
-            <p className="st-enter mt-5 max-w-[42ch] text-[16px] font-medium leading-relaxed text-neutral-600" style={{ animationDelay: '0.16s' }}>
-              Take Stockly with you. Manage products, track stock movements, and keep your inventory organized from
-              your Android device.
+            <p className="st-enter mt-6 text-[17px] font-medium text-neutral-600" style={{ animationDelay: '0.16s' }}>
+              Inventory management, in your pocket.
             </p>
-            <p className="st-enter mt-5" style={{ animationDelay: '0.2s' }}>
-              <span className="tnum inline-flex items-center gap-2 rounded-full bg-[#151515] px-3.5 py-1.5 text-[11px] font-extrabold uppercase tracking-[0.16em] text-[#C7FF4D]">
-                <span className={`h-1.5 w-1.5 rounded-full ${info ? 'bg-[#C7FF4D]' : 'st-blink bg-[#C7FF4D]'}`} aria-hidden="true" />
-                {info ? `Latest · ${metaLine}` : rel.status === 'error' ? rel.message : 'Checking the latest release…'}
-              </span>
-            </p>
-            <div className="st-enter mt-7 flex flex-wrap gap-3" style={{ animationDelay: '0.24s' }}>
+            <div className="st-enter mt-8" style={{ animationDelay: '0.22s' }}>
               {info ? (
                 <a
                   href={info.apkUrl}
-                  className="rounded-full bg-[#151515] px-7 py-3.5 text-[13px] font-extrabold uppercase tracking-[0.14em] text-[#C7FF4D] transition-transform hover:scale-[1.03] active:scale-95"
+                  className="inline-block rounded-full bg-[#C7FF4D] px-9 py-4 text-[13px] font-extrabold uppercase tracking-[0.14em] text-[#151515] transition-transform hover:scale-[1.03] active:scale-95"
                 >
                   Download for Android
                 </a>
               ) : (
                 <a
                   href="#download"
-                  className="rounded-full bg-[#151515] px-7 py-3.5 text-[13px] font-extrabold uppercase tracking-[0.14em] text-[#C7FF4D] transition-transform hover:scale-[1.03] active:scale-95"
+                  className="inline-block rounded-full bg-[#C7FF4D] px-9 py-4 text-[13px] font-extrabold uppercase tracking-[0.14em] text-[#151515] transition-transform hover:scale-[1.03] active:scale-95"
                 >
                   {rel.status === 'checking' ? 'Checking…' : 'Get the APK'}
                 </a>
               )}
-              <a
-                href="#release-notes"
-                className="rounded-full border border-[#151515] px-7 py-3.5 text-[13px] font-extrabold uppercase tracking-[0.14em] transition-colors hover:bg-[#151515] hover:text-white"
-              >
-                View release notes
-              </a>
             </div>
-            <dl className="st-enter mt-9 flex gap-8 border-t border-[#D9D9D0] pt-5" style={{ animationDelay: '0.3s' }}>
-              {[
-                ['Android', 'APK direct'],
-                [info && info.apkSize > 0 ? formatApkSize(info.apkSize) : 'Light', 'Download size'],
-                [info ? fmtDate(info.publishedAt) || 'Official' : 'Official', 'Signed build'],
-              ].map(([v, k]) => (
-                <div key={k}>
-                  <dt className="text-[10.5px] font-extrabold uppercase tracking-[0.2em] text-neutral-500">{k}</dt>
-                  <dd className="tnum mt-0.5 text-[16px] font-extrabold">{v}</dd>
-                </div>
-              ))}
-            </dl>
+            <p className="st-enter tnum mt-5 text-[12.5px] font-bold uppercase tracking-[0.16em] text-neutral-400" style={{ animationDelay: '0.28s' }}>
+              {info ? (
+                <>
+                  {versionLabel}
+                  {sizeLabel ? ` · ${sizeLabel}` : ''}
+                  {dateLabel ? ` · ${dateLabel}` : ''}
+                </>
+              ) : rel.status === 'error' ? (
+                rel.message
+              ) : (
+                'Checking the latest release…'
+              )}
+            </p>
           </div>
 
-          {/* editorial release ticket — brand-derived, no invented UI */}
-          <Reveal delay="st-d1" className="lg:pl-4">
-            <div className="relative mx-auto w-full max-w-[420px]">
-              <div className="overflow-hidden rounded-[28px] bg-[#151515] text-white shadow-[0_30px_60px_-30px_rgba(21,21,21,0.5)]">
-                <div className="flex items-center justify-between px-6 pt-5">
-                  <p className="inline-flex items-center gap-2 text-[10.5px] font-extrabold uppercase tracking-[0.22em] text-white/60">
-                    <span className="h-1.5 w-1.5 rounded-full bg-[#C7FF4D]" aria-hidden="true" />
-                    Official release
-                  </p>
-                  <span className="rounded-full bg-[#C7FF4D] px-2.5 py-1 text-[10.5px] font-extrabold uppercase tracking-widest text-[#151515]">
-                    APK
-                  </span>
+          {/* app preview — the centerpiece */}
+          <Reveal delay="st-d1" className="relative">
+            <div className="relative mx-auto w-full max-w-[320px]">
+              <span aria-hidden="true" className="absolute -left-10 top-16 h-24 w-24 rounded-full bg-[#C7FF4D]/60 blur-2xl" />
+              <div className="relative rounded-[48px] bg-[#151515] p-3 shadow-[0_50px_100px_-40px_rgba(21,21,21,0.55)] transition-transform duration-500 hover:-translate-y-1.5">
+                <div className="overflow-hidden rounded-[36px]">
+                  <img
+                    src={settingsShot}
+                    alt="Stockly app on Android — Settings screen with cloud connection, sync status and appearance controls"
+                    className="block aspect-[9/19.5] w-full object-cover object-top"
+                    loading="eager"
+                  />
                 </div>
-                <div className="px-6 pb-2 pt-4">
-                  <p className="text-[15px] font-bold text-white/70">Stockly for Android</p>
-                  <p className="tnum mt-1 text-[64px] font-extrabold leading-none tracking-tight text-white sm:text-[76px]">
-                    {info ? `v${info.version}` : versionLabel}
-                  </p>
-                </div>
-                <div aria-hidden="true" className="mx-6 my-4 border-t-2 border-dashed border-white/20" />
-                <dl className="grid grid-cols-3 gap-3 px-6 pb-6">
-                  {[
-                    ['Updated', info && info.publishedAt ? fmtDate(info.publishedAt) : '—'],
-                    ['Size', info && info.apkSize > 0 ? formatApkSize(info.apkSize) : '—'],
-                    ['Build', info ? info.build : '—'],
-                  ].map(([k, v]) => (
-                    <div key={k} className="rounded-2xl bg-white/[0.07] px-3 py-2.5">
-                      <dt className="text-[9.5px] font-extrabold uppercase tracking-[0.2em] text-white/50">{k}</dt>
-                      <dd className="tnum mt-0.5 truncate text-[14px] font-extrabold text-[#C7FF4D]">{v}</dd>
-                    </div>
-                  ))}
-                </dl>
               </div>
-              <div className="st-float absolute -right-2 -top-4 hidden items-center gap-2 rounded-2xl border border-[#D9D9D0] bg-white px-3.5 py-2.5 shadow-[0_18px_36px_-18px_rgba(21,21,21,0.4)] sm:flex">
-                <span className="flex h-8 w-8 items-center justify-center rounded-xl bg-[#151515]">
-                  <Logo size={20} light />
+              <div className="st-float absolute -right-3 top-10 flex items-center gap-2.5 rounded-2xl bg-[#151515] py-3 pl-3.5 pr-5 text-white shadow-[0_18px_36px_-14px_rgba(21,21,21,0.55)] sm:-right-8">
+                <span className="h-2 w-2 rounded-full bg-[#C7FF4D]" aria-hidden="true" />
+                <span>
+                  <span className="tnum block text-[15px] font-extrabold leading-none">{info ? versionLabel : `v${APP_VERSION}`}</span>
+                  <span className="mt-1 block text-[10px] font-extrabold uppercase tracking-[0.2em] text-white/50">Latest</span>
                 </span>
-                <span className="text-[12px] font-extrabold">Same Sheet, every device</span>
+              </div>
+              <div className="absolute -bottom-5 -left-3 flex items-center gap-2 rounded-full border border-[#D9D9D0] bg-white/90 py-2 pl-3 pr-4 backdrop-blur sm:-left-8">
+                <Logo size={18} />
+                <span className="text-[11px] font-extrabold uppercase tracking-[0.16em]">Android · APK</span>
               </div>
             </div>
           </Reveal>
         </section>
 
         {/* ---------------- latest release ---------------- */}
-        <section id="download" className="mx-auto max-w-6xl scroll-mt-24 px-5 pb-4 sm:px-8">
-          <Reveal>
-            <p className="text-[11px] font-extrabold uppercase tracking-[0.22em] text-neutral-500">01 · Latest release</p>
-            <div className="mt-3 flex flex-wrap items-end justify-between gap-4 border-t-2 border-[#151515] pt-5">
-              <h2 className="max-w-[14ch] text-4xl font-extrabold leading-[1.02] tracking-tight sm:text-5xl">
-                Straight from the source.
-              </h2>
-              {info ? (
-                <span className="rounded-full border border-[#151515] px-3.5 py-1.5 text-[11px] font-extrabold uppercase tracking-[0.18em]">
-                  Latest · {versionLabel}
-                </span>
-              ) : null}
-            </div>
-          </Reveal>
-
-          <div className="mt-8 grid gap-10 lg:grid-cols-[1.15fr_0.85fr] lg:items-start">
-            {/* left: release details */}
-            <Reveal delay="st-d1">
-              <div className="flex items-center gap-4">
-                <span className="flex h-16 w-16 shrink-0 items-center justify-center rounded-[20px] bg-[#151515]">
-                  <Logo size={34} light />
-                </span>
-                <div className="min-w-0">
-                  <p className="text-[24px] font-extrabold tracking-tight">Stockly for Android</p>
-                  <p className="tnum mt-0.5 text-[13px] font-semibold text-neutral-500">
-                    {info
-                      ? metaLine
-                      : rel.status === 'error'
-                        ? rel.message
-                        : 'Checking the latest release…'}
-                  </p>
-                </div>
-              </div>
-
-              {groupCount > 0 ? (
-                <div id="release-notes" className="mt-6 scroll-mt-28">
-                  <p className="text-[11px] font-extrabold uppercase tracking-[0.18em] text-neutral-500">What’s new</p>
-                  {groupedSections.map(([label, items]) => (
-                    <div key={label} className="mt-3">
-                      <p className="text-[11px] font-extrabold uppercase tracking-[0.16em] text-neutral-400">{label}</p>
-                      <ul className="mt-1.5 space-y-2">
-                        {items.map((n) => (
-                          <li key={`${label}-${n}`} className="flex gap-2.5 text-[14.5px] font-medium leading-relaxed text-neutral-700">
-                            <span aria-hidden="true" className="mt-[9px] h-1.5 w-1.5 shrink-0 rounded-full bg-[#151515]" />
-                            {n}
-                          </li>
-                        ))}
-                      </ul>
-                    </div>
-                  ))}
-                  {extraHighlights.length > 0 ? (
-                    <div className="mt-2">
-                      <button
-                        type="button"
-                        onClick={() => setAllNotes((v) => !v)}
-                        aria-expanded={allNotes}
-                        className="text-[12px] font-extrabold uppercase tracking-[0.14em] text-neutral-500 underline-offset-4 transition-colors hover:text-[#151515] hover:underline"
-                      >
-                        {allNotes ? 'Show fewer notes −' : `All ${nonDetail.length} notes +`}
-                      </button>
-                    </div>
-                  ) : null}
-                </div>
-              ) : info ? (
-                <div id="release-notes" className="mt-6 scroll-mt-28">
-                  <p className="text-[11px] font-extrabold uppercase tracking-[0.18em] text-neutral-500">What’s new</p>
-                  <p className="mt-2 text-[14px] font-medium text-neutral-500">
-                    {info.releaseUrl ? (
-                      <>
-                        Release notes for this version live on the{' '}
-                        <a href={info.releaseUrl} target="_blank" rel="noreferrer" className="font-bold text-[#151515] underline underline-offset-4">
-                          official GitHub release
-                        </a>
-                        .
-                      </>
-                    ) : (
-                      'No release notes published for this version yet.'
-                    )}
-                  </p>
-                </div>
-              ) : null}
-
-              {info ? (
-                <a
-                  href={info.apkUrl}
-                  className="mt-7 block rounded-full bg-[#151515] py-4 text-center text-[13px] font-extrabold uppercase tracking-[0.14em] text-[#C7FF4D] transition-transform hover:scale-[1.02] active:scale-95"
-                >
-                  Download APK{info.apkSize > 0 ? ` · ${formatApkSize(info.apkSize)}` : ''}
-                </a>
-              ) : (
-                <span
-                  aria-disabled="true"
-                  className={`mt-7 block rounded-full py-4 text-center text-[13px] font-extrabold uppercase tracking-[0.14em] ${
-                    rel.status === 'checking' ? 'bg-[#EAEAE4] text-neutral-500' : 'bg-[#151515] text-white/60'
-                  }`}
-                >
-                  {rel.status === 'checking' ? 'Checking…' : 'APK coming soon'}
-                </span>
-              )}
-
-              <dl className="mt-7 grid grid-cols-2 gap-x-6 sm:grid-cols-3">
-                {[
-                  ['Version', info ? `${versionLabel}${info.versionCode > 0 ? ` · code ${info.versionCode}` : ''}` : '—'],
-                  ['Released', info && info.publishedAt ? fmtDate(info.publishedAt) : '—'],
-                  ['File size', info && info.apkSize > 0 ? formatApkSize(info.apkSize) : '—'],
-                  ['Platform', 'Android'],
-                  ['Build', info ? `${info.build}-signed` : '—'],
-                  ['Source', info ? (info.source === 'release.json' ? 'release.json' : 'GitHub assets') : '—'],
-                ].map(([k, v]) => (
-                  <div key={k} className="border-t border-[#D9D9D0] py-3">
-                    <dt className="text-[10px] font-extrabold uppercase tracking-[0.2em] text-neutral-500">{k}</dt>
-                    <dd className="tnum mt-1 truncate text-[14px] font-extrabold" title={v}>
-                      {v}
-                    </dd>
-                  </div>
-                ))}
-              </dl>
-
-              <div className="flex flex-wrap items-center gap-x-6 gap-y-2 border-t border-[#D9D9D0] pt-4">
-                {info?.releaseUrl ? (
-                  <a
-                    href={info.releaseUrl}
-                    target="_blank"
-                    rel="noreferrer"
-                    className="text-[12px] font-extrabold uppercase tracking-[0.14em] underline-offset-4 hover:underline"
-                  >
-                    Official GitHub release →
-                  </a>
-                ) : null}
-                {rel.status === 'error' ? (
-                  <button
-                    type="button"
-                    onClick={() => window.location.reload()}
-                    className="text-[12px] font-extrabold uppercase tracking-[0.14em] text-neutral-500 underline-offset-4 hover:text-[#151515] hover:underline"
-                  >
-                    Retry
-                  </button>
-                ) : null}
-              </div>
-
-              <div className="mt-4">
-                <p className="text-[11px] font-extrabold uppercase tracking-[0.18em] text-neutral-500">Verify</p>
-                {sha ? (
-                  <p className="tnum mt-2 break-all rounded-2xl border border-[#D9D9D0] bg-white px-3.5 py-3 text-[11.5px] font-semibold leading-relaxed text-neutral-600">
-                    SHA-256 · {sha}
-                  </p>
-                ) : (
-                  <p className="mt-2 text-[13px] font-medium text-neutral-500">
-                    {info ? 'Checksum file not published for this release.' : 'Checksum appears with the release.'}
-                  </p>
-                )}
-              </div>
+        <section id="download" className="scroll-mt-24 border-t border-[#D9D9D0]">
+          <div className="mx-auto grid max-w-6xl gap-12 px-5 py-20 sm:px-8 sm:py-28 lg:grid-cols-[1fr_1fr] lg:items-center">
+            <Reveal className="order-2 lg:order-1">
+              <ScreenTour />
             </Reveal>
 
-            {/* right: real screenshot + QR */}
-            <div className="space-y-6">
-              <Reveal delay="st-d2">
-                <figure className="mx-auto w-full max-w-[300px]">
-                  <div className="rounded-[44px] border border-[#D9D9D0] bg-[#151515] p-2.5 shadow-[0_40px_80px_-40px_rgba(21,21,21,0.5)]">
-                    <div className="overflow-hidden rounded-[34px]">
-                      <img
-                        src={settingsShot}
-                        alt="Stockly app on Android — Settings screen with cloud connection, sync status and appearance controls"
-                        className="block aspect-[9/19.5] w-full object-cover object-top"
-                        loading="lazy"
-                      />
-                    </div>
-                  </div>
-                  <figcaption className="mt-3 text-center text-[12px] font-semibold text-neutral-500">
-                    Real app screen · Settings, dark mode
-                  </figcaption>
-                </figure>
-              </Reveal>
-
-              <Reveal delay="st-d2">
-                <aside aria-label="Download on another device" className="st-darkzone overflow-hidden rounded-[28px] bg-[#111210] p-6 text-white sm:p-7">
-                  <p className="text-[11px] font-extrabold uppercase tracking-[0.22em] text-[#C7FF4D]">Download on another device</p>
-                  <h3 className="mt-2 text-2xl font-extrabold tracking-tight">Scan with your phone</h3>
-                  <p className="mt-1.5 text-[13.5px] font-medium leading-relaxed text-white/65">
-                    Point your Android camera at the code to open this App Store page and grab the latest release.
-                  </p>
-                  <div className="mt-5 flex justify-center">
-                    <span className="inline-block rounded-2xl bg-white p-3.5">
-                      <QRCode value={STORE_URL} size={168} bgColor="#FFFFFF" fgColor="#151515" aria-label={`QR code linking to ${STORE_URL}`} />
-                    </span>
-                  </div>
-                  <p className="tnum mt-4 truncate text-center text-[12px] font-semibold text-white/50" title={STORE_URL}>
-                    {STORE_URL.replace(/^https:\/\//, '')}
-                  </p>
-                  <p className="mt-2 text-center text-[12px] font-medium text-white/45">
-                    The APK is for Android devices.
-                  </p>
-                  <button
-                    type="button"
-                    onClick={copyLink}
-                    className="mt-3 block w-full rounded-full bg-[#C7FF4D] py-3.5 text-center text-[12px] font-extrabold uppercase tracking-[0.14em] text-[#151515] transition-transform hover:scale-[1.02] active:scale-95"
-                  >
-                    {copied ? 'Download link copied ✓' : 'Copy download link'}
-                  </button>
-                  <p aria-live="polite" className="sr-only">
-                    {copied ? 'Store download link copied to clipboard.' : ''}
-                  </p>
-                  {copyError ? (
-                    <p role="alert" className="mt-2 text-center text-[12.5px] font-semibold text-[#C7FF4D]">
-                      {copyError}
-                    </p>
-                  ) : null}
+            <div className="order-1 lg:order-2">
+              <Reveal>
+                <p className="flex items-center gap-3">
+                  <span className="flex h-12 w-12 items-center justify-center rounded-2xl bg-[#151515]">
+                    <Logo size={24} light />
+                  </span>
+                  <span className="text-[19px] font-extrabold tracking-tight">Stockly for Android</span>
+                </p>
+                <p className="tnum mt-6 text-7xl font-extrabold leading-none tracking-tight sm:text-8xl">
+                  {info ? versionLabel : `v${APP_VERSION}`}
+                </p>
+                <p className="tnum mt-4 text-[13px] font-bold uppercase tracking-[0.18em] text-neutral-500">
+                  {info ? (
+                    <>
+                      {dateLabel || 'Official build'}
+                      {sizeLabel ? ` · ${sizeLabel}` : ''}
+                    </>
+                  ) : rel.status === 'error' ? (
+                    rel.message
+                  ) : (
+                    'Checking the latest release…'
+                  )}
+                </p>
+                {info ? (
                   <a
-                    href={STORE_URL}
-                    className="mt-3 block w-full rounded-full border border-white/25 py-3.5 text-center text-[12px] font-extrabold uppercase tracking-[0.14em] text-white transition-colors hover:bg-white/10"
+                    href={info.apkUrl}
+                    className="mt-8 block rounded-full bg-[#151515] py-4 text-center text-[13px] font-extrabold uppercase tracking-[0.14em] text-[#C7FF4D] transition-transform hover:scale-[1.02] active:scale-95"
                   >
-                    Open download page
+                    Download APK{sizeLabel ? ` · ${sizeLabel}` : ''}
                   </a>
-                </aside>
+                ) : (
+                  <span
+                    aria-disabled="true"
+                    className="mt-8 block rounded-full bg-[#EAEAE4] py-4 text-center text-[13px] font-extrabold uppercase tracking-[0.14em] text-neutral-500"
+                  >
+                    {rel.status === 'checking' ? 'Checking…' : 'APK coming soon'}
+                  </span>
+                )}
+                <div className="mt-5 flex items-center gap-6">
+                  {notes.length > 0 ? (
+                    <button
+                      type="button"
+                      onClick={() => setNotesOpen((v) => !v)}
+                      aria-expanded={notesOpen}
+                      className="group inline-flex items-center gap-1.5 text-[12px] font-extrabold uppercase tracking-[0.16em] underline-offset-4 hover:underline"
+                    >
+                      Release notes
+                      <ArrowUpRight size={15} strokeWidth={2.5} aria-hidden="true" className="transition-transform group-hover:translate-x-0.5 group-hover:-translate-y-0.5" />
+                    </button>
+                  ) : null}
+                  {info?.releaseUrl ? (
+                    <a
+                      href={info.releaseUrl}
+                      target="_blank"
+                      rel="noreferrer"
+                      className="inline-flex items-center gap-1.5 text-[12px] font-extrabold uppercase tracking-[0.16em] text-neutral-400 underline-offset-4 transition-colors hover:text-[#151515] hover:underline"
+                    >
+                      GitHub
+                      <ArrowUpRight size={15} strokeWidth={2.5} aria-hidden="true" />
+                    </a>
+                  ) : null}
+                </div>
+                {notesOpen && notes.length > 0 ? (
+                  <ul className="mt-4 space-y-2 border-t border-[#D9D9D0] pt-4">
+                    {notes.slice(0, 8).map((n) => (
+                      <li key={n} className="flex gap-2.5 text-[14px] font-medium leading-relaxed text-neutral-600">
+                        <span aria-hidden="true" className="mt-[9px] h-1.5 w-1.5 shrink-0 rounded-full bg-[#C7FF4D] ring-1 ring-[#151515]" />
+                        {n}
+                      </li>
+                    ))}
+                  </ul>
+                ) : null}
+                <p className="tnum mt-5 break-all text-[11.5px] font-semibold leading-relaxed text-neutral-400">
+                  {sha ? (
+                    <>SHA-256 · {sha}</>
+                  ) : (
+                    <>Checksum appears with the release.</>
+                  )}
+                </p>
               </Reveal>
             </div>
           </div>
         </section>
 
-        {/* ---------------- why install ---------------- */}
-        <section className="mx-auto max-w-6xl px-5 py-14 sm:px-8 sm:py-20">
+        {/* ---------------- QR ---------------- */}
+        <section aria-label="Get Stockly on your phone" className="border-t border-[#D9D9D0] bg-[#111210] text-white">
+          <div className="mx-auto grid max-w-6xl items-center gap-10 px-5 py-20 sm:px-8 sm:py-24 lg:grid-cols-2">
+            <Reveal>
+              <h2 className="text-5xl font-extrabold leading-[1.0] tracking-tight sm:text-6xl">
+                Your phone.
+                <br />
+                Your stock.
+              </h2>
+              <p className="mt-4 text-[11px] font-extrabold uppercase tracking-[0.28em] text-[#C7FF4D]">
+                Scan to get Stockly
+              </p>
+              <p className="mt-3 max-w-[32ch] text-[14px] font-medium leading-relaxed text-white/55">
+                Point your camera. Open the store. Download the latest APK.
+              </p>
+              <div className="mt-7 flex flex-wrap items-center gap-3">
+                <button
+                  type="button"
+                  onClick={copyLink}
+                  className="rounded-full bg-[#C7FF4D] px-7 py-3.5 text-[12px] font-extrabold uppercase tracking-[0.14em] text-[#151515] transition-transform hover:scale-[1.03] active:scale-95"
+                >
+                  {copied ? 'Link copied ✓' : 'Copy link'}
+                </button>
+                <a
+                  href={STORE_URL}
+                  className="rounded-full border border-white/25 px-7 py-3.5 text-[12px] font-extrabold uppercase tracking-[0.14em] text-white transition-colors hover:bg-white/10"
+                >
+                  Open page
+                </a>
+              </div>
+              <p aria-live="polite" className="sr-only">
+                {copied ? 'Store download link copied to clipboard.' : ''}
+              </p>
+              {copyError ? (
+                <p role="alert" className="mt-3 text-[13px] font-semibold text-[#C7FF4D]">
+                  {copyError}
+                </p>
+              ) : null}
+            </Reveal>
+            <Reveal delay="st-d1" className="flex justify-center lg:justify-end">
+              <div className="text-center">
+                <span className="inline-block rounded-[28px] bg-white p-5 shadow-[0_30px_60px_-20px_rgba(199,255,77,0.25)]">
+                  <QRCode value={STORE_URL} size={192} bgColor="#FFFFFF" fgColor="#151515" aria-label={`QR code linking to ${STORE_URL}`} />
+                </span>
+                <p className="tnum mt-4 text-[12px] font-semibold text-white/40">{STORE_URL.replace(/^https:\/\//, '')}</p>
+              </div>
+            </Reveal>
+          </div>
+        </section>
+
+        {/* ---------------- features ---------------- */}
+        <section className="mx-auto max-w-6xl px-5 py-20 sm:px-8 sm:py-28">
           <Reveal>
-            <p className="text-[11px] font-extrabold uppercase tracking-[0.22em] text-neutral-500">02 · Why install</p>
-            <h2 className="mt-3 max-w-[16ch] text-4xl font-extrabold leading-[1.02] tracking-tight sm:text-5xl">
-              The shop floor, in your pocket.
+            <h2 className="max-w-[12ch] text-5xl font-extrabold leading-[1.0] tracking-tight sm:text-6xl">
+              Made for the shop floor.
             </h2>
           </Reveal>
-          <div className="mt-8 grid gap-8 border-t-2 border-[#151515] pt-8 sm:grid-cols-3 sm:pt-10">
+          <div className="mt-12 grid gap-10 sm:grid-cols-3 sm:gap-0 sm:divide-x sm:divide-[#D9D9D0]">
             {[
-              {
-                t: 'Official builds',
-                d: 'Every APK is published automatically from the Stockly source, with a SHA-256 checksum to verify.',
-                icon: (
-                  <path d="M12 3l7 3v5c0 4.5-3 8.5-7 10-4-1.5-7-5.5-7-10V6l7-3z M9.5 12l2 2 3.5-4" />
-                ),
-              },
-              {
-                t: 'One shared Sheet',
-                d: 'Your Google Sheet stays the database — every device reads and writes the same inventory.',
-                icon: (
-                  <path d="M4 5h16v14H4z M4 10h16 M10 10v9" />
-                ),
-              },
-              {
-                t: 'Painless updates',
-                d: 'New releases install over the existing app, keeping your data and connection intact.',
-                icon: (
-                  <path d="M20 12a8 8 0 1 1-2.3-5.6 M20 3v4h-4" />
-                ),
-              },
+              { icon: Package, t: 'Track stock', d: 'Every product, counted.' },
+              { icon: Zap, t: 'Move faster', d: 'Stock in and out in seconds.' },
+              { icon: ShieldCheck, t: 'Stay in control', d: 'One shared Sheet, always synced.' },
             ].map((f, i) => (
-              <Reveal key={f.t} delay={i === 1 ? 'st-d1' : i === 2 ? 'st-d2' : ''}>
-                <p className="text-[13px] font-extrabold text-neutral-400">0{i + 1}</p>
-                <span className="mt-3 flex h-11 w-11 items-center justify-center rounded-2xl bg-[#151515] text-[#C7FF4D]">
-                  <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
-                    {f.icon}
-                  </svg>
-                </span>
-                <h3 className="mt-3 text-xl font-extrabold tracking-tight">{f.t}</h3>
-                <p className="mt-1.5 max-w-[30ch] text-[14px] font-medium leading-relaxed text-neutral-600">{f.d}</p>
+              <Reveal key={f.t} delay={i === 1 ? 'st-d1' : i === 2 ? 'st-d2' : ''} className="sm:px-10 sm:first:pl-0 sm:last:pr-0">
+                <f.icon size={40} strokeWidth={1.5} aria-hidden="true" />
+                <h3 className="mt-5 text-[13px] font-extrabold uppercase tracking-[0.22em]">{f.t}</h3>
+                <p className="mt-2 text-[15px] font-medium text-neutral-600">{f.d}</p>
               </Reveal>
             ))}
           </div>
-          {detailLines.length > 0 ? (
-            <Reveal>
-              <dl className="mt-8 flex flex-wrap gap-x-8 gap-y-2 border-t border-[#D9D9D0] pt-4">
-                {detailLines.map((n) => {
-                  const [k, ...rest] = n.split(':');
-                  return (
-                    <div key={n} className="flex gap-2 text-[12.5px]">
-                      <dt className="font-extrabold uppercase tracking-[0.14em] text-neutral-400">{k}</dt>
-                      <dd className="tnum font-semibold text-neutral-600">{rest.join(':').trim()}</dd>
-                    </div>
-                  );
-                })}
-              </dl>
-            </Reveal>
-          ) : null}
         </section>
 
-        {/* ---------------- version history ---------------- */}
-        <section id="history" className="mx-auto max-w-6xl scroll-mt-24 px-5 pb-4 sm:px-8">
-          <Reveal>
-            <p className="text-[11px] font-extrabold uppercase tracking-[0.22em] text-neutral-500">03 · Version history</p>
-            <div className="mt-3 flex flex-wrap items-end justify-between gap-4 border-t-2 border-[#151515] pt-5">
-              <h2 className="max-w-[14ch] text-4xl font-extrabold leading-[1.02] tracking-tight sm:text-5xl">
-                Every release, on record.
-              </h2>
-              <p className="max-w-[30ch] text-[13.5px] font-medium leading-relaxed text-neutral-500">
-                Read straight from official GitHub releases — nothing hardcoded.
-              </p>
-            </div>
-          </Reveal>
-          <Reveal delay="st-d1">
-            <div className="mt-8">
-              {history === null ? (
-                <p className="rounded-[24px] border border-[#D9D9D0] bg-white px-5 py-6 text-[14px] font-medium text-neutral-500">
-                  Couldn’t load the release history.
-                </p>
-              ) : prior.length === 0 && !info ? (
-                <p className="rounded-[24px] border border-[#D9D9D0] bg-white px-5 py-6 text-[14px] font-medium text-neutral-500">
-                  No releases published yet.
-                </p>
-              ) : (
-                <>
-                  <ol className="overflow-hidden rounded-[24px] border border-[#D9D9D0] bg-white">
+        {/* ---------------- history ---------------- */}
+        <section id="history" className="scroll-mt-24 border-t border-[#D9D9D0]">
+          <div className="mx-auto max-w-6xl px-5 py-20 sm:px-8 sm:py-24">
+            <Reveal>
+              <h2 className="text-5xl font-extrabold leading-[1.0] tracking-tight sm:text-6xl">Releases.</h2>
+            </Reveal>
+            <Reveal delay="st-d1">
+              <div className="mt-10">
+                {history === null ? (
+                  <p className="border-t-2 border-[#151515] pt-5 text-[14px] font-medium text-neutral-500">
+                    Couldn’t load the release history.
+                  </p>
+                ) : info || prior.length > 0 ? (
+                  <ol>
                     {info ? (
-                      <li className="flex flex-wrap items-center gap-x-4 gap-y-1 border-b-2 border-[#151515] bg-[#F7F7F2] px-5 py-4">
-                        <a href={info.releaseUrl || '#download'} target={info.releaseUrl ? '_blank' : undefined} rel="noreferrer" className="text-[16px] font-extrabold underline-offset-4 hover:underline">
-                          v{info.version}
-                        </a>
-                        <span className="rounded-full bg-[#151515] px-2.5 py-1 text-[10px] font-extrabold uppercase tracking-widest text-[#C7FF4D]">
+                      <li className="flex items-baseline gap-4 border-t-2 border-[#151515] py-5">
+                        <span className="tnum text-3xl font-extrabold tracking-tight sm:text-4xl">v{info.version}</span>
+                        <span className="rounded-full bg-[#C7FF4D] px-3 py-1 text-[10px] font-extrabold uppercase tracking-[0.18em]">
                           Latest
                         </span>
-                        <span className="tnum text-[12.5px] font-semibold text-neutral-500">
-                          {fmtDate(info.publishedAt)}{info.apkSize > 0 ? ` · ${formatApkSize(info.apkSize)}` : ''}
+                        <span className="tnum ml-auto hidden text-[13px] font-semibold text-neutral-500 sm:inline">
+                          {dateLabel}
+                          {sizeLabel ? ` · ${sizeLabel}` : ''}
                         </span>
-                        <span className="ml-auto flex items-center gap-4">
-                          <a href={info.apkUrl} className="rounded-full bg-[#151515] px-4 py-2 text-[11px] font-extrabold uppercase tracking-[0.14em] text-[#C7FF4D] transition-transform hover:scale-105 active:scale-95">
-                            APK
+                        <span className="ml-auto flex items-center gap-4 sm:ml-0">
+                          <a href={info.apkUrl} aria-label={`Download v${info.version} APK`} className="flex h-10 w-10 items-center justify-center rounded-full bg-[#151515] text-[#C7FF4D] transition-transform hover:scale-105 active:scale-95">
+                            <ArrowDown size={16} strokeWidth={2.5} aria-hidden="true" />
                           </a>
                           {info.releaseUrl ? (
-                            <a href={info.releaseUrl} target="_blank" rel="noreferrer" className="text-[11px] font-extrabold uppercase tracking-[0.14em] text-neutral-500 underline-offset-4 hover:text-[#151515] hover:underline">
-                              Notes
+                            <a href={info.releaseUrl} target="_blank" rel="noreferrer" aria-label={`Release notes for v${info.version}`} className="text-neutral-400 transition-colors hover:text-[#151515]">
+                              <ArrowUpRight size={18} strokeWidth={2.5} aria-hidden="true" />
                             </a>
                           ) : null}
                         </span>
                       </li>
                     ) : null}
-                    {visiblePrior.map((h, i) => (
-                      <li key={h.tag} className={`flex flex-wrap items-center gap-x-4 gap-y-1 px-5 py-3.5 ${i < visiblePrior.length - 1 ? 'border-b border-[#EAEAE4]' : ''}`}>
-                        <span className="w-6 text-[12px] font-extrabold text-neutral-300">{String(i + 1).padStart(2, '0')}</span>
-                        <a href={h.releaseUrl} target="_blank" rel="noreferrer" className="text-[15px] font-extrabold underline-offset-4 hover:underline">
-                          v{h.version}
-                        </a>
-                        <span className="tnum text-[12.5px] font-semibold text-neutral-500">
-                          {fmtDate(h.publishedAt)}{h.apkSize > 0 ? ` · ${formatApkSize(h.apkSize)}` : ''}
+                    {prior.slice(0, 6).map((h) => (
+                      <li key={h.tag} className="flex items-baseline gap-4 border-t border-[#D9D9D0] py-4">
+                        <span className="tnum text-xl font-extrabold tracking-tight text-neutral-400">v{h.version}</span>
+                        <span className="tnum ml-auto hidden text-[13px] font-semibold text-neutral-400 sm:inline">
+                          {fmtDate(h.publishedAt)}
+                          {h.apkSize > 0 ? ` · ${formatApkSize(h.apkSize)}` : ''}
                         </span>
-                        <span className="ml-auto flex items-center gap-4">
+                        <span className="ml-auto flex items-center gap-4 sm:ml-0">
                           {h.apkUrl ? (
-                            <a href={h.apkUrl} className="text-[12px] font-extrabold uppercase tracking-[0.14em] underline-offset-4 hover:underline">
-                              APK
+                            <a href={h.apkUrl} aria-label={`Download v${h.version} APK`} className="text-neutral-400 transition-colors hover:text-[#151515]">
+                              <ArrowDown size={16} strokeWidth={2.5} aria-hidden="true" />
                             </a>
-                          ) : (
-                            <span className="text-[12px] font-semibold text-neutral-400">No APK</span>
-                          )}
-                          <a href={h.releaseUrl} target="_blank" rel="noreferrer" className="text-[12px] font-extrabold uppercase tracking-[0.14em] text-neutral-500 underline-offset-4 hover:text-[#151515] hover:underline">
-                            Notes
+                          ) : null}
+                          <a href={h.releaseUrl} target="_blank" rel="noreferrer" aria-label={`Release notes for v${h.version}`} className="text-neutral-400 transition-colors hover:text-[#151515]">
+                            <ArrowUpRight size={18} strokeWidth={2.5} aria-hidden="true" />
                           </a>
                         </span>
                       </li>
                     ))}
-                    {prior.length === 0 ? (
-                      <li className="px-5 py-4 text-[13.5px] font-medium text-neutral-500">
-                        This is the first published release.
-                      </li>
-                    ) : null}
                   </ol>
-                  {prior.length > 4 ? (
-                    <button
-                      type="button"
-                      onClick={() => setShowAll((v) => !v)}
-                      aria-expanded={showAll}
-                      className="mt-4 w-full rounded-full border border-[#151515] py-3.5 text-[12px] font-extrabold uppercase tracking-[0.14em] transition-colors hover:bg-[#151515] hover:text-white"
-                    >
-                      {showAll ? 'Show fewer releases −' : `Show all ${Math.min(prior.length, 10)} releases +`}
-                    </button>
-                  ) : null}
-                </>
-              )}
-            </div>
-          </Reveal>
+                ) : (
+                  <p className="border-t-2 border-[#151515] pt-5 text-[14px] font-medium text-neutral-500">
+                    No releases published yet.
+                  </p>
+                )}
+              </div>
+            </Reveal>
+          </div>
         </section>
 
-        {/* ---------------- install + trust ---------------- */}
-        <section id="install" className="mx-auto max-w-6xl scroll-mt-24 px-5 py-14 sm:px-8 sm:py-20">
-          <Reveal>
-            <div className="overflow-hidden rounded-[28px] border border-[#D9D9D0] bg-white">
-              <div className="grid gap-0 md:grid-cols-[1fr_1fr]">
-                <div className="p-6 sm:p-9">
-                  <p className="text-[11px] font-extrabold uppercase tracking-[0.22em] text-neutral-500">04 · Install in minutes</p>
-                  <h2 className="mt-3 text-3xl font-extrabold leading-[1.02] tracking-tight sm:text-4xl">
-                    Three steps to Stockly.
-                  </h2>
-                  <ol className="mt-7 space-y-0">
-                    {[
-                      ['Download the official APK', info ? `Get ${versionLabel} from this page — free, no account needed.` : 'Get the latest APK from this page — free, no account needed.'],
-                      ['Open the downloaded file', 'Follow Android’s installation prompts, allowing “install unknown apps” once when asked.'],
-                      ['Open Stockly', 'Connect your Google Sheet and start managing inventory.'],
-                    ].map(([t, d], i) => (
-                      <li key={t} className="flex gap-4 border-t border-[#EAEAE4] py-4 first:border-t-2 first:border-[#151515]">
-                        <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-[#151515] text-[13px] font-extrabold text-[#C7FF4D]">
-                          {i + 1}
-                        </span>
-                        <span>
-                          <span className="block text-[15.5px] font-extrabold">{t}</span>
-                          <span className="mt-0.5 block max-w-[36ch] text-[13.5px] font-medium leading-relaxed text-neutral-600">{d}</span>
-                        </span>
-                      </li>
-                    ))}
-                  </ol>
-                </div>
-                <div className="st-darkzone bg-[#111210] p-6 text-white sm:p-9">
-                  <p className="inline-flex items-center gap-2 text-[11px] font-extrabold uppercase tracking-[0.22em] text-[#C7FF4D]">
-                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
-                      <path d="M12 3l7 3v5c0 4.5-3 8.5-7 10-4-1.5-7-5.5-7-10V6l7-3z" />
-                    </svg>
-                    A note on safety
+        {/* ---------------- install ---------------- */}
+        <section id="install" className="scroll-mt-24 border-t border-[#D9D9D0]">
+          <div className="mx-auto max-w-6xl px-5 py-20 sm:px-8 sm:py-24">
+            <Reveal>
+              <h2 className="text-5xl font-extrabold leading-[1.0] tracking-tight sm:text-6xl">Three steps.</h2>
+            </Reveal>
+            <div className="mt-12 grid gap-10 sm:grid-cols-3 sm:gap-0 sm:divide-x sm:divide-[#D9D9D0]">
+              {[
+                { n: '01', t: 'Download', d: 'Get the official APK.', icon: ArrowDown },
+                { n: '02', t: 'Install', d: 'Allow install once, then open.', icon: Package },
+                { n: '03', t: 'Get started', d: 'Connect your Sheet.', icon: Barcode },
+              ].map((s, i) => (
+                <Reveal key={s.n} delay={i === 1 ? 'st-d1' : i === 2 ? 'st-d2' : ''} className="sm:px-10 sm:first:pl-0 sm:last:pr-0">
+                  <p className="tnum text-6xl font-extrabold tracking-tight text-[#D9D9D0]">{s.n}</p>
+                  <p className="mt-3 flex items-center gap-2.5">
+                    <s.icon size={20} strokeWidth={2} aria-hidden="true" />
+                    <span className="text-[13px] font-extrabold uppercase tracking-[0.22em]">{s.t}</span>
                   </p>
-                  <p className="mt-3 max-w-[38ch] text-[14.5px] font-medium leading-relaxed text-white/75">
-                    Install only official releases — from this page or the app’s built-in updater. Only accept
-                    updates carrying Stockly’s official release signature.
-                  </p>
-                  {sha ? (
-                    <p className="tnum mt-4 break-all rounded-2xl bg-white/[0.07] px-3.5 py-3 text-[11.5px] font-semibold leading-relaxed text-white/70">
-                      SHA-256 · {sha}
-                    </p>
-                  ) : null}
-                  <p className="mt-4 text-[12.5px] font-medium leading-relaxed text-white/45">
-                    Stockly is distributed as a direct APK download and is not Play Protect-certified. Verification
-                    details live on each official GitHub release page.
-                  </p>
-                  {info ? (
-                    <a
-                      href={info.apkUrl}
-                      className="mt-6 block rounded-full bg-[#C7FF4D] py-4 text-center text-[13px] font-extrabold uppercase tracking-[0.14em] text-[#151515] transition-transform hover:scale-[1.02] active:scale-95"
-                    >
-                      Download APK
-                    </a>
-                  ) : null}
-                </div>
-              </div>
+                  <p className="mt-2 text-[15px] font-medium text-neutral-600">{s.d}</p>
+                </Reveal>
+              ))}
             </div>
-          </Reveal>
+            <Reveal>
+              <p className="mt-12 max-w-[52ch] border-t border-[#D9D9D0] pt-5 text-[13px] font-medium leading-relaxed text-neutral-500">
+                Android may ask permission to install from your browser. Install only official Stockly releases — from
+                this page or the app’s updater. Direct APK, not Play Protect-certified.
+              </p>
+            </Reveal>
+          </div>
         </section>
       </main>
 
-      <footer className="border-t border-[#D9D9D0] px-5 py-10 sm:px-8">
-        <div className="mx-auto flex max-w-6xl flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+      <footer className="border-t border-[#D9D9D0] px-5 py-8 sm:px-8">
+        <div className="mx-auto flex max-w-6xl items-center justify-between gap-4">
           <span className="flex items-center gap-2.5">
             <Logo />
-            <span className="text-[15px] font-extrabold tracking-tight">Stockly · v{APP_VERSION}</span>
+            <span className="tnum text-[14px] font-extrabold tracking-tight">Stockly · v{APP_VERSION}</span>
           </span>
           <a href="index.html" className="text-[12px] font-bold uppercase tracking-[0.14em] text-neutral-500 transition-colors hover:text-[#151515]">
-            ← Back to home
+            Home
           </a>
-          <p className="text-[12px] font-medium text-neutral-500">Made for small businesses.</p>
         </div>
       </footer>
     </div>

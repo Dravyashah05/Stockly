@@ -4,13 +4,13 @@ import { ArrowDownToLine, ArrowLeft, ArrowUpFromLine, History as HistoryIcon } f
 import { formatMoney } from '../lib/config';
 import { useStore } from '../lib/store';
 import type { StockTransaction } from '../lib/types';
-import { EmptyState, Header, SearchBar, Segmented, SkeletonRow, StockBadge, useDismissable } from '../components/ui';
+import { EmptyState, ErrorState, Header, SearchBar, Segmented, SkeletonRow, StockBadge, useDismissable } from '../components/ui';
 
 /** Rendered rows per page — full history stays server-side, screen pages locally. */
 const PAGE_SIZE = 100;
 
 export default function HistoryScreen() {
-  const { transactions, loading, loadMoreTransactions, txLoadingMore, txExhausted, isPending } = useStore();
+  const { transactions, loading, error, refresh, refreshing, loadMoreTransactions, txLoadingMore, txExhausted, isPending } = useStore();
   const [q, setQ] = useState('');
   const [type, setType] = useState<'ALL' | 'IN' | 'OUT'>('ALL');
   const [visible, setVisible] = useState(PAGE_SIZE);
@@ -64,27 +64,38 @@ export default function HistoryScreen() {
   return (
     <div className="app-page-viewport flex flex-col overflow-hidden">
       <Header
-        title="History"
+        title="Transaction History"
         subtitle={
-          txExhausted
-            ? `${transactions.length} transaction${transactions.length === 1 ? '' : 's'}`
-            : `Recent ${transactions.length} transaction${transactions.length === 1 ? '' : 's'}`
+          q.trim() || type !== 'ALL'
+            ? `${list.length} matching · ${transactions.length} loaded`
+            : txExhausted
+              ? `${transactions.length} transaction${transactions.length === 1 ? '' : 's'}`
+              : `Recent ${transactions.length} transaction${transactions.length === 1 ? '' : 's'}`
         }
       />
       {/* Fixed controls */}
       <div className="history-controls mx-auto w-full max-w-md shrink-0 space-y-3 px-4 pt-3">
         <SearchBar value={q} onChange={setQ} placeholder="Search product, reason, note…" />
 
-        <Segmented<'ALL' | 'IN' | 'OUT'>
-          label="Transaction type filter"
-          value={type}
-          onChange={setType}
-          options={[
-            { key: 'ALL', label: 'All' },
-            { key: 'IN', label: 'Stock In' },
-            { key: 'OUT', label: 'Stock Out' },
-          ]}
-        />
+        <div className="history-filter-row flex items-center gap-2">
+          <div className="min-w-0 flex-1">
+            <Segmented<'ALL' | 'IN' | 'OUT'>
+              label="Transaction type filter"
+              value={type}
+              onChange={setType}
+              options={[
+                { key: 'ALL', label: 'All' },
+                { key: 'IN', label: 'Stock In' },
+                { key: 'OUT', label: 'Stock Out' },
+              ]}
+            />
+          </div>
+          {q || type !== 'ALL' ? (
+            <button type="button" onClick={() => { setQ(''); setType('ALL'); }} className="press flex min-h-11 shrink-0 items-center gap-1 rounded-xl bg-rose-500/10 px-3 text-[12px] font-bold text-rose-600 dark:text-rose-400">
+              <span aria-hidden="true">×</span> Clear
+            </button>
+          ) : null}
+        </div>
       </div>
 
       {/* List card hugs its content when short; scrolls internally when long */}
@@ -95,17 +106,24 @@ export default function HistoryScreen() {
             <SkeletonRow h={72} />
             <SkeletonRow h={72} />
           </div>
+        ) : error && transactions.length === 0 ? (
+          <div className="sheet-scroll overflow-y-auto">
+            <ErrorState message={error} onRetry={() => void refresh()} retrying={refreshing} />
+          </div>
         ) : list.length === 0 ? (
           <div className="sheet-scroll overflow-y-auto">
             <EmptyState
               icon={<HistoryIcon size={22} />}
-              title="No transactions"
-              hint="Stock In and Stock Out entries will appear here."
+              title={q || type !== 'ALL' ? 'No matching transactions' : 'No transactions yet'}
+              hint={q || type !== 'ALL' ? 'Try a different search or clear the filter.' : 'Stock In and Stock Out entries will appear here.'}
             />
+            {q || type !== 'ALL' ? (
+              <button type="button" onClick={() => { setQ(''); setType('ALL'); }} className="press mx-auto mt-1 flex min-h-11 items-center rounded-xl bg-(--primary) px-4 text-sm font-bold text-(--primary-foreground)">Clear filters</button>
+            ) : null}
           </div>
         ) : (
           <div className="glass sheet-scroll min-h-0 flex-1 overflow-y-auto rounded-[26px] px-1.5 pt-1 pb-4">
-            <div className="history-table-head"><span>Type</span><span>Product</span><span>Details</span><span>Quantity</span></div>
+            <div className="history-table-head"><span>Date</span><span>Product</span><span>Type</span><span className="text-right">Quantity</span><span className="text-right">Price</span><span>Details</span></div>
             <div className="divide-y divide-(--stroke-dim)">
               {rows.map(({ t, when }) => (
                 <TxRow key={t.id} t={t} when={when} pending={isPending(t.id)} onOpen={openTx} />
@@ -173,11 +191,13 @@ const TxRow = memo(function TxRow({
           {t.type === 'IN' ? '+' : '−'}
           {t.quantity}
         </span>
+        <span className="history-desktop-date">{when || '—'}</span>
+        <span className="history-desktop-price tnum">{t.price > 0 ? formatMoney(t.price) : '—'}</span>
       </div>
       <p className="history-row-meta mt-1 text-xs leading-relaxed text-(--ink-2)">
-        {when}
-        {t.reason ? ` · ${t.reason}` : ''}
-        {t.note ? ` — ${t.note}` : ''}
+        <span className="history-mobile-date">{when}</span>
+        {when && (t.reason || t.note) ? ' · ' : ''}
+        {[t.reason, t.note].filter(Boolean).join(' · ') || '—'}
       </p>
     </button>
   );

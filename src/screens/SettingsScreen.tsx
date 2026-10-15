@@ -1,61 +1,88 @@
-import { useEffect, useMemo, useRef, useState } from 'react';
+import { useEffect, useState } from 'react';
 import {
-  Camera,
-  Check,
   CheckCircle2,
   ChevronRight,
   Cloud,
-  Copy,
   Database,
   Download,
   Link2,
+  LogOut,
   Moon,
   Pencil,
   Plus,
-  QrCode,
   RefreshCw,
-  ScanLine,
   ShieldCheck,
   Sun,
   Sunset,
   Tag,
   Trash2,
-  X,
+  User as UserIcon,
 } from 'lucide-react';
-import { APP_VERSION, LS_KEYS, UPDATE_CHECK_URL, getApiUrl, isAppsScriptExecUrl, setApiUrl } from '../lib/config';
-import { parseScannedEndpoint, scannedEndpointMessage } from '../lib/qr-link';
-import QRCode from 'react-qr-code';
+import { APP_VERSION, LS_KEYS, UPDATE_CHECK_URL } from '../lib/config';
 import { fetchLatestRelease, formatApkSize } from '../lib/releases';
 import { useStore } from '../lib/store';
-import type { Category } from '../lib/types';
+import type { Category, UserProfile } from '../lib/types';
+import { getCachedProfile, refreshMyProfile, signOutAccount } from '../lib/users';
+import { sheetsApi } from '../lib/connection';
+import AdminScreen from './AdminScreen';
+import LinkedDevicesScreen from './LinkedDevicesScreen';
+import { SheetSetupScreen } from './AccessScreens';
 import { Confirm, Field, Header, Sheet, BrandMark, inputCls } from '../components/ui';
 
 export default function SettingsScreen() {
   const {
-    theme, setTheme, products, categories, refresh, refreshing,
-    saveCategory, removeCategory, setConfiguredFlag, clearCache, notify,
-    failedOps, lastSync, retryFailedOp,
+    theme, setTheme, products, categories, refresh, refreshing, online, configured, pendingIds, error,
+    saveCategory, removeCategory, clearCache, notify,
+    failedOps, lastSync, retryFailedOp, logout,
   } = useStore();
 
-  const [url, setUrl] = useState(getApiUrl());
-  const [savedTick, setSavedTick] = useState(false);
   const [cloudOpen, setCloudOpen] = useState(false);
+  const [logoutOpen, setLogoutOpen] = useState(false);
+  // Account (server-verified identity)
+  const [profile, setProfile] = useState<UserProfile | null>(() => getCachedProfile());
+  const [accountOpen, setAccountOpen] = useState(false);
+  const [accBusy, setAccBusy] = useState(false);
+  const [accError, setAccError] = useState('');
+  const [accStatus, setAccStatus] = useState('');
+  // Server-verified sheet connection (never a client-held URL)
+  const [connState, setConnState] = useState<string | null>(null);
+  const [connVerifiedAt, setConnVerifiedAt] = useState<string | null>(null);
+  const [connError, setConnError] = useState('');
+  const [connBusy, setConnBusy] = useState(false);
+  const [sheetChangeOpen, setSheetChangeOpen] = useState(false);
+  // Owner-only admin area
+  const [adminOpen, setAdminOpen] = useState(false);
+  // Linked devices (WhatsApp-style Stockly-to-Stockly linking)
+  const [devicesOpen, setDevicesOpen] = useState(false);
+  const [devicesMode, setDevicesMode] = useState<'manage' | 'link'>('manage');
   // Categories manager
   const [catListOpen, setCatListOpen] = useState(false);
   const [quickCat, setQuickCat] = useState('');
+  const [catError, setCatError] = useState('');
   const [quickBusy, setQuickBusy] = useState(false);
   const [editingCat, setEditingCat] = useState<Category | null>(null);
   const [delCat, setDelCat] = useState<Category | null>(null);
   const [delBusy, setDelBusy] = useState(false);
   const submitQuickCat = async () => {
-    const name = quickCat.trim();
-    if (!name) return notify('Category name is required.', 'error');
+    const name = quickCat.trim().replace(/\s+/g, ' ');
+    if (!name) {
+      setCatError('Enter a category name.');
+      return;
+    }
+    if (categories.some((c) => c.id !== editingCat?.id && c.name.trim().toLocaleLowerCase() === name.toLocaleLowerCase())) {
+      setCatError('A category with this name already exists.');
+      return;
+    }
+    setCatError('');
     setQuickBusy(true);
     const ok = await saveCategory(name, editingCat?.id);
     setQuickBusy(false);
     if (ok) {
       setQuickCat('');
       setEditingCat(null);
+      setCatError('');
+    } else {
+      setCatError('Could not save the category. Check your connection and try again.');
     }
   };
   const confirmDelCat = async () => {
@@ -66,153 +93,21 @@ export default function SettingsScreen() {
     if (ok) setDelCat(null);
   };
 
-  /* ---- QR device linking (shares ONLY the database endpoint) ---- */
-  const [qrOpen, setQrOpen] = useState(false);
-  const [qrUrl, setQrUrl] = useState('');
-  const openQr = () => {
-    const v = getApiUrl();
-    if (!isAppsScriptExecUrl(v)) {
-      notify('Save a valid Apps Script /exec URL first, then share it.', 'error');
-      return;
-    }
-    setQrUrl(v);
-    setQrOpen(true);
-  };
-  const copyQrUrl = async () => {
-    try {
-      if (!navigator.clipboard?.writeText) throw new Error('no clipboard');
-      await navigator.clipboard.writeText(qrUrl);
-      notify('Link copied — paste it in Stockly on the other device.');
-    } catch {
-      notify('Couldn’t copy automatically — select the link text to copy it.', 'error');
-    }
-  };
-
-  /* ---- Scan to connect (camera optional; paste always works) ---- */
-  const [scanOpen, setScanOpen] = useState(false);
-  const [scanNonce, setScanNonce] = useState(0);
-  const [scanStatus, setScanStatus] = useState<'idle' | 'starting' | 'ready' | 'denied' | 'unavailable' | 'error'>('idle');
-  const [scanError, setScanError] = useState('');
-  const [pasted, setPasted] = useState('');
-  const [discovered, setDiscovered] = useState<string | null>(null);
-  const [confirmBusy, setConfirmBusy] = useState(false);
-  const scannerRef = useRef<{ stop: () => Promise<unknown>; clear: () => unknown } | null>(null);
-
-  // Camera lifecycle: lazy-loads the scanner bundle, starts on open, always
-  // stops on close. The paste fallback below works with no camera at all.
-  useEffect(() => {
-    if (!scanOpen) return;
-    let cancelled = false;
-    setScanStatus('starting');
-    setScanError('');
-    setDiscovered(null);
-    setPasted('');
-    (async () => {
-      try {
-        const { Html5Qrcode } = await import('html5-qrcode');
-        if (cancelled) return;
-        let cameras: { id: string }[] = [];
-        try {
-          cameras = (await Html5Qrcode.getCameras()) as { id: string }[];
-        } catch {
-          cameras = [];
-        }
-        if (cancelled) return;
-        if (cameras.length === 0) {
-          setScanStatus('unavailable');
-          return;
-        }
-        const scanner = new Html5Qrcode('stockly-qr-reader');
-        scannerRef.current = scanner;
-        await scanner.start(
-          { facingMode: 'environment' },
-          { fps: 10, qrbox: { width: 250, height: 250 } },
-          (text) => {
-            const r = parseScannedEndpoint(text);
-            if (r.ok === true) {
-              setDiscovered(r.url);
-              setScanError('');
-              void scanner.stop().catch(() => undefined);
-            } else {
-              setScanError(scannedEndpointMessage(r.reason));
-            }
-          },
-          () => { /* per-frame misses are routine — stay silent */ },
-        );
-        if (cancelled) {
-          await scanner.stop().catch(() => undefined);
-          return;
-        }
-        setScanStatus('ready');
-      } catch (e) {
-        if (cancelled) return;
-        const msg = e instanceof Error ? `${e.name} ${e.message}` : '';
-        if (/NotAllowedError|permission/i.test(msg)) setScanStatus('denied');
-        else {
-          setScanStatus('error');
-          setScanError('The camera couldn’t start here — paste the link below instead.');
-        }
-      }
-    })();
-    return () => {
-      cancelled = true;
-      const s = scannerRef.current;
-      scannerRef.current = null;
-      if (s) {
-        void (async () => {
-          try {
-            await s.stop();
-          } catch {
-            /* already stopped */
-          }
-          try {
-            s.clear();
-          } catch {
-            /* already torn down */
-          }
-        })();
-      }
-    };
-  }, [scanOpen, scanNonce]);
-
-  const submitPasted = () => {
-    const r = parseScannedEndpoint(pasted);
-    if (r.ok === false) {
-      setScanError(scannedEndpointMessage(r.reason));
-      return;
-    }
-    setScanError('');
-    setDiscovered(r.url);
-    const s = scannerRef.current;
-    if (s) void s.stop().catch(() => undefined);
-  };
-
-  const confirmDiscovered = async () => {
-    if (!discovered || confirmBusy) return;
-    const v = discovered.trim();
-    if (!isAppsScriptExecUrl(v)) {
-      notify('That link is no longer a valid backend URL.', 'error');
-      return;
-    }
-    setConfirmBusy(true);
-    try {
-      // Same persistence path as Save & sync — never overwrites before confirm.
-      if (v !== getApiUrl()) clearCache();
-      setApiUrl(v);
-      setConfiguredFlag();
-      setUrl(v);
-      setScanOpen(false);
-      if (v) await refresh();
-      notify('Backend updated — synced.');
-    } finally {
-      setConfirmBusy(false);
-    }
-  };
-
-  const connected = useMemo(() => (url.trim() || getApiUrl()).length > 10, [url]);
+  const connected = configured;
 
   // ---- Sync status (durable outbox visibility) ----
   const failedCount = failedOps.length;
+  const syncState = refreshing
+    ? 'Syncing'
+    : !online
+      ? 'Offline'
+      : error || failedCount > 0
+        ? 'Failed'
+        : pendingIds.length > 0
+          ? 'Changes syncing'
+          : lastSync
+            ? 'Synced'
+            : 'Not synced yet';
   const lastSyncLabel = lastSync
     ? lastSync.toLocaleString('en-IN', { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' })
     : 'Never';
@@ -333,27 +228,55 @@ export default function SettingsScreen() {
     }
   };
 
-  const saveUrl = async () => {
-    const v = url.trim();
-    if (v && !isAppsScriptExecUrl(v)) {
-      notify('Paste the deployed Apps Script Web App URL in the form https://script.google.com/macros/s/…/exec.', 'error');
-      return;
+  /* ---- Server-verified sheet connection (read-only here) ---- */
+  const checkConnection = async () => {
+    setConnBusy(true);
+    setConnError('');
+    try {
+      const conn = await sheetsApi.getConnection();
+      setConnState(conn.status);
+      setConnVerifiedAt(conn.verifiedAt);
+      if (!conn.connected) setConnError('No verified sheet connection.');
+    } catch (e) {
+      setConnError(e instanceof Error ? e.message : 'Could not check the connection.');
+    } finally {
+      setConnBusy(false);
     }
-    // New backend = new data. Drop the old Sheet's cached products first so
-    // stale/demo rows never linger if the sync fails.
-    if (v !== getApiUrl()) clearCache();
-    setApiUrl(v);
-    setConfiguredFlag();
-    setSavedTick(true);
-    window.setTimeout(() => setSavedTick(false), 2000);
-    if (v) await refresh();
   };
+
+  useEffect(() => {
+    if (cloudOpen) void checkConnection();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [cloudOpen]);
 
   const themeOptions = [
     { k: 'light', label: 'Light', hint: 'Bright', icon: <Sun size={16} /> },
     { k: 'dark', label: 'Dark', hint: 'Night', icon: <Moon size={16} /> },
-    { k: 'system', label: 'Auto', hint: 'System', icon: <Sunset size={16} /> },
+    { k: 'system', label: 'System', hint: 'System', icon: <Sunset size={16} /> },
   ] as const;
+
+  /* ---- Account (server-verified identity; sign-in lives on AuthScreen) ---- */
+  const doRefreshStatus = async () => {
+    setAccBusy(true);
+    setAccError('');
+    try {
+      const latest = await refreshMyProfile();
+      const current = latest ?? profile;
+      if (current) setProfile(current);
+      try {
+        const conn = await sheetsApi.getConnection();
+        setAccStatus(
+          conn.connected
+            ? `Account is ${current?.accountStatus ?? 'active'} · sheet verified${conn.verifiedAt ? ` ${new Date(conn.verifiedAt).toLocaleDateString()}` : ''}.`
+            : 'Account is active · sheet not connected.',
+        );
+      } catch {
+        setAccStatus(`Account is ${current?.accountStatus ?? 'active'}.`);
+      }
+    } finally {
+      setAccBusy(false);
+    }
+  };
 
   return (
     <div className="app-page-viewport mx-auto max-w-md">
@@ -371,9 +294,9 @@ export default function SettingsScreen() {
             <div className="min-w-0 flex-1">
               <p className="text-[18px] font-extrabold leading-tight tracking-tight">Stockly</p>
               <p className="text-[12px] font-medium text-white/60">Inventory on Google Sheets · v{APP_VERSION}</p>
-              <span className={`mt-1.5 inline-flex items-center gap-1.5 rounded-full px-2.5 py-1 text-[11px] font-extrabold ${connected ? 'bg-white/10 text-white/80' : 'bg-amber-400/15 text-amber-300'}`}>
-                <span className={`h-1.5 w-1.5 rounded-full ${connected ? 'bg-[#C7FF4D]' : 'bg-amber-400'}`} />
-                {connected ? 'Cloud connected' : 'Not connected'}
+              <span className="mt-1.5 inline-flex items-center gap-1.5 rounded-full px-2.5 py-1 text-[11px] font-extrabold bg-white/10 text-white/80">
+                <span className="h-1.5 w-1.5 rounded-full bg-[#C7FF4D]" />
+                Signed in
               </span>
             </div>
           </div>
@@ -465,7 +388,7 @@ export default function SettingsScreen() {
             <span className="min-w-0 flex-1">
               <span className="block text-[15px] font-extrabold tracking-tight text-(--ink)">Cloud database</span>
               <span className="block truncate text-[12px] font-medium text-(--ink-2)">
-                {connected ? 'Connected — tap to manage' : 'Not connected — tap to connect'}
+                {connected ? 'Sheet verified — tap to manage' : 'Not configured — tap to connect'}
               </span>
             </span>
             {connected ? (
@@ -473,6 +396,66 @@ export default function SettingsScreen() {
                 <CheckCircle2 size={16} />
               </span>
             ) : null}
+            <ChevronRight size={18} className="shrink-0 text-(--ink-3)" />
+          </button>
+        </section>
+
+        {/* Account — user database profile (no passwords, no secrets) */}
+        <section className="glass rounded-[24px] p-4">
+          <button
+            type="button"
+            onClick={() => setAccountOpen(true)}
+            className="press flex w-full items-center gap-3 text-left"
+          >
+            <span className="flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl bg-[#EAEAE4] text-[#151515] dark:bg-white/10 dark:text-[#C7FF4D]">
+              <UserIcon size={20} />
+            </span>
+            <span className="min-w-0 flex-1">
+              <span className="block text-[15px] font-extrabold tracking-tight text-(--ink)">Account</span>
+              <span className="block truncate text-[12px] font-medium text-(--ink-2)">
+                {profile ? `${profile.name} · ${profile.accountStatus}` : 'Register or sign in on this device'}
+              </span>
+            </span>
+            <ChevronRight size={18} className="shrink-0 text-(--ink-3)" />
+          </button>
+        </section>
+
+        {/* Linked Devices — one account, many devices */}
+        <section className="glass rounded-[24px] p-4">
+          <button
+            type="button"
+            onClick={() => { setDevicesMode('manage'); setDevicesOpen(true); }}
+            className="press flex w-full items-center gap-3 text-left"
+          >
+            <span className="flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl bg-[#EAEAE4] text-[#151515] dark:bg-white/10 dark:text-[#C7FF4D]">
+              <Link2 size={20} />
+            </span>
+            <span className="min-w-0 flex-1">
+              <span className="block text-[15px] font-extrabold tracking-tight text-(--ink)">Linked Devices</span>
+              <span className="block text-[12px] font-medium text-(--ink-2)">
+                Link phones & tablets to this account
+              </span>
+            </span>
+            <ChevronRight size={18} className="shrink-0 text-(--ink-3)" />
+          </button>
+        </section>
+
+        {/* Administration — owner-only area (server-validated) */}
+        <section className="glass rounded-[24px] p-4">
+          <button
+            type="button"
+            onClick={() => setAdminOpen(true)}
+            className="press flex w-full items-center gap-3 text-left"
+          >
+            <span className="flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl bg-[#EAEAE4] text-[#151515] dark:bg-white/10 dark:text-[#C7FF4D]">
+              <ShieldCheck size={20} />
+            </span>
+            <span className="min-w-0 flex-1">
+              <span className="block text-[15px] font-extrabold tracking-tight text-(--ink)">Administration</span>
+              <span className="block text-[12px] font-medium text-(--ink-2)">
+                Owner-only users, roles, settings & audit logs
+              </span>
+            </span>
             <ChevronRight size={18} className="shrink-0 text-(--ink-3)" />
           </button>
         </section>
@@ -503,7 +486,7 @@ export default function SettingsScreen() {
               <Tag size={16} /> Manage
             </button>
             <button
-              onClick={() => { setEditingCat(null); setQuickCat(''); setCatListOpen(true); }}
+              onClick={() => { setEditingCat(null); setQuickCat(''); setCatError(''); setCatListOpen(true); }}
               className="press flex min-h-[48px] items-center justify-center gap-1 rounded-2xl bg-[#151515] text-[14px] font-extrabold text-white dark:bg-[#C7FF4D] dark:text-[#151515]"
             >
               <Plus size={16} /> Add
@@ -518,7 +501,7 @@ export default function SettingsScreen() {
               <RefreshCw size={20} className={refreshing ? 'animate-spin' : ''} />
             </span>
             <span className="min-w-0 flex-1">
-              <span className="block text-[15px] font-extrabold tracking-tight text-(--ink)">Sync status</span>
+              <span className="block text-[15px] font-extrabold tracking-tight text-(--ink)">{syncState}</span>
               <span className="tnum block text-[12px] font-medium text-(--ink-2)">
                 Last sync: {lastSyncLabel} · Cache {cacheKb} KB
               </span>
@@ -610,53 +593,71 @@ export default function SettingsScreen() {
           </div>
         </section>
 
+        {/* Log out — disconnects the cloud database and clears this phone */}
+        <section className="glass rounded-[24px] border-red-500/20 p-4">
+          <button
+            onClick={() => setLogoutOpen(true)}
+            className="flex w-full items-center gap-3 text-left"
+          >
+            <span className="flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl bg-red-500/10 text-red-500">
+              <LogOut size={20} />
+            </span>
+            <span className="min-w-0 flex-1">
+              <span className="block text-[15px] font-extrabold tracking-tight text-red-500">Log out</span>
+              <span className="block text-[12px] font-medium text-(--ink-2)">
+                Disconnects the cloud database and clears this phone’s cache
+              </span>
+            </span>
+            <ChevronRight size={18} className="shrink-0 text-(--ink-3)" />
+          </button>
+        </section>
+
         <p className="settings-footnote px-2 pb-2 text-center text-[11.5px] font-medium text-(--ink-3)">
           Made for small businesses · your data stays yours
         </p>
       </div>
 
-      {/* Cloud database popup — URL form lives here, not inline */}
+      {/* Cloud database popup — server-verified connection (no URLs held here) */}
       <Sheet open={cloudOpen} onClose={() => setCloudOpen(false)} title="Cloud database">
-        <p className="mb-3 text-[12px] font-medium text-(--ink-2)">Google Sheets via Apps Script</p>
-        <Field label="Apps Script Web-App URL">
-          <div className="relative">
-            <Link2 size={16} className="pointer-events-none absolute left-4 top-1/2 -translate-y-1/2 text-(--ink-3)" />
-            <input
-              value={url}
-              onChange={(e) => setUrl(e.target.value)}
-              placeholder="https://script.google.com/macros/s/…/exec"
-              inputMode="url"
-              autoCapitalize="off"
-              autoCorrect="off"
-              className={`${inputCls} pl-11 pr-11`}
-            />
-            {url ? (
-              <button
-                type="button"
-                onClick={() => setUrl('')}
-                aria-label="Clear URL"
-                className="press absolute right-2 top-1/2 flex h-8 w-8 -translate-y-1/2 items-center justify-center rounded-xl text-(--ink-3) hover:bg-(--accent-soft)"
-              >
-                <X size={16} />
-              </button>
-            ) : null}
-          </div>
-        </Field>
+        <p className="mb-3 text-[12px] font-medium text-(--ink-2)">Your own Google Sheet, verified by the server</p>
+        <div className="mb-3 flex items-center justify-between gap-3 rounded-xl bg-(--glass-soft) px-3.5 py-3" role="status" aria-live="polite">
+          <span className="flex items-center gap-2 text-[13px] font-bold text-(--ink)">
+            <span className={`h-2 w-2 rounded-full ${syncState === 'Synced' ? 'bg-emerald-500' : syncState === 'Failed' ? 'bg-rose-500' : syncState === 'Offline' ? 'bg-amber-500' : 'bg-(--ink-3)'}`} />
+            {syncState}
+          </span>
+          <span className="tnum text-right text-[11px] font-medium text-(--ink-2)">Last successful sync · {lastSyncLabel}</span>
+        </div>
+        <div className="mb-3 rounded-xl bg-(--glass-soft) px-3.5 py-3" role="status" aria-live="polite">
+          <p className="flex items-center gap-2 text-[13px] font-bold text-(--ink)">
+            <span className={`h-2 w-2 rounded-full ${connState === 'verified' ? 'bg-emerald-500' : connState ? 'bg-amber-500' : 'bg-(--ink-3)'}`} />
+            {connState === 'verified'
+              ? `Sheet verified${connVerifiedAt ? ` · ${new Date(connVerifiedAt).toLocaleDateString()}` : ''}`
+              : connState
+                ? `Sheet ${connState} — reconnect below`
+                : 'Checking connection…'}
+          </p>
+          {connError ? <p className="mt-1 text-[12px] font-medium text-rose-600 dark:text-rose-300">{connError}</p> : null}
+        </div>
         <p className="mt-2 flex items-start gap-1.5 text-[12px] leading-relaxed text-(--ink-2)">
           <ShieldCheck size={14} className="mt-0.5 shrink-0 text-emerald-600 dark:text-emerald-300" />
-          Same URL on every phone — all devices share one Sheet. No account needed.
+          Your sheet association is stored and verified server-side. Linked devices share this same sheet automatically.
         </p>
         <div className="mt-3 space-y-2 pb-2">
           <button
-            onClick={saveUrl}
-            className={`press flex min-h-[52px] w-full items-center justify-center gap-1.5 rounded-2xl text-[15px] font-extrabold transition ${
-              savedTick
-                ? 'bg-[#1E7B3C] text-white'
-                : 'bg-[#151515] text-white dark:bg-[#C7FF4D] dark:text-[#151515]'
-            }`}
+            type="button"
+            onClick={() => void checkConnection()}
+            disabled={connBusy}
+            className="glass-soft press flex min-h-[48px] w-full items-center justify-center gap-1.5 rounded-2xl text-[14px] font-extrabold text-(--ink) disabled:opacity-50"
           >
-            {savedTick ? <Check size={16} /> : <RefreshCw size={16} className={refreshing ? 'animate-spin' : ''} />}
-            {savedTick ? 'Saved' : 'Save & sync'}
+            <RefreshCw size={16} className={connBusy ? 'animate-spin' : ''} />
+            {connBusy ? 'Verifying…' : 'Verify connection'}
+          </button>
+          <button
+            type="button"
+            onClick={() => { setCloudOpen(false); setSheetChangeOpen(true); }}
+            className="press flex min-h-[52px] w-full items-center justify-center gap-1.5 rounded-2xl bg-[#151515] text-[15px] font-extrabold text-white dark:bg-[#C7FF4D] dark:text-[#151515]"
+          >
+            Change sheet
           </button>
           <button
             onClick={() => void refresh()}
@@ -668,34 +669,15 @@ export default function SettingsScreen() {
           </button>
         </div>
 
-        {/* Link another device — QR shares only the database endpoint */}
-        <p className="mt-3 px-1 text-[12px] font-bold uppercase tracking-wider text-(--ink-2)">Link another device</p>
-        <div className="mt-1.5 grid grid-cols-2 gap-2 pb-2">
-          <button
-            type="button"
-            onClick={openQr}
-            className="glass-soft press flex min-h-[48px] items-center justify-center gap-1.5 rounded-2xl text-[14px] font-extrabold text-(--ink)"
-          >
-            <QrCode size={16} /> Show QR
-          </button>
-          <button
-            type="button"
-            onClick={() => setScanOpen(true)}
-            className="glass-soft press flex min-h-[48px] items-center justify-center gap-1.5 rounded-2xl text-[14px] font-extrabold text-(--ink)"
-          >
-            <ScanLine size={16} /> Scan
-          </button>
-        </div>
-
         {/* How syncing works — merged into the Cloud popup */}
         <p className="mt-3 px-1 text-[12px] font-bold uppercase tracking-wider text-(--ink-2)">How syncing works</p>
         <ol className="mt-1.5 list-decimal space-y-2 pl-5 text-[13.5px] leading-relaxed text-(--ink)">
           {[
-            'Create a new Google Sheet (any name).',
+            'Create your own Google Sheet (keep it private).',
             'Open Extensions → Apps Script, paste the code from apps-script/Code.gs in this project.',
-            'Run setupDatabase once, then setupDemoData (optional).',
-            'Deploy → New deployment → Web app: execute as Me, access Anyone. Copy the /exec URL.',
-            'Paste the URL above and tap Save & sync. Repeat on every device — all phones share the same Sheet.',
+            'Run setupDatabase once, then deploy as a Web app (execute as Me, access Anyone).',
+            'Connect it once from the setup screen — the server verifies access before storing anything.',
+            'Linked devices share the same verified sheet automatically.',
           ].map((step, i) => (
             <li key={i} className="rounded-2xl bg-(--glass-soft) px-3 py-2.5">
               {step}
@@ -709,157 +691,35 @@ export default function SettingsScreen() {
         </p>
       </Sheet>
 
-      {/* Link device — QR encodes ONLY the saved /exec URL */}
-      <Sheet open={qrOpen} onClose={() => setQrOpen(false)} title="Link a new device">
-        <p className="mb-3 text-[13px] leading-relaxed text-(--ink-2)">
-          On the new phone, open Stockly → Settings → Cloud database → <b className="text-(--ink)">Scan</b>, then point
-          its camera at this code.
-        </p>
-        <div className="mx-auto w-fit rounded-[24px] bg-white p-4">
-          {qrUrl ? <QRCode value={qrUrl} size={200} bgColor="#FFFFFF" fgColor="#151515" /> : null}
-        </div>
-        <p className="mt-3 break-all rounded-2xl bg-(--glass-soft) px-3.5 py-3 text-[12px] font-medium leading-relaxed text-(--ink-2) select-all">
-          {qrUrl}
-        </p>
-        <button
-          type="button"
-          onClick={() => void copyQrUrl()}
-          className="glass-soft press mt-2.5 flex min-h-[48px] w-full items-center justify-center gap-1.5 rounded-2xl text-[14px] font-extrabold text-(--ink)"
-        >
-          <Copy size={16} /> Copy link
-        </button>
-        <p className="mt-2.5 flex items-start gap-2 rounded-[20px] bg-amber-500/10 px-3.5 py-3 text-[12.5px] leading-relaxed text-(--ink-2)">
-          <ShieldCheck size={16} className="mt-0.5 shrink-0 text-amber-600 dark:text-amber-300" />
-          This code shares only your database address so another device can connect to the same Sheet. It contains no
-          passwords or private data — anyone holding it can point their app at your database.
-        </p>
-      </Sheet>
-
-      {/* Scan to connect — camera optional, paste always available */}
-      <Sheet open={scanOpen} onClose={() => setScanOpen(false)} title="Scan to connect">
-        {discovered ? (
-          <div>
-            <p className="flex items-start gap-2 rounded-[20px] bg-emerald-500/10 px-3.5 py-3 text-[13px] font-medium leading-relaxed text-(--ink)">
-              <CheckCircle2 size={16} className="mt-0.5 shrink-0 text-emerald-600 dark:text-emerald-300" />
-              A Stockly database link was found. Confirm to switch this device to it — your current backend is kept
-              until you confirm.
-            </p>
-            <p className="mt-2.5 break-all rounded-2xl bg-(--glass-soft) px-3.5 py-3 text-[12px] font-medium leading-relaxed text-(--ink-2)">
-              {discovered}
-            </p>
-            <div className="mt-3 grid grid-cols-2 gap-2 pb-1">
-              <button
-                type="button"
-                onClick={() => { setDiscovered(null); setScanNonce((n) => n + 1); }}
-                className="press glass-soft min-h-[52px] rounded-2xl py-3.5 text-[15px] font-bold text-(--ink)"
-              >
-                Rescan
-              </button>
-              <button
-                type="button"
-                onClick={() => void confirmDiscovered()}
-                disabled={confirmBusy}
-                className="press min-h-[52px] rounded-2xl bg-[#151515] py-3.5 text-[15px] font-extrabold text-white disabled:opacity-50 dark:bg-[#C7FF4D] dark:text-[#151515]"
-              >
-                {confirmBusy ? 'Saving…' : 'Confirm'}
-              </button>
-            </div>
-          </div>
-        ) : (
-          <div>
-            <p className="mb-3 text-[13px] leading-relaxed text-(--ink-2)">
-              Point the camera at the QR code shown on the other device (Settings → Cloud database → Show QR).
-            </p>
-            {scanStatus === 'unavailable' ? (
-              <div className="mb-3 flex items-start gap-2.5 rounded-[20px] bg-(--glass-soft) px-3.5 py-3 text-[13px] leading-relaxed text-(--ink-2)">
-                <Camera size={16} className="mt-0.5 shrink-0" />
-                No camera was found on this device — paste the link below instead.
-              </div>
-            ) : scanStatus === 'denied' ? (
-              <div className="mb-3 flex items-start gap-2.5 rounded-[20px] bg-amber-500/10 px-3.5 py-3 text-[13px] leading-relaxed text-(--ink-2)">
-                <Camera size={16} className="mt-0.5 shrink-0 text-amber-600 dark:text-amber-300" />
-                Camera access was denied. Allow camera access for this app/site and reopen this sheet — or paste the
-                link below instead.
-              </div>
-            ) : null}
-            {scanStatus === 'error' && scanError ? (
-              <p className="mb-3 rounded-2xl border border-rose-500/25 bg-rose-500/10 px-3.5 py-2.5 text-[13px] font-medium text-rose-600 dark:text-rose-300">
-                {scanError}
-              </p>
-            ) : null}
-            {scanStatus !== 'unavailable' ? (
-              <div id="stockly-qr-reader" className="mb-3 min-h-[48px] overflow-hidden rounded-[20px] bg-(--glass-soft)" />
-            ) : null}
-            {scanStatus === 'starting' ? (
-              <p className="mb-3 px-1 text-[12.5px] font-medium text-(--ink-2)">Starting camera…</p>
-            ) : null}
-            {scanStatus === 'ready' && scanError ? (
-              <p className="mb-3 rounded-2xl border border-rose-500/25 bg-rose-500/10 px-3.5 py-2.5 text-[13px] font-medium text-rose-600 dark:text-rose-300">
-                {scanError}
-              </p>
-            ) : null}
-            <Field label="Or paste the database link">
-              <div className="flex gap-2">
-                <input
-                  value={pasted}
-                  onChange={(e) => setPasted(e.target.value)}
-                  onKeyDown={(e) => {
-                    if (e.key === 'Enter') submitPasted();
-                  }}
-                  placeholder="https://script.google.com/macros/s/…/exec"
-                  inputMode="url"
-                  autoCapitalize="off"
-                  autoCorrect="off"
-                  aria-label="Paste database link"
-                  className={inputCls}
-                />
-                <button
-                  type="button"
-                  onClick={submitPasted}
-                  className="press flex min-h-[48px] shrink-0 items-center rounded-2xl bg-[#151515] px-4 text-[14px] font-extrabold text-white dark:bg-[#C7FF4D] dark:text-[#151515]"
-                >
-                  Use
-                </button>
-              </div>
-            </Field>
-            <p className="mt-2.5 px-1 text-[12px] leading-relaxed text-(--ink-2)">
-              Only links from a working Stockly setup are accepted — anything else is rejected before anything is saved.
-            </p>
-          </div>
-        )}
-      </Sheet>
-
       {/* Categories popup — add / rename / delete in one place */}
-      <Sheet open={catListOpen} onClose={() => { setCatListOpen(false); setEditingCat(null); setQuickCat(''); }} title={`Categories${categories.length ? ` (${categories.length})` : ''}`}>
-        <div className="mb-3 flex gap-2">
-          <input
-            value={quickCat}
-            onChange={(e) => setQuickCat(e.target.value)}
-            onKeyDown={(e) => {
-              if (e.key === 'Enter') void submitQuickCat();
-            }}
-            placeholder={editingCat ? `Rename “${editingCat.name}”…` : 'New category name…'}
-            aria-label={editingCat ? 'Rename category' : 'New category name'}
-            className={inputCls}
-          />
+      <Sheet open={catListOpen} onClose={() => { setCatListOpen(false); setEditingCat(null); setQuickCat(''); setCatError(''); }} title={`Categories · ${categories.length}`}>
+        <form className="mb-4" onSubmit={(e) => { e.preventDefault(); void submitQuickCat(); }}>
+          <Field label={editingCat ? 'Category name' : 'New category'}>
+            <input
+              value={quickCat}
+              onChange={(e) => { setQuickCat(e.target.value); setCatError(''); }}
+              placeholder="e.g. Beverages"
+              aria-label={editingCat ? 'Rename category' : 'New category name'}
+              aria-invalid={!!catError}
+              aria-describedby={catError ? 'category-form-error' : undefined}
+              className={inputCls}
+              autoFocus
+            />
+          </Field>
+          {catError ? <p id="category-form-error" className="mt-1.5 text-[12px] font-semibold text-rose-600 dark:text-rose-300" role="alert">{catError}</p> : null}
+          <div className="mt-2 flex justify-end gap-2">
+            {editingCat ? (
+              <button type="button" onClick={() => { setEditingCat(null); setQuickCat(''); setCatError(''); }} className="press min-h-11 rounded-xl px-4 text-[13px] font-bold text-(--ink-2)">Cancel</button>
+            ) : null}
           <button
-            type="button"
-            onClick={() => void submitQuickCat()}
+            type="submit"
             disabled={quickBusy}
-            className="press flex min-h-[48px] shrink-0 items-center gap-1 rounded-2xl bg-[#151515] px-4 text-[14px] font-extrabold text-white disabled:opacity-50 dark:bg-[#C7FF4D] dark:text-[#151515]"
+            className="press flex min-h-11 items-center gap-1.5 rounded-xl bg-[#151515] px-4 text-[13px] font-extrabold text-white disabled:opacity-50 dark:bg-[#C7FF4D] dark:text-[#151515]"
           >
-            {quickBusy ? (editingCat ? 'Saving…' : 'Adding…') : editingCat ? 'Save' : 'Add'}
+            {quickBusy ? 'Saving…' : editingCat ? 'Save category' : 'Add category'}
           </button>
-        </div>
-        {editingCat ? (
-          <button
-            type="button"
-            onClick={() => { setEditingCat(null); setQuickCat(''); }}
-            className="press mb-3 text-[13px] font-bold text-(--ink-2)"
-          >
-            Cancel rename
-          </button>
-        ) : null}
+          </div>
+        </form>
         {categories.length === 0 ? (
           <div className="rounded-[20px] border border-dashed border-(--stroke-dim) px-4 py-6 text-center">
             <p className="text-[14px] font-bold text-(--ink)">No categories yet</p>
@@ -881,7 +741,7 @@ export default function SettingsScreen() {
                       {count} product{count === 1 ? '' : 's'}
                     </span>
                   </span>
-                  <button type="button" onClick={() => { setEditingCat(c); setQuickCat(c.name); }} aria-label={`Rename ${c.name}`} className="press flex h-10 w-10 shrink-0 items-center justify-center rounded-2xl bg-(--bg-elev)/60 text-(--ink-2) shadow-sm">
+                  <button type="button" onClick={() => { setEditingCat(c); setQuickCat(c.name); setCatError(''); }} aria-label={`Rename ${c.name}`} className="press flex h-10 w-10 shrink-0 items-center justify-center rounded-2xl bg-(--bg-elev)/60 text-(--ink-2) shadow-sm">
                     <Pencil size={16} />
                   </button>
                   <button type="button" onClick={() => setDelCat(c)} aria-label={`Delete ${c.name}`} className="press flex h-10 w-10 shrink-0 items-center justify-center rounded-2xl bg-rose-500/10 text-rose-500 dark:text-rose-400">
@@ -897,11 +757,130 @@ export default function SettingsScreen() {
       <Confirm
         open={!!delCat}
         title="Delete category?"
-        body={delCat ? `“${delCat.name}” will be removed. Its products stay in stock as Uncategorized. This cannot be undone.` : ''}
+        body={delCat ? (() => {
+          const linked = products.filter((p) => p.categoryId === delCat.id).length;
+          return linked
+            ? `“${delCat.name}” has ${linked} linked product${linked === 1 ? '' : 's'}. Deleting it moves ${linked === 1 ? 'that product' : 'those products'} to Uncategorized; product records remain. This cannot be undone.`
+            : `“${delCat.name}” has no linked products and will be removed. This cannot be undone.`;
+        })() : ''}
         busy={delBusy}
         onCancel={() => setDelCat(null)}
         onConfirm={() => void confirmDelCat()}
       />
+
+      <Confirm
+        open={logoutOpen}
+        title="Log out?"
+        body="You will be signed out on this device and this phone’s cached data cleared. Your Google Sheet is untouched — sign in again any time."
+        confirmLabel="Log out"
+        onCancel={() => setLogoutOpen(false)}
+        onConfirm={() => {
+          setLogoutOpen(false);
+          signOutAccount();
+          setProfile(null);
+          logout();
+        }}
+      />
+
+      {/* Account popup — register / sign in / status */}
+      <Sheet open={accountOpen} onClose={() => { setAccountOpen(false); setAccError(''); setAccStatus(''); }} title="Account">
+        {profile ? (
+          <div>
+            <div className="rounded-[20px] bg-(--glass-soft) px-3.5 py-3">
+              <p className="text-[15px] font-extrabold text-(--ink)">{profile.name}</p>
+              <p className="text-[12.5px] text-(--ink-2)">{profile.email}</p>
+              <p className="tnum mt-1 text-[11.5px] font-bold text-(--ink-2)">Status: {profile.accountStatus}</p>
+            </div>
+            {accStatus ? <p className="mt-2 px-1 text-[12.5px] font-semibold text-(--ink-2)">{accStatus}</p> : null}
+            <div className="mt-3 grid grid-cols-2 gap-2 pb-1">
+              <button
+                type="button"
+                onClick={() => void doRefreshStatus()}
+                disabled={accBusy}
+                className="glass-soft press min-h-[52px] rounded-2xl text-[14px] font-extrabold text-(--ink) disabled:opacity-50"
+              >
+                {accBusy ? 'Checking…' : 'Check status'}
+              </button>
+              <button
+                type="button"
+                onClick={() => { signOutAccount(); setProfile(null); setAccountOpen(false); notify('Signed out on this device.'); }}
+                className="press min-h-[52px] rounded-2xl bg-rose-500/12 text-[14px] font-extrabold text-rose-600 dark:text-rose-300"
+              >
+                Sign out
+              </button>
+            </div>
+            <p className="mt-2 px-1 text-[12px] leading-relaxed text-(--ink-2)">
+              Profiles sync to the owner’s admin area automatically. Account status is owner-managed and enforced by
+              the backend.
+            </p>
+          </div>
+        ) : (
+          <div>
+            <p className="mb-3 text-[13px] leading-relaxed text-(--ink-2)">
+              Signed in with a server-verified Stockly account. Sign-in methods attach to one identity — Google and
+              password logins for the same verified email share this account.
+            </p>
+            {accError ? <p role="alert" className="mt-2 text-[12.5px] font-semibold text-rose-600 dark:text-rose-300">{accError}</p> : null}
+            <button
+              type="button"
+              onClick={() => { setAccountOpen(false); setDevicesMode('link'); setDevicesOpen(true); }}
+              className="glass-soft press mt-2 flex min-h-[52px] w-full items-center justify-center gap-1.5 rounded-2xl text-[14px] font-extrabold text-(--ink)"
+            >
+              <Link2 size={16} /> Link another device
+            </button>
+            <button
+              type="button"
+              onClick={() => { signOutAccount(); setProfile(null); setAccountOpen(false); logout(); }}
+              className="press mt-2 min-h-[52px] w-full rounded-2xl bg-rose-500/12 text-[14px] font-extrabold text-rose-600 dark:text-rose-300"
+            >
+              Sign out
+            </button>
+          </div>
+        )}
+      </Sheet>
+
+      {/* Owner-only admin area */}
+      {adminOpen ? (
+        <div className="fixed inset-0 z-40 overflow-y-auto bg-(--bg)">
+          <AdminScreen onBack={() => setAdminOpen(false)} notify={notify} />
+        </div>
+      ) : null}
+
+      {/* Linked devices */}
+      {devicesOpen ? (
+        <div className="fixed inset-0 z-40 overflow-y-auto bg-(--bg)">
+          <LinkedDevicesScreen
+            onBack={() => setDevicesOpen(false)}
+            notify={notify}
+            initialMode={devicesMode}
+            onLinked={() => {
+              void refreshMyProfile().then((p) => {
+                if (p) setProfile(p);
+                setDevicesOpen(false);
+                void refresh();
+              });
+            }}
+          />
+        </div>
+      ) : null}
+
+      {/* Change sheet (server-verified; replaces the stored association) */}
+      {sheetChangeOpen ? (
+        <div className="fixed inset-0 z-40 overflow-y-auto bg-(--bg)">
+          <SheetSetupScreen
+            mode="repair"
+            initialMessage="Connect a different sheet. Verification replaces your current association."
+            onConnected={() => {
+              setSheetChangeOpen(false);
+              clearCache();
+              void checkConnection();
+              void refresh();
+              notify('Sheet connection updated and verified.', 'success');
+            }}
+            onBack={() => setSheetChangeOpen(false)}
+          />
+        </div>
+      ) : null}
 
     </div>
   );

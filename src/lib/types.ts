@@ -68,6 +68,18 @@ export interface ApiResponse<T = unknown> {
 
 export type ThemeMode = 'light' | 'dark' | 'system';
 
+/** Registered app-user profile (user database `Users` tab).
+ *  Never carries passwords, tokens, or secrets — profiles only. */
+export interface UserProfile {
+  userId: string;
+  name: string;
+  email: string;
+  accountStatus: 'active' | 'suspended' | 'deactivated';
+  createdAt: string;
+  updatedAt: string;
+  lastLoginAt: string;
+}
+
 export interface ToastMsg {
   id: number;
   kind: 'success' | 'error' | 'info';

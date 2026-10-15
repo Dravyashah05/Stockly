@@ -11,6 +11,8 @@ node_modules
 dist
 dist-ssr
 *.local
+.env
+.env.*
 android/local.properties
 android/.gradle
 android/app/build

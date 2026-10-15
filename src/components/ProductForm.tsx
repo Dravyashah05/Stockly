@@ -276,17 +276,30 @@ export default function ProductForm({
       open={open}
       onClose={onClose}
       title={editing ? 'Edit product' : 'Add product'}
-      footer={(
-        <div className="glass-strong rounded-3xl p-2">
-          <PrimaryBtn onClick={submit} disabled={busy}>
-            {busy ? 'Saving…' : editing ? 'Save changes' : 'Add product'}
-          </PrimaryBtn>
-        </div>
-      )}
+      footer={
+        <PrimaryBtn onClick={submit} disabled={busy}>
+          {busy ? 'Saving…' : editing ? 'Save changes' : 'Add product'}
+        </PrimaryBtn>
+      }
     >
-      <div className="product-form-grid space-y-3">
-        {/* 1 — Image */}
-        <div className="product-form-image glass rounded-3xl p-4">
+      <div className="product-form-grid space-y-5">
+        {/* 1 — Product name */}
+        <div className="product-form-name">
+          <Field
+            label="Product name *"
+            hint={editing ? `SKU: ${editing.sku}` : `SKU auto-generated: ${autoSku}`}
+          >
+            <input
+              value={name}
+              onChange={(e) => setName(e.target.value)}
+              placeholder="e.g. Basmati Rice 5kg"
+              className={inputCls}
+            />
+          </Field>
+        </div>
+
+        {/* 2 — Image */}
+        <div className="product-form-image">
           <Field label="Product image">
             <div className="flex items-center gap-3">
               {imageOk ? (
@@ -356,23 +369,8 @@ export default function ProductForm({
           </Field>
         </div>
 
-        {/* 2 — Product name */}
-        <div className="product-form-name glass rounded-3xl p-4">
-          <Field
-            label="Product name *"
-            hint={editing ? `SKU: ${editing.sku}` : `SKU auto-generated: ${autoSku}`}
-          >
-            <input
-              value={name}
-              onChange={(e) => setName(e.target.value)}
-              placeholder="e.g. Basmati Rice 5kg"
-              className={inputCls}
-            />
-          </Field>
-        </div>
-
         {/* Min / qty / price — one related group with equal-width fields */}
-        <div className="product-form-stock glass rounded-3xl p-4">
+        <div className="product-form-stock">
           <div className="grid grid-cols-2 gap-3 sm:grid-cols-3">
             <Field label="Minimum stock *" hint="Low-stock alert level">
               <input
@@ -407,7 +405,7 @@ export default function ProductForm({
         </div>
 
         {/* 4 — Description */}
-        <div className="product-form-description glass rounded-3xl p-4">
+        <div className="product-form-description">
           <Field label="Description">
             <textarea
               value={description}
@@ -420,7 +418,7 @@ export default function ProductForm({
         </div>
 
         {/* 5 — Category */}
-        <div className="product-form-category glass rounded-3xl p-4">
+        <div className="product-form-category">
           <Field
             label="Category"
             hint={categories.length === 0 ? 'No categories yet — add them in Settings.' : undefined}

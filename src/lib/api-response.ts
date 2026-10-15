@@ -52,6 +52,36 @@ function safeBackendError(message: unknown): string {
   if (/product not found/i.test(message)) {
     return 'That product no longer exists. Sync the latest inventory and try again.';
   }
+  if (/account is suspended/i.test(message)) {
+    return 'This account is suspended. Contact the owner to reactivate it.';
+  }
+  if (/account is deactivated/i.test(message)) {
+    return 'This account is deactivated. Contact the owner.';
+  }
+  if (/account is not active|unknown user/i.test(message)) {
+    return 'This account cannot make changes right now. Contact the owner.';
+  }
+  if (/already registered/i.test(message)) {
+    return 'This email is already registered. Sign in with it instead.';
+  }
+  if (/user not found/i.test(message)) {
+    return 'Account not found on this database. Register again or contact the owner.';
+  }
+  if (/sign-in required/i.test(message)) {
+    return 'Your session expired. Sign in again.';
+  }
+  if (/no verified sheet connection|connect your google sheet/i.test(message)) {
+    return 'Connect your Google Sheet before using inventory.';
+  }
+  if (/device is not authorized|device session is (incomplete|no longer valid)|device and account do not match/i.test(message)) {
+    return 'This device is not authorized. Re-link it from Settings → Linked Devices.';
+  }
+  if (/device.*(not linked|unlinked|re-link|no longer valid)|device session is (incomplete|no longer valid)|device and account do not match|no longer linked/i.test(message)) {
+    return 'This device is no longer linked. Re-link it from Settings → Linked Devices.';
+  }
+  if (/could not verify this device/i.test(message)) {
+    return 'Could not verify this device right now. Check your connection and try again.';
+  }
   // Do not put arbitrary exception text, spreadsheet IDs, or submitted data in UI errors.
   return 'Apps Script rejected the request. Check the entered values and the database setup.';
 }

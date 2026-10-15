@@ -88,6 +88,7 @@ test('preserves the legacy sync fallback for old Apps Script deployments', () =>
 test('accepts only deployed Apps Script /exec URLs', () => {
   assert.equal(isAppsScriptExecUrl('https://script.google.com/macros/s/AKfycb123/exec'), true);
   assert.equal(isAppsScriptExecUrl('https://script.google.com/macros/s/AKfycb123/dev'), false);
+  assert.equal(isAppsScriptExecUrl('https://script.google.com:444/macros/s/AKfycb123/exec'), false);
   assert.equal(isAppsScriptExecUrl('https://script.google.com/macros/s/AKfycb123/exec?x=1'), false);
   assert.equal(isAppsScriptExecUrl('https://example.com/macros/s/AKfycb123/exec'), false);
   assert.equal(isAppsScriptExecUrl('not a url'), false);

@@ -1,6 +1,12 @@
 import React, { Suspense, lazy, useCallback, useEffect, useRef, useState, useTransition } from 'react';
 import { CloudOff } from 'lucide-react';
 import { StoreProvider, useStore } from './lib/store';
+import { LS_KEYS } from './lib/config';
+import { authApi, getAuthSession } from './lib/auth';
+import { sheetsApi, SheetsApiError } from './lib/connection';
+import { signOutAccount } from './lib/users';
+import AuthScreen from './screens/AuthScreen';
+import { RestrictedScreen, SheetSetupScreen } from './screens/AccessScreens';
 import type { Product } from './lib/types';
 import { BottomNav, DesktopSidebar, DesktopToolbar, SyncStatus, Toasts, AppLoader, hasOpenOverlay, useOverlayOpen, type TabKey } from './components/ui';
 import HomeScreen from './screens/HomeScreen';
@@ -32,28 +38,51 @@ function Shell() {
     startSwitch(() => setTab(t));
   }, []);
   const [stockReq, setStockReq] = useState<StockRequest>(null);
+  // Desktop sidebar hide/show (persisted; desktop layout only).
+  const [sideCollapsed, setSideCollapsed] = useState(() => {
+    try {
+      return localStorage.getItem(LS_KEYS.sidebar) === '1';
+    } catch {
+      return false;
+    }
+  });
+  const toggleSidebar = useCallback(() => {
+    setSideCollapsed((v) => {
+      try {
+        localStorage.setItem(LS_KEYS.sidebar, v ? '0' : '1');
+      } catch { /* ignore */ }
+      return !v;
+    });
+  }, []);
   const [productFilter, setProductFilter] = useState<ProductFilter>('all');
   const [formOpen, setFormOpen] = useState(false);
   const [editing, setEditing] = useState<Product | null>(null);
-  const { toasts, dismissToast, configured, ready, loading, lastSync, pendingIds, failedOps, retryFailedOp, dismissFailedOp, theme, setTheme } = useStore();
+  const { toasts, dismissToast, configured, ready, loading, lastSync, online, pendingIds, failedOps, retryFailedOp, dismissFailedOp } = useStore();
   // Hide the bottom nav under any popup so sheet buttons are never covered.
   const overlayOpen = useOverlayOpen();
   const showSync = !overlayOpen && (pendingIds.length > 0 || failedOps.length > 0);
 
-  /* Branded startup loader: cached screens are usable immediately; uncached
-   * first installs can show the loader while the initial request settles. A 12s
-   * safety forces it away on hung networks — the app behind shows
-   * skeletons/offline states instead of a stuck spinner. Fades out, then
-   * unmounts after the transition. Screens mount + fetch underneath. */
+  /* Branded startup loader: shows on every cold start for a minimum
+   *  brand moment (~1.5s) while screens mount + fetch underneath. Cached
+   *  screens are usable immediately after; uncached first installs keep
+   *  the loader until the initial request settles. A 12s safety forces it
+   *  away on hung networks — the app behind shows skeletons/offline
+   *  states instead of a stuck spinner. Fades out, then unmounts after
+   *  the transition. */
   const [forced, setForced] = useState(false);
   const [loaderGone, setLoaderGone] = useState(false);
+  const [minElapsed, setMinElapsed] = useState(false);
   useEffect(() => {
     const t = window.setTimeout(() => setForced(true), 12000);
     return () => window.clearTimeout(t);
   }, []);
+  useEffect(() => {
+    const t = window.setTimeout(() => setMinElapsed(true), 1500);
+    return () => window.clearTimeout(t);
+  }, []);
   const dataReady = ready || !configured;
   const hasCachedData = lastSync !== null;
-  const showLoader = !loaderGone && !(forced || hasCachedData || dataReady);
+  const showLoader = !loaderGone && !(forced || ((hasCachedData || dataReady) && minElapsed));
   useEffect(() => {
     if (!showLoader && !loaderGone) {
       const t = window.setTimeout(() => setLoaderGone(true), 320);
@@ -194,9 +223,9 @@ function Shell() {
   return (
     <div className="min-h-dvh bg-(--bg) text-(--ink)">
       <div className="ambient" aria-hidden="true" />
-      <div className="app-shell relative z-[1] mx-auto min-h-dvh max-w-md sm:border-x sm:border-(--stroke-dim)">
-        <DesktopSidebar tab={tab} onNavigate={switchTab} onStock={openStock} />
-        <DesktopToolbar title={pageTitle} pending={pendingIds.length} failed={failedOps.length} lastSync={lastSync} theme={theme} setTheme={setTheme} />
+      <div className={`app-shell relative z-[1] mx-auto min-h-dvh max-w-md sm:border-x sm:border-(--stroke-dim) ${sideCollapsed ? 'side-collapsed' : ''}`}>
+        <DesktopSidebar tab={tab} onNavigate={switchTab} onStock={openStock} collapsed={sideCollapsed} />
+        <DesktopToolbar title={pageTitle} online={online} pending={pendingIds.length} failed={failedOps.length} lastSync={lastSync} sideCollapsed={sideCollapsed} onToggleSidebar={toggleSidebar} />
         {!configured ? (
           <div className="backend-banner safe-top sticky top-0 z-20 px-3 pt-3">
             <button
@@ -228,6 +257,8 @@ function Shell() {
               onAddProduct={openAdd}
               onStockIn={stockInHome}
               onStockOut={stockOutHome}
+              onStockInProduct={stockInFor}
+              onStockOutProduct={stockOutFor}
               goProducts={goProducts}
               goHistory={goHistoryTab}
             />
@@ -288,8 +319,122 @@ function Shell() {
 
 export default function App() {
   return (
-    <StoreProvider>
-      <Shell />
-    </StoreProvider>
+    <StoreProvider><Gate /></StoreProvider>
   );
+}
+
+/* Central route guard (frontend mirror only — every protected API
+ * re-validates session, account status, sheet connection, and device).
+ * Phases: login → restricted (suspended) → setup/repair (sheet) → app. */
+type GatePhase =
+  | { name: 'loading' }
+  | { name: 'login' }
+  | { name: 'restricted'; status: string }
+  | { name: 'setup'; message?: string }
+  | { name: 'repair'; message: string }
+  | { name: 'app' };
+
+function Gate() {
+  const [phase, setPhase] = useState<GatePhase>({ name: 'loading' });
+  const { setConfiguredFlag } = useStore();
+
+  const evaluate = useCallback(async () => {
+    if (!getAuthSession()) {
+      setPhase({ name: 'login' });
+      return;
+    }
+    let accountStatus = 'active';
+    try {
+      const me = await authApi.me();
+      accountStatus = me.user.accountStatus;
+    } catch (e) {
+      // Dead/expired session → back to login. Anything else keeps the
+      // cached shell away from protected data until retry.
+      const status = (e as { status?: number }).status;
+      if (status === 401) {
+        signOutAccount();
+        setPhase({ name: 'login' });
+      } else {
+        setPhase({ name: 'login' });
+      }
+      return;
+    }
+    if (accountStatus !== 'active') {
+      setPhase({ name: 'restricted', status: accountStatus });
+      return;
+    }
+    try {
+      const conn = await sheetsApi.getConnection();
+      if (conn.connected && conn.status === 'verified') {
+        setConfiguredFlag();
+        setPhase({ name: 'app' });
+      } else if (conn.status === 'failed' || conn.status === 'revoked') {
+        setPhase({ name: 'repair', message: 'Your sheet connection failed verification. Reconnect below.' });
+      } else {
+        setPhase({ name: 'setup' });
+      }
+    } catch (e) {
+      if (e instanceof SheetsApiError && e.status === 401) {
+        signOutAccount();
+        setPhase({ name: 'login' });
+      } else if (e instanceof SheetsApiError && e.reason === 'suspended') {
+        setPhase({ name: 'restricted', status: 'suspended' });
+      } else {
+        setPhase({ name: 'setup', message: 'Could not check your sheet connection. Try again.' });
+      }
+    }
+  }, [setConfiguredFlag]);
+
+  useEffect(() => {
+    void evaluate();
+  }, [evaluate]);
+
+  // Native splash screen: Shell used to hide it, but Shell only mounts in
+  // the app phase now — with launchAutoHide:false the splash would stick
+  // forever on login/setup/restricted. Hide it for every phase.
+  useEffect(() => {
+    (async () => {
+      try {
+        const { SplashScreen } = await import('@capacitor/splash-screen');
+        await SplashScreen.hide();
+      } catch {
+        /* web — no splash plugin */
+      }
+    })();
+  }, []);
+
+  // Backend-driven guard: any 401/403 from a protected API re-runs the
+  // gate (session expiry, suspension, revoked sheet/device). Frontend
+  // redirects alone never grant access — this only re-checks state.
+  useEffect(() => {
+    const onForbidden = () => {
+      void evaluate();
+    };
+    window.addEventListener('stockly:forbidden', onForbidden);
+    return () => window.removeEventListener('stockly:forbidden', onForbidden);
+  }, [evaluate]);
+
+  if (phase.name === 'loading') {
+    return (
+      <div className="min-h-dvh bg-(--bg) text-(--ink)">
+        <div className="ambient" aria-hidden="true" />
+      </div>
+    );
+  }
+  if (phase.name === 'login') {
+    return <AuthScreen onAuthed={() => void evaluate()} />;
+  }
+  if (phase.name === 'restricted') {
+    return <RestrictedScreen status={phase.status} onSignOut={() => setPhase({ name: 'login' })} />;
+  }
+  if (phase.name === 'setup' || phase.name === 'repair') {
+    return (
+      <SheetSetupScreen
+        mode={phase.name}
+        initialMessage={phase.message}
+        onConnected={() => void evaluate()}
+      />
+    );
+  }
+  return <Shell />;
 }

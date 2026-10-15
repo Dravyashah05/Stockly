@@ -8,7 +8,7 @@ import React, {
   useState,
 } from 'react';
 import { api, ApiError, isUnknownOutcome, newIdempotencyKey } from './api';
-import { LS_KEYS, AUTO_SYNC_MS, SYNC_FRESH_MS, SYNC_TX_LIMIT, TX_CACHE_CAP, TX_MEMORY_CAP, getApiUrl } from './config';
+import { LS_KEYS, AUTO_SYNC_MS, SYNC_FRESH_MS, SYNC_TX_LIMIT, TX_CACHE_CAP, TX_MEMORY_CAP, getCurrentUserId } from './config';
 import type {
   Category,
   DashboardStats,
@@ -79,6 +79,8 @@ interface Store {
   /** Wipe in-memory + on-device cache (used when switching backend URLs
    *  so the old Sheet's products never linger as "dummy" rows). */
   clearCache: () => void;
+  /** Log out: disconnect the cloud database and wipe this device's cache. */
+  logout: () => void;
   saveProduct: (input: ProductFormInput, editingId?: string) => Promise<boolean>;
   removeProduct: (id: string) => Promise<boolean>;
   saveCategory: (name: string, editingId?: string) => Promise<boolean>;
@@ -243,13 +245,7 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
     initial?.savedAt ? new Date(initial.savedAt) : null,
   );
   const [online, setOnline] = useState<boolean>(typeof navigator === 'undefined' ? true : navigator.onLine);
-  const [configured, setConfigured] = useState<boolean>(() => {
-    try {
-      return (localStorage.getItem(LS_KEYS.apiUrl) || '').length > 10;
-    } catch {
-      return false;
-    }
-  });
+  const [configured, setConfigured] = useState<boolean>(false);
   const [theme, setThemeState] = useState<ThemeMode>(readTheme);
   const [toasts, setToasts] = useState<ToastMsg[]>([]);
   const [txLoadingMore, setTxLoadingMore] = useState(false);
@@ -845,11 +841,7 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
   }, [configured]);
 
   const setConfiguredFlag = useCallback(() => {
-    try {
-      setConfigured((localStorage.getItem(LS_KEYS.apiUrl) || '').length > 10);
-    } catch {
-      setConfigured(false);
-    }
+    setConfigured(true);
   }, []);
 
   const clearCache = useCallback(() => {
@@ -887,11 +879,20 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
     } catch { /* ignore */ }
   }, [notify, saveOutbox]);
 
-  /** True while `base` is still the active backend (URL switches stand
-   *  in-flight background work down — see clearCache). */
+  /** Log out: wipe every trace of cached data + pending work. The auth
+   *  session itself is cleared by signOutAccount; the gate returns to login. */
+  const logout = useCallback(() => {
+    clearCache();
+    setConfigured(false);
+    notify('Logged out — local data cleared.', 'info');
+  }, [clearCache, notify]);
+
+  /** True while `base` is still the active account (account switches stand
+   *  in-flight background work down — see clearCache). Backend identity is
+   *  the authenticated user id; the sheet URL is never client-held. */
   function isCurrentBackend(base: string): boolean {
     try {
-      return getApiUrl() === base;
+      return (getCurrentUserId() ?? '') === base;
     } catch {
       return false;
     }
@@ -931,7 +932,7 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
     async (input: ProductFormInput): Promise<boolean> => {
       const key = `new-prod-${input.sku}-${input.name}`;
       if (!claimSubmit(key)) return false;
-      const base = getApiUrl();
+      const base = getCurrentUserId() ?? '';
       const cur = live.current;
       const t = nowIso();
       const temp: Product = {
@@ -1012,7 +1013,7 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
     async (editingId: string, input: ProductFormInput): Promise<boolean> => {
       const key = `upd-prod-${editingId}`;
       if (!claimSubmit(key)) return false;
-      const base = getApiUrl();
+      const base = getCurrentUserId() ?? '';
       const cur = live.current;
       const prev = cur.products.find((p) => p.id === editingId);
       if (!prev) {
@@ -1163,7 +1164,7 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
     async (id: string): Promise<boolean> => {
       const key = `del-prod-${id}`;
       if (!claimSubmit(key)) return false;
-      const base = getApiUrl();
+      const base = getCurrentUserId() ?? '';
       const cur = live.current;
       const idx = cur.products.findIndex((p) => p.id === id);
       if (idx === -1) {
@@ -1245,7 +1246,7 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
       // are never blocked — but the SAME tap can't double-submit (2.5s).
       const idem = opts?.idempotencyKey || newIdempotencyKey();
       if (!claimSubmit(`in-${a.productId}-${a.quantity}-${idem}`)) return false;
-      const base = getApiUrl();
+      const base = getCurrentUserId() ?? '';
       const cur = live.current;
       const prev = cur.products.find((p) => p.id === a.productId);
       if (!prev) {
@@ -1405,7 +1406,7 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
     ): Promise<boolean> => {
       const idem = opts?.idempotencyKey || newIdempotencyKey();
       if (!claimSubmit(`out-${a.productId}-${a.quantity}-${idem}`)) return false;
-      const base = getApiUrl();
+      const base = getCurrentUserId() ?? '';
       const cur = live.current;
       const prev = cur.products.find((p) => p.id === a.productId);
       if (!prev) {
@@ -1692,7 +1693,7 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
   useEffect(() => {
     if (!ready || !configured || hydratedRef.current) return;
     hydratedRef.current = true;
-    const curBase = getApiUrl();
+    const curBase = getCurrentUserId() ?? '';
     let droppedBase = 0;
     for (const d of outboxRef.current?.values() ?? []) {
       if (d.base && d.base !== curBase) {
@@ -1762,6 +1763,7 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
       txExhausted,
       setConfiguredFlag,
       clearCache,
+      logout,
       saveProduct,
       removeProduct,
       saveCategory,
@@ -1783,7 +1785,7 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
       pendingIds, failedOps, isPending, retryFailedOp, dismissFailedOp,
       theme, setTheme,
       dark, toasts, notify, dismissToast, refresh, ensureFresh,
-      loadMoreTransactions, txLoadingMore, txExhausted, setConfiguredFlag, clearCache,
+      loadMoreTransactions, txLoadingMore, txExhausted, setConfiguredFlag, clearCache, logout,
       saveProduct, removeProduct, saveCategory, removeCategory, doStockIn, doStockOut,
       addProductOptimistically, updateProductOptimistically, deleteProductOptimistically,
       submitStockIn, submitStockOut, reconcileServerResponse, invalidateAffectedQueries,

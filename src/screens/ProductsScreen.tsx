@@ -176,15 +176,24 @@ export default function ProductsScreen({
           <div className="sheet-scroll overflow-y-auto">
             <EmptyState
               icon={<Search size={22} />}
-              title={q || cat !== 'all' || status !== 'all' ? 'No products match' : 'No products yet'}
-              hint="Tap + to add your first product."
+              title={filtersActive ? 'No products match' : 'No products yet'}
+              hint={filtersActive ? 'Try another search or clear the filters.' : 'Add a product to start tracking stock.'}
             />
+            {filtersActive ? (
+              <button
+                type="button"
+                onClick={clearFilters}
+                className="press mx-auto mt-1 flex min-h-11 items-center gap-2 rounded-xl bg-(--primary) px-4 text-sm font-bold text-(--primary-foreground)"
+              >
+                <X size={16} /> Clear filters
+              </button>
+            ) : null}
           </div>
         ) : (
           <div className="glass sheet-scroll min-h-0 flex-1 overflow-auto rounded-[26px] px-1.5 pt-1 pb-4">
             <div className="desktop-product-table">
               <div className="desktop-product-table-head" role="row">
-                <span role="columnheader">Product</span><span role="columnheader">SKU</span><span role="columnheader" className="text-right">Stock</span><span role="columnheader" className="text-right">Minimum</span><span role="columnheader" className="text-right">Price</span><span role="columnheader">Status</span><span role="columnheader" aria-label="Actions" />
+                <span role="columnheader">Product</span><span role="columnheader">SKU</span><span role="columnheader">Category</span><span role="columnheader" className="text-right">Stock</span><span role="columnheader" className="text-right">Minimum</span><span role="columnheader" className="text-right">Price</span><span role="columnheader">Status</span><span role="columnheader" aria-label="Actions" />
               </div>
               <div className="divide-y divide-(--stroke-dim)" role="rowgroup">
               {list.slice(0, visible).map((p) => (
@@ -339,6 +348,7 @@ const ProductRow = memo(function ProductRow({
       <span className="product-desktop-name hidden" title={p.name}>{p.name}</span>
       </div>
       <span className="product-desktop-cell" role="cell" title={sku}>{sku || '—'}</span>
+      <span className="product-desktop-cell" role="cell" title={catLabel}>{catLabel || '—'}</span>
       <span className="product-desktop-cell tnum text-right" role="cell">{p.currentStock}</span>
       <span className="product-desktop-cell tnum text-right" role="cell">{p.minimumStock}</span>
       <span className="product-desktop-cell tnum text-right" role="cell">{p.sellingPrice > 0 ? formatMoney(p.sellingPrice) : '—'}</span>

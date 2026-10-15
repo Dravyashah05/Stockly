@@ -1,8 +1,4 @@
-/* Single API configuration file for the whole frontend.
- * No secrets live here — the Apps Script URL is public-by-design
- * (access is controlled inside Apps Script + the Sheet sharing settings).
- * Users paste their Web-App URL once in Settings; it is stored on-device.
- */
+/* Single API configuration file for the frontend. The Apps Script Web-App URL is stored in local settings; the endpoint itself is public to URL holders. */
 
 export const APP_NAME = 'Stockly';
 export const APP_ID = 'com.stockly.inventory';
@@ -16,8 +12,48 @@ export const APP_VERSION = '1.0.0';
  *  pretending to check. */
 export const UPDATE_CHECK_URL = '';
 
-/** Default backend URL. Empty until the user connects a deployment. */
-export const DEFAULT_API_URL = '';
+/** Default backend URL. Prefers the public endpoint env var when the
+ *  deployment configures one; otherwise empty until the user connects.
+ *  Only a public URL belongs here — never secrets (Vite env is public). */
+const ENV_USER_SCRIPT_URL = import.meta.env?.VITE_USER_SCRIPT_URL;
+export const DEFAULT_API_URL = typeof ENV_USER_SCRIPT_URL === 'string' ? ENV_USER_SCRIPT_URL.trim() : '';
+
+/** Same-origin trusted admin API (Vercel serverless). The private admin
+ *  spreadsheet ID and Google credentials stay server-side; the browser
+ *  only ever talks to this route with a short-lived session token. */
+export const ADMIN_API_ROUTE = '/api/admin';
+
+/** Same-origin trusted device-linking API (Vercel serverless). Issues
+ *  short-lived linking tokens and per-device sessions; the browser never
+ *  sees server secrets. */
+export const DEVICES_API_ROUTE = '/api/devices';
+
+/** Same-origin trusted user-sheet gateway (Vercel serverless). Resolves
+ *  the caller's verified spreadsheet server-side and forwards inventory
+ *  traffic. The browser never holds an exec URL. */
+export const SHEETS_API_ROUTE = '/api/sheets';
+
+/** Base URL of the deployed backend (Vercel). Web builds use same-origin
+ *  (empty). Installed Android builds have no same-origin server, so they
+ *  need the deployment URL, e.g. VITE_API_BASE_URL=https://your-app.vercel.app
+ *  (public origin only — never secrets). */
+const API_ENV_RAW = import.meta.env?.VITE_API_BASE_URL;
+export const API_BASE_URL = (typeof API_ENV_RAW === 'string' ? API_ENV_RAW : '').trim().replace(/\/+$/, '');
+
+export function isNativeApp(): boolean {
+  try {
+    return typeof window !== 'undefined' && !!(window as unknown as { Capacitor?: unknown }).Capacitor;
+  } catch {
+    return false;
+  }
+}
+
+/** Absolute backend URL on native builds (same-origin on web). All
+ *  /api/* calls go through here so Android reaches the deployment. */
+export function apiUrl(route: string): string {
+  if (API_BASE_URL && isNativeApp()) return `${API_BASE_URL}${route}`;
+  return route;
+}
 
 /** localStorage keys — used ONLY as a cache / for settings, never as the DB. */
 export const LS_KEYS = {
@@ -25,6 +61,18 @@ export const LS_KEYS = {
   theme: 'stockly.theme',
   cache: 'stockly.cache.v1',
   queue: 'stockly.outbox.v1',
+  sidebar: 'stockly.sidebarCollapsed',
+  userId: 'stockly.userId',
+  userProfile: 'stockly.userProfile.v1',
+  deviceId: 'stockly.deviceId',
+  deviceSession: 'stockly.deviceSession.v1',
+  authSession: 'stockly.authSession.v1',
+} as const;
+
+/** sessionStorage keys — short-lived, cleared when the tab closes. */
+export const SS_KEYS = {
+  adminToken: 'stockly.adminToken',
+  adminEmail: 'stockly.adminEmail',
 } as const;
 
 export const STOCK_OUT_REASONS = [
@@ -71,6 +119,7 @@ export function isAppsScriptExecUrl(value: string): boolean {
     return (
       url.protocol === 'https:' &&
       url.hostname === 'script.google.com' &&
+      !url.port &&
       /^\/macros\/s\/[^/]+\/exec\/?$/.test(url.pathname) &&
       !url.username &&
       !url.password &&
@@ -93,4 +142,24 @@ export function setApiUrl(url: string): void {
 
 export function isConfigured(): boolean {
   return getApiUrl().length > 10;
+}
+
+/* ------------------------------ user identity ------------------------------ */
+/** Stable user id for the registered profile on this device. Stored only as
+ *  a cache key — the user spreadsheet is authoritative for the profile. */
+export function getCurrentUserId(): string | null {
+  try {
+    return localStorage.getItem(LS_KEYS.userId);
+  } catch {
+    return null;
+  }
+}
+
+export function setCurrentUserId(userId: string): void {
+  try {
+    if (userId) localStorage.setItem(LS_KEYS.userId, userId);
+    else localStorage.removeItem(LS_KEYS.userId);
+  } catch {
+    /* storage unavailable — ignore */
+  }
 }

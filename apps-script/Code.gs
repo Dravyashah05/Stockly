@@ -13,13 +13,27 @@
  * All responses are JSON: { success: true, data } or
  * { success: false, error }.
  *
+ * NOTE v1.4.0: linked-device sessions. Inventory writes may carry
+ * `deviceId` + `deviceSession` (issued by the trusted /api/devices
+ * backend); verified via HMAC plus a live revocation check when
+ * DEVICE_VALIDATE_URL is configured. Writes without device fields keep
+ * working (legacy setups).
+ *
+ * NOTE v1.3.0: adds a `Users` tab for registered user profiles
+ * (userId, name, email, accountStatus, createdAt, updatedAt, lastLoginAt).
+ * No passwords, tokens, or secrets are ever stored here — profiles only.
+ * Inventory writes optionally carry `userId`; when present the backend
+ * rejects the write for unknown / suspended / deactivated accounts.
+ * The private admin spreadsheet is a SEPARATE spreadsheet accessed only
+ * through the server-side admin API — never through this script.
+ *
  * NOTE v1.2.0: products carry an optional categoryId (Categories tab).
  * Suppliers remain removed; an old Suppliers tab (if any) is left unused.
  */
 
 /* ------------------------------ schema ------------------------------ */
 
-var VERSION = '1.2.0';
+var VERSION = '1.5.0';
 
 /** Bound sheet ID override for standalone projects (set via configureSpreadsheet). */
 var PROP_SHEET_ID = 'SPREADSHEET_ID';
@@ -31,7 +45,13 @@ var HEADERS = {
   Categories: ['id', 'name', 'createdAt'],
   StockTransactions: ['id', 'productId', 'productName', 'type', 'quantity',
     'price', 'reason', 'note', 'idempotencyKey', 'createdAt'],
-  Settings: ['key', 'value']
+  Settings: ['key', 'value'],
+  /* User database: registered app-user profiles. No passwords, session
+   * tokens, API keys, or other secrets are stored in this tab — ever.
+   * accountStatus is mirrored FROM the admin system; the admin sheet is
+   * authoritative for status, this tab is authoritative for profile data. */
+  Users: ['userId', 'name', 'email', 'accountStatus',
+    'createdAt', 'updatedAt', 'lastLoginAt']
 };
 
 var STOCK_OUT_REASONS = ['Sale', 'Damaged', 'Lost', 'Return', 'Other'];
@@ -431,6 +451,8 @@ function checkProduct_(b, isNew) {
 
 function createProduct_(b) {
   return withLock_(function () {
+    requireActiveUser_(b.userId);
+    requireDevice_(b);
     checkProduct_(b, true);
     var sku = String(b.sku).trim();
     if (skuTaken_(sku, null)) throw new Error('SKU already exists. Use a unique SKU.');
@@ -457,6 +479,8 @@ function createProduct_(b) {
 
 function updateProduct_(b) {
   return withLock_(function () {
+    requireActiveUser_(b.userId);
+    requireDevice_(b);
     if (!b.id) throw new Error('Product id is required.');
     var idx = rowIndexById_('Products', b.id);
     if (idx === -1) throw new Error('Product not found.');
@@ -494,8 +518,11 @@ function updateProduct_(b) {
   });
 }
 
-function deleteProduct_(id) {
+function deleteProduct_(b) {
   return withLock_(function () {
+    var id = (b && typeof b === 'object') ? b.id : b;
+    requireActiveUser_(b && typeof b === 'object' ? b.userId : undefined);
+    requireDevice_(b);
     if (!id) throw new Error('Product id is required.');
     var idx = rowIndexById_('Products', id);
     if (idx === -1) throw new Error('Product not found.');
@@ -524,8 +551,11 @@ function catNameTaken_(name, excludeId) {
   return false;
 }
 
-function createCategory_(name) {
+function createCategory_(name, ctx) {
   return withLock_(function () {
+    var userId = ctx && typeof ctx === 'object' ? ctx.userId : ctx;
+    requireActiveUser_(userId);
+    requireDevice_(ctx && typeof ctx === 'object' ? ctx : {});
     name = normCatName_(name);
     if (!name) throw new Error('Category name is required.');
     if (catNameTaken_(name, null)) throw new Error('Category already exists.');
@@ -535,8 +565,11 @@ function createCategory_(name) {
   });
 }
 
-function updateCategory_(id, name) {
+function updateCategory_(id, name, ctx) {
   return withLock_(function () {
+    var userId = ctx && typeof ctx === 'object' ? ctx.userId : ctx;
+    requireActiveUser_(userId);
+    requireDevice_(ctx && typeof ctx === 'object' ? ctx : {});
     if (!id) throw new Error('Category id is required.');
     name = normCatName_(name);
     if (!name) throw new Error('Category name is required.');
@@ -552,8 +585,11 @@ function updateCategory_(id, name) {
  * Delete a category and move its products to Uncategorized (blank
  * categoryId). categoryId lives in the last Products column.
  */
-function deleteCategory_(id) {
+function deleteCategory_(id, ctx) {
   return withLock_(function () {
+    var userId = ctx && typeof ctx === 'object' ? ctx.userId : ctx;
+    requireActiveUser_(userId);
+    requireDevice_(ctx && typeof ctx === 'object' ? ctx : {});
     if (!id) throw new Error('Category id is required.');
     var idx = rowIndexById_('Categories', id);
     if (idx === -1) throw new Error('Category not found.');
@@ -577,9 +613,184 @@ function deleteCategory_(id) {
   });
 }
 
+/* ------------------------------ users ------------------------------ */
+
+var USER_ID_RE = /^[A-Za-z0-9_-]{8,64}$/;
+var EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+var USER_STATUS_RE = /^(active|suspended|deactivated)$/;
+
+function normEmail_(email) {
+  return String(email || '').trim().toLowerCase();
+}
+
+function checkUserFields_(name, email) {
+  var n = String(name || '').trim().replace(/\s+/g, ' ');
+  if (!n) throw new Error('Name is required.');
+  if (n.length > 80) throw new Error('Name is too long (max 80 characters).');
+  var e = normEmail_(email);
+  if (!e) throw new Error('Email is required.');
+  if (e.length > 254 || !EMAIL_RE.test(e)) throw new Error('Enter a valid email address.');
+  return { name: n, email: e };
+}
+
+function findUserRow_(userId) {
+  var sh = sheet_('Users');
+  var last = sh.getLastRow();
+  if (last < 2) return null;
+  var ids = sh.getRange(2, 1, last - 1, 1).getValues();
+  for (var i = 0; i < ids.length; i++) {
+    if (String(ids[i][0]) === String(userId)) {
+      return readRow_(sh, 'Users', i + 2);
+    }
+  }
+  return null;
+}
+
+function findUserRowIndex_(sh, userId) {
+  var last = sh.getLastRow();
+  if (last < 2) return -1;
+  var ids = sh.getRange(2, 1, last - 1, 1).getValues();
+  for (var i = 0; i < ids.length; i++) {
+    if (String(ids[i][0]) === String(userId)) return i + 2;
+  }
+  return -1;
+}
+
+function emailTaken_(email, excludeUserId) {
+  var sh = sheet_('Users');
+  var last = sh.getLastRow();
+  if (last < 2) return false;
+  var width = HEADERS.Users.length;
+  var vals = sh.getRange(2, 1, last - 1, width).getValues();
+  var want = normEmail_(email);
+  for (var i = 0; i < vals.length; i++) {
+    if (String(vals[i][0]) === '') continue;
+    if (String(vals[i][2]).trim().toLowerCase() === want &&
+        String(vals[i][0]) !== String(excludeUserId || '')) {
+      return true;
+    }
+  }
+  return false;
+}
+
+/**
+ * Guard for writes carrying a userId. Unknown / suspended / deactivated
+ * accounts are rejected HERE (backend), never only in the UI. A missing
+ * userId is allowed for backwards compatibility with pre-registration
+ * sheets and single-owner setups.
+ */
+function requireActiveUser_(userId) {
+  if (userId === undefined || userId === null || String(userId).trim() === '') return null;
+  var u;
+  try {
+    u = findUserRow_(String(userId));
+  } catch (e) {
+    return null; // No Users tab yet (old sheet) — don't block legacy writes.
+  }
+  if (!u) throw new Error('Unknown user. Register again or contact the owner.');
+  var st = String(u.accountStatus || 'active');
+  if (st === 'suspended') throw new Error('Account is suspended. Contact the owner to reactivate.');
+  if (st === 'deactivated') throw new Error('Account is deactivated. Contact the owner.');
+  if (!USER_STATUS_RE.test(st)) throw new Error('Account is not active. Contact the owner.');
+  return u;
+}
+
+/** Register a new user profile. Never accepts passwords/tokens/roles. */
+function registerUser_(b) {
+  return withLock_(function () {
+    sheet_('Users'); // throws with setup guidance when missing
+    var checked = checkUserFields_(b.name, b.email);
+    if (emailTaken_(checked.email, null)) throw new Error('This email is already registered.');
+    var userId = String(b.userId || '').trim();
+    if (userId) {
+      if (!USER_ID_RE.test(userId)) throw new Error('Invalid user ID format.');
+      if (findUserRow_(userId)) throw new Error('User ID already exists.');
+    } else {
+      userId = uid_('usr');
+    }
+    var t = nowIso_();
+    var u = {
+      userId: userId, name: checked.name, email: checked.email,
+      accountStatus: 'active', createdAt: t, updatedAt: t, lastLoginAt: t
+    };
+    sheet_('Users').appendRow(objToRow_('Users', u));
+    return u;
+  });
+}
+
+/** Update own profile (name/email). Suspended accounts cannot write. */
+function updateUserProfile_(b) {
+  return withLock_(function () {
+    var userId = String(b.userId || '').trim();
+    if (!userId) throw new Error('userId is required.');
+    requireActiveUser_(userId);
+    var sh = sheet_('Users');
+    var idx = findUserRowIndex_(sh, userId);
+    if (idx === -1) throw new Error('User not found.');
+    var cur = readRow_(sh, 'Users', idx);
+    var next = {
+      name: b.name !== undefined ? String(b.name).trim().replace(/\s+/g, ' ') : String(cur.name),
+      email: b.email !== undefined ? normEmail_(b.email) : normEmail_(cur.email)
+    };
+    var checked = checkUserFields_(next.name, next.email);
+    if (emailTaken_(checked.email, userId)) throw new Error('This email is already registered.');
+    cur.name = checked.name;
+    cur.email = checked.email;
+    cur.updatedAt = nowIso_();
+    writeRow_(sh, 'Users', idx, cur);
+    return cur;
+  });
+}
+
+/** Record a login. Rejected for suspended/deactivated accounts. */
+function reportLogin_(userId) {
+  return withLock_(function () {
+    var id = String(userId || '').trim();
+    if (!id) throw new Error('userId is required.');
+    var u = requireActiveUser_(id);
+    if (!u) throw new Error('User not found.');
+    var sh = sheet_('Users');
+    var idx = findUserRowIndex_(sh, id);
+    if (idx === -1) throw new Error('User not found.');
+    var cur = readRow_(sh, 'Users', idx);
+    cur.lastLoginAt = nowIso_();
+    cur.updatedAt = cur.lastLoginAt;
+    writeRow_(sh, 'Users', idx, cur);
+    return cur;
+  });
+}
+
+function getUser_(userId) {
+  var id = String(userId || '').trim();
+  if (!id) throw new Error('userId is required.');
+  var u = findUserRow_(id);
+  if (!u) throw new Error('User not found.');
+  return u;
+}
+
+function getUserByEmail_(email) {
+  var e = normEmail_(email);
+  if (!e) throw new Error('Email is required.');
+  var sh = sheet_('Users');
+  var last = sh.getLastRow();
+  if (last < 2) throw new Error('User not found.');
+  var width = HEADERS.Users.length;
+  var vals = sh.getRange(2, 1, last - 1, width).getValues();
+  for (var i = 0; i < vals.length; i++) {
+    if (String(vals[i][2]).trim().toLowerCase() === e && String(vals[i][0]) !== '') {
+      var o = {};
+      HEADERS.Users.forEach(function (h, j) { o[h] = vals[i][j]; });
+      return o;
+    }
+  }
+  throw new Error('User not found.');
+}
+
 /** Stock IN: increases inventory; product update + transaction in one lock. */
 function stockIn_(b) {
   return withLock_(function () {
+    requireActiveUser_(b.userId);
+    requireDevice_(b);
     var productId = String(b.productId || '');
     var qty = Math.floor(Number(b.quantity));
     if (!productId) throw new Error('Product is required.');
@@ -630,6 +841,8 @@ function stockIn_(b) {
 /** Stock OUT: decreases inventory, never below zero; atomic + idempotent. */
 function stockOut_(b) {
   return withLock_(function () {
+    requireActiveUser_(b.userId);
+    requireDevice_(b);
     var productId = String(b.productId || '');
     var qty = Math.floor(Number(b.quantity));
     if (!productId) throw new Error('Product is required.');
@@ -672,40 +885,278 @@ function stockOut_(b) {
   });
 }
 
+/* ------------------------------ admin status mirror ------------------------------ */
+
+/**
+ * Trusted status mirror (admin → user sheet). The private admin spreadsheet
+ * is authoritative for accountStatus; this tab mirrors it so inventory
+ * writes can be rejected locally via requireActiveUser_.
+ *
+ * The envelope {userId, accountStatus, issuedAt, signature} is created by
+ * the server-side admin API, which holds the mirror secret. This script
+ * holds the SAME secret in Script Properties (never in code, never in the
+ * frontend). signature = hex(HMAC_SHA256(secret, userId|status|issuedAt)).
+ * Replay protection: per-user last-applied issuedAt in Settings
+ * (`mirror_<userId>`); older envelopes are rejected.
+ */
+var PROP_SYNC_SECRET = 'USER_SYNC_SECRET';
+
+function getSyncSecret_() {
+  try {
+    return String(PropertiesService.getScriptProperties().getProperty(PROP_SYNC_SECRET) || '').trim();
+  } catch (e) {
+    return '';
+  }
+}
+
+function hex_(bytes) {
+  return bytes.map(function (b) {
+    var v = (b < 0 ? b + 256 : b).toString(16);
+    return v.length === 1 ? '0' + v : v;
+  }).join('');
+}
+
+function verifyMirrorSignature_(secret, userId, status, issuedAt, signature) {
+  var msg = String(userId) + '|' + String(status) + '|' + String(issuedAt);
+  var mac = Utilities.computeHmacSha256Signature(msg, secret);
+  var expect = hex_(mac).toLowerCase();
+  var got = String(signature || '').trim().toLowerCase();
+  if (got.length !== expect.length || got.length < 32) return false;
+  var diff = 0;
+  for (var i = 0; i < expect.length; i++) {
+    diff |= expect.charCodeAt(i) ^ got.charCodeAt(i);
+  }
+  return diff === 0;
+}
+
+function getSetting_(key) {
+  var sh = sheet_('Settings');
+  var last = sh.getLastRow();
+  if (last < 2) return '';
+  var vals = sh.getRange(2, 1, last - 1, 2).getValues();
+  for (var i = 0; i < vals.length; i++) {
+    if (String(vals[i][0]) === String(key)) return vals[i][1];
+  }
+  return '';
+}
+
+function setSetting_(key, value) {
+  var sh = sheet_('Settings');
+  var last = sh.getLastRow();
+  if (last >= 2) {
+    var keys = sh.getRange(2, 1, last - 1, 1).getValues();
+    for (var i = 0; i < keys.length; i++) {
+      if (String(keys[i][0]) === String(key)) {
+        sh.getRange(i + 2, 2).setValue(value);
+        return;
+      }
+    }
+  }
+  sh.appendRow([String(key), value]);
+}
+
+function mirrorStatus_(b) {
+  return withLock_(function () {
+    var secret = getSyncSecret_();
+    if (!secret) throw new Error('Status sync is not configured on this database. Ask the owner to set USER_SYNC_SECRET in Apps Script → Project Settings → Script Properties.');
+    var userId = String(b.userId || '').trim();
+    var status = String(b.accountStatus || '').trim();
+    var issuedAt = String(b.issuedAt || '').trim();
+    if (!userId) throw new Error('userId is required.');
+    if (!USER_STATUS_RE.test(status)) throw new Error('Invalid account status.');
+    if (!/^\d{4}-\d{2}-\d{2}T/.test(issuedAt)) throw new Error('Invalid envelope timestamp.');
+    if (issuedAt > new Date(Date.now() + 5 * 60 * 1000).toISOString()) {
+      throw new Error('Envelope timestamp is in the future.');
+    }
+    if (!verifyMirrorSignature_(secret, userId, status, issuedAt, b.signature)) {
+      throw new Error('Invalid status envelope signature.');
+    }
+    var markerKey = 'mirror_' + userId;
+    var lastApplied = String(getSetting_(markerKey) || '');
+    if (lastApplied && issuedAt <= lastApplied) {
+      var cur = findUserRow_(userId);
+      return { user: cur, replayed: true };
+    }
+    var sh = sheet_('Users');
+    var idx = findUserRowIndex_(sh, userId);
+    if (idx === -1) throw new Error('User not found.');
+    var row = readRow_(sh, 'Users', idx);
+    row.accountStatus = status;
+    row.updatedAt = nowIso_();
+    writeRow_(sh, 'Users', idx, row);
+    setSetting_(markerKey, issuedAt);
+    return { user: row, replayed: false };
+  });
+}
+
+/**
+ * Shop-owner setup helper: stores the shared mirror secret in Script
+ * Properties. Run manually once (it never ships in code or the frontend):
+ *   setSyncSecret("a-long-random-string-also-saved-as-ADMIN_MIRROR_SECRET")
+ */
+function setSyncSecret(secret) {
+  if (!secret || String(secret).trim().length < 16) {
+    throw new Error('Pass a secret of at least 16 characters.');
+  }
+  PropertiesService.getScriptProperties().setProperty(PROP_SYNC_SECRET, String(secret).trim());
+  return 'Mirror secret saved in Script Properties (value is not shown back).';
+}
+
+/* ------------------------------ linked-device sessions ------------------------------ */
+/**
+ * Enforcement for linked-device sessions on inventory writes. The trusted
+ * backend (Vercel /api/devices) issues device sessions; this script
+ * verifies them WITHOUT ever storing live tokens:
+ *  1. Local HMAC check with DEVICE_SESSION_SECRET (Script Properties).
+ *  2. Live revocation check against /api/devices validateDevice when
+ *     DEVICE_VALIDATE_URL is configured (fail-closed).
+ * Writes WITHOUT device fields are still allowed for backwards
+ * compatibility with legacy single-device setups (documented limitation:
+ * set both Script Properties for full revocation enforcement).
+ */
+var PROP_DEVICE_SECRET = 'DEVICE_SESSION_SECRET';
+var PROP_VALIDATE_URL = 'DEVICE_VALIDATE_URL';
+
+function getDeviceSecret_() {
+  try {
+    return String(PropertiesService.getScriptProperties().getProperty(PROP_DEVICE_SECRET) || '').trim();
+  } catch (e) {
+    return '';
+  }
+}
+
+function getValidateUrl_() {
+  try {
+    return String(PropertiesService.getScriptProperties().getProperty(PROP_VALIDATE_URL) || '').trim();
+  } catch (e) {
+    return '';
+  }
+}
+
+function b64UrlDecode_(s) {
+  s = String(s || '').replace(/-/g, '+').replace(/_/g, '/');
+  while (s.length % 4) s += '=';
+  return Utilities.base64Decode(s);
+}
+
+function parseDeviceSession_(sessionToken, secret) {
+  try {
+    if (!sessionToken || !secret) return null;
+    var parts = String(sessionToken).split('.');
+    if (parts.length !== 2) return null;
+    var mac = Utilities.computeHmacSha256Signature(parts[0], secret);
+    var got = b64UrlDecode_(parts[1]);
+    if (got.length !== mac.length) return null;
+    var diff = 0;
+    for (var i = 0; i < mac.length; i++) diff |= (mac[i] ^ (got[i] < 0 ? got[i] + 256 : got[i]));
+    if (diff !== 0) return null;
+    var payload = JSON.parse(Utilities.newBlob(b64UrlDecode_(parts[0])).getDataAsString());
+    if (!payload || !payload.userId || !payload.deviceId || !payload.exp) return null;
+    if (Date.now() > Number(payload.exp)) return null;
+    return { userId: String(payload.userId), deviceId: String(payload.deviceId) };
+  } catch (e) {
+    return null;
+  }
+}
+
+function validateDeviceLive_(userId, deviceId, sessionToken) {
+  var url = getValidateUrl_();
+  if (!url) return { mode: 'unconfigured' };
+  try {
+    var res = UrlFetchApp.fetch(url, {
+      method: 'post',
+      contentType: 'application/json',
+      payload: JSON.stringify({ action: 'validateDevice', userId: userId, deviceId: deviceId, sessionToken: sessionToken }),
+      muteHttpExceptions: true
+    });
+    var data = JSON.parse(res.getContentText() || '{}');
+    if (data && data.success && data.data) return { mode: 'live', valid: !!data.data.valid, reason: String(data.data.reason || '') };
+    return { mode: 'live', valid: false, reason: 'unavailable' };
+  } catch (e) {
+    throw new Error('Could not verify this device right now. Check your connection and try again.');
+  }
+}
+
+function requireDevice_(b) {
+  var ds = b && typeof b === 'object' ? String(b.deviceSession || '') : '';
+  var dd = b && typeof b === 'object' ? String(b.deviceId || '') : '';
+  if (!ds && !dd) return null; // legacy write without device info
+  if (!ds || !dd) throw new Error('Device session is incomplete. Re-link this device from Settings.');
+  var secret = getDeviceSecret_();
+  if (!secret) return null; // device checks not configured on this database
+  var local = parseDeviceSession_(ds, secret);
+  if (!local || local.deviceId !== dd) {
+    throw new Error('This device is not linked to Stockly. Re-link it from Settings.');
+  }
+  if (b.userId && String(b.userId) !== local.userId) {
+    throw new Error('Device and account do not match. Re-link this device from Settings.');
+  }
+  var live = validateDeviceLive_(local.userId, local.deviceId, ds);
+  if (live.mode === 'live' && !live.valid) {
+    if (live.reason === 'revoked') throw new Error('This device was unlinked. Link it again to continue.');
+    if (live.reason === 'suspended') throw new Error('Account is suspended. Contact the owner to reactivate.');
+    throw new Error('This device session is no longer valid. Re-link this device from Settings.');
+  }
+  return local;
+}
+
+/**
+ * Shop-owner setup helper for device enforcement. Run manually once:
+ *   setDeviceSecrets("same-value-as-DEVICE_SESSION_SECRET", "https://your-app.vercel.app/api/devices")
+ * The URL is optional (without it only the local signature is checked).
+ */
+function setDeviceSecrets(secret, validateUrl) {
+  if (!secret || String(secret).trim().length < 16) {
+    throw new Error('Pass a secret of at least 16 characters.');
+  }
+  var props = PropertiesService.getScriptProperties();
+  props.setProperty(PROP_DEVICE_SECRET, String(secret).trim());
+  if (validateUrl && String(validateUrl).trim()) {
+    props.setProperty(PROP_VALIDATE_URL, String(validateUrl).trim());
+  }
+  return 'Device secrets saved in Script Properties (values are not shown back).';
+}
+
+/**
+ * Backend introspection for the trusted sheet-gateway (Vercel /api/sheets).
+ * Returns the bound spreadsheet id, backend version, and tab names so the
+ * server can verify structure and record the association. Contains no
+ * row data, secrets, or credentials.
+ */
+function describe_() {
+  var s = ss_();
+  var tabs = [];
+  try {
+    s.getSheets().forEach(function (sh) { tabs.push(sh.getName()); });
+  } catch (e) {
+    tabs = [];
+  }
+  return { spreadsheetId: s.getId(), version: VERSION, tabs: tabs };
+}
+
 /* ------------------------------ routing ------------------------------ */
 
 function doGet(e) {
   try {
-    var action = (e && e.parameter && e.parameter.action) || '';
+    var p = (e && e.parameter) || {};
+    var action = p.action || '';
     var data;
     switch (action) {
-      case 'health':
-        data = { time: nowIso_(), version: VERSION };
-        break;
-      case 'listProducts':
-        data = listProducts_();
-        break;
+      case 'health': data = { time: nowIso_(), version: VERSION }; break;
+      case 'listProducts': data = listProducts_(); break;
       case 'getProduct': {
-        var id = e.parameter.id || '';
-        var all = listProducts_().filter(function (p) { return String(p.id) === String(id); });
-        if (!all.length) return fail_('Product not found.');
-        data = all[0];
-        break;
+        var products = listProducts_().filter(function (product) { return String(product.id) === String(p.id || ''); });
+        if (!products.length) return fail_('Product not found.');
+        data = products[0]; break;
       }
-      case 'listCategories':
-        data = listCategories_();
-        break;
-      case 'listTransactions':
-        data = listTransactions_(num_(e.parameter.limit, 200));
-        break;
-      case 'dashboard':
-        data = dashboard_();
-        break;
-      case 'sync':
-        data = sync_(e.parameter.txLimit);
-        break;
-      default:
-        return fail_('Unknown action: ' + action);
+      case 'listCategories': data = listCategories_(); break;
+      case 'listTransactions': data = listTransactions_(num_(p.limit, 200)); break;
+      case 'dashboard': data = dashboard_(); break;
+      case 'sync': data = sync_(p.txLimit); break;
+      case 'getUser': data = getUser_(p.userId); break;
+      case 'getUserByEmail': data = getUserByEmail_(p.email); break;
+      case 'describe': data = describe_(); break;
+      default: return fail_('Unknown action: ' + action);
     }
     return ok_(data);
   } catch (err) {
@@ -716,24 +1167,25 @@ function doGet(e) {
 function doPost(e) {
   try {
     var body = {};
-    try {
-      body = JSON.parse((e && e.postData && e.postData.contents) || '{}');
-    } catch (parseErr) {
-      return fail_('Invalid JSON body.');
-    }
+    try { body = JSON.parse((e && e.postData && e.postData.contents) || '{}'); }
+    catch (parseErr) { return fail_('Invalid JSON body.'); }
     var action = body.action || '';
     var data;
     switch (action) {
       case 'createProduct': data = createProduct_(body); break;
       case 'updateProduct': data = updateProduct_(body); break;
-      case 'deleteProduct': data = deleteProduct_(body.id); break;
-      case 'createCategory': data = createCategory_(body.name); break;
-      case 'updateCategory': data = updateCategory_(body.id, body.name); break;
-      case 'deleteCategory': data = deleteCategory_(body.id); break;
+      case 'deleteProduct': data = deleteProduct_(body); break;
+      case 'createCategory': data = createCategory_(body.name, body); break;
+      case 'updateCategory': data = updateCategory_(body.id, body.name, body); break;
+      case 'deleteCategory': data = deleteCategory_(body.id, body); break;
       case 'stockIn': data = stockIn_(body); break;
       case 'stockOut': data = stockOut_(body); break;
-      default:
-        return fail_('Unknown action: ' + action);
+      case 'registerUser': data = registerUser_(body); break;
+      case 'updateUserProfile': data = updateUserProfile_(body); break;
+      case 'reportLogin': data = reportLogin_(body.userId); break;
+      case 'mirrorStatus': data = mirrorStatus_(body); break;
+      case 'setupDatabase': data = { ready: setupDatabase() }; break;
+      default: return fail_('Unknown action: ' + action);
     }
     return ok_(data);
   } catch (err) {

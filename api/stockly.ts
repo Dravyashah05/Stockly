@@ -46,6 +46,7 @@ export default async function handler(req: ProxyReq, res: ProxyRes): Promise<voi
     if (
       target.protocol !== 'https:' ||
       target.hostname !== 'script.google.com' ||
+      target.port !== '' ||
       !/^\/macros\/s\/[^/]+\/exec\/?$/.test(target.pathname) ||
       target.username ||
       target.password ||

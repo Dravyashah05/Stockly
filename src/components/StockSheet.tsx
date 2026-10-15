@@ -1,22 +1,37 @@
-import { useDeferredValue, useEffect, useMemo, useState } from 'react';
+import { useDeferredValue, useEffect, useMemo, useRef, useState } from 'react';
 import {
   ArrowDownToLine,
-  ArrowRight,
   ArrowUpFromLine,
   Check,
   ChevronRight,
+  Ellipsis,
   Minus,
+  PackageX,
   Plus,
   Search,
+  SearchX,
+  ShoppingCart,
+  Undo2,
 } from 'lucide-react';
 import { STOCK_OUT_REASONS, formatMoney } from '../lib/config';
 import { useStore } from '../lib/store';
 import { EmptyState, Field, PrimaryBtn, SearchBar, Sheet, inputCls } from '../components/ui';
 
-const QUICK_QTY = [1, 5, 10, 50];
+const QUICK_QTY = [1, 5, 10];
+
+const REASON_ICONS: Record<string, React.ReactNode> = {
+  Sale: <ShoppingCart size={15} />,
+  Damaged: <PackageX size={15} />,
+  Lost: <SearchX size={15} />,
+  Return: <Undo2 size={15} />,
+  Other: <Ellipsis size={15} />,
+};
 
 /* Stock In / Out as a popup (no dedicated page). Opened from Home quick
- * actions and product details; stays open after saving for repeat entries. */
+ * actions and product details; stays open after saving for repeat entries.
+ * Flat single-column layout: header → segmented mode → product → quantity
+ * → context → sticky footer. Validation, submission, and idempotency are
+ * unchanged from the previous card-based layout. */
 export default function StockSheet({
   open,
   initialMode,
@@ -42,6 +57,8 @@ export default function StockSheet({
   const [pickerOpen, setPickerOpen] = useState(false);
   const [busy, setBusy] = useState(false);
   const [err, setErr] = useState<string | null>(null);
+  const [savedMsg, setSavedMsg] = useState<string | null>(null);
+  const flashTimer = useRef(0);
   const deferredQ = useDeferredValue(q);
 
   // Fresh form on every open (mode + preselected product from the caller).
@@ -55,9 +72,11 @@ export default function StockSheet({
       setNote('');
       setQ('');
       setErr(null);
+      setSavedMsg(null);
       setBusy(false);
     }
   }, [open, openKey, initialMode, presetProductId]);
+  useEffect(() => () => window.clearTimeout(flashTimer.current), []);
 
   const filtered = useMemo(() => {
     const needle = deferredQ.trim().toLowerCase();
@@ -75,10 +94,28 @@ export default function StockSheet({
       : selected.currentStock - qtyNum
     : null;
   const overdraw = mode === 'OUT' && selected != null && qtyNum > selected.currentStock;
+  const hitsLow =
+    mode === 'OUT' &&
+    selected != null &&
+    !overdraw &&
+    qtyNum > 0 &&
+    resulting != null &&
+    resulting <= selected.minimumStock;
+
+  const switchMode = (m: 'IN' | 'OUT') => {
+    setMode(m);
+    setErr(null);
+  };
 
   const bump = (d: number) => {
     const next = Math.max(0, qtyNum + d);
     setQty(next === 0 ? '' : String(next));
+  };
+
+  const flashNotice = (msg: string) => {
+    window.clearTimeout(flashTimer.current);
+    setSavedMsg(msg);
+    flashTimer.current = window.setTimeout(() => setSavedMsg(null), 2600);
   };
 
   const submit = async () => {
@@ -105,7 +142,11 @@ export default function StockSheet({
       ok = await doStockOut({ productId, quantity, reason, note: note.trim() || undefined });
     }
     setBusy(false);
-    if (ok) {
+    if (ok && selected) {
+      // doStockIn/Out acknowledges a durable queued write; the server
+      // confirms asynchronously and emits its own success/error toast.
+      // Keep this local message explicit that the operation is still syncing.
+      flashNotice(`${mode === 'IN' ? 'Stock In' : 'Stock Out'} queued · ${quantity} × ${selected.name} · syncing`);
       setQty('');
       setPrice('');
       setNote('');
@@ -114,241 +155,238 @@ export default function StockSheet({
   };
 
   const isIn = mode === 'IN';
+  const confirmLabel = busy ? 'Saving…' : isIn ? 'Add to stock' : 'Remove from stock';
 
   return (
     <>
-      <Sheet open={open} onClose={onClose} title={isIn ? 'Stock In' : 'Stock Out'}>
-        {/* Mode toggle */}
-        <div className="stock-mode mb-3 grid grid-cols-2 gap-2.5">
-          <ModeCard
-            active={isIn}
-            onClick={() => {
-              setMode('IN');
-              setErr(null);
-            }}
-            icon={<ArrowDownToLine size={20} />}
-            title="Stock In"
-            hint="Receive goods"
-            activeCls="bg-[#151515] text-white dark:bg-[#C7FF4D] dark:text-[#151515]"
+      <Sheet
+        open={open}
+        onClose={onClose}
+        title={isIn ? 'Stock In' : 'Stock Out'}
+        subtitle={isIn ? 'Add inventory' : 'Record inventory removal'}
+        backdropCls="bg-black/30"
+        footer={
+          <PrimaryBtn onClick={submit} disabled={busy || overdraw} dense>
+            {busy ? 'Saving…' : confirmLabel}
+          </PrimaryBtn>
+        }
+      >
+        {/* Mode segmented control */}
+        <div
+          role="group"
+          aria-label="Movement type"
+          onKeyDown={(e) => {
+            if (e.key === 'ArrowLeft' || e.key === 'ArrowRight') {
+              e.preventDefault();
+              switchMode(isIn ? 'OUT' : 'IN');
+            }
+          }}
+          className="relative grid grid-cols-2 gap-1 rounded-full bg-(--glass-soft) p-1.5"
+        >
+          <span
+            aria-hidden="true"
+            className={`absolute inset-y-1.5 left-1.5 w-[calc(50%-6px)] rounded-full transition-transform duration-300 ${
+              isIn ? 'translate-x-0' : 'translate-x-full'
+            } bg-[#151515] dark:bg-[#C7FF4D]`}
           />
-          <ModeCard
-            active={!isIn}
-            onClick={() => {
-              setMode('OUT');
-              setErr(null);
-            }}
-            icon={<ArrowUpFromLine size={20} />}
-            title="Stock Out"
-            hint="Issue goods"
-            activeCls="bg-[#151515] text-white dark:bg-[#C7FF4D] dark:text-[#151515]"
-          />
+          {(
+            [
+              { m: 'IN' as const, label: 'Stock In', icon: <ArrowDownToLine size={16} /> },
+              { m: 'OUT' as const, label: 'Stock Out', icon: <ArrowUpFromLine size={16} /> },
+            ]
+          ).map((o) => {
+            const active = mode === o.m;
+            return (
+              <button
+                key={o.m}
+                type="button"
+                aria-pressed={active}
+                onClick={() => switchMode(o.m)}
+                className={`relative z-[1] flex items-center justify-center gap-2 rounded-full py-2.5 text-[13.5px] font-extrabold transition-colors ${
+                  active
+                    ? 'text-[#C7FF4D] dark:text-[#151515]'
+                    : 'text-(--ink-2) hover:text-(--ink)'
+                }`}
+              >
+                {o.icon}
+                {o.label}
+              </button>
+            );
+          })}
         </div>
 
         {products.length === 0 ? (
-          <EmptyState
-            icon={isIn ? <ArrowDownToLine size={22} /> : <ArrowUpFromLine size={22} />}
-            title="No products yet"
-            hint="Add a product first, then record stock movements."
-          />
+          <div className="pt-4">
+            <EmptyState
+              icon={isIn ? <ArrowDownToLine size={22} /> : <ArrowUpFromLine size={22} />}
+              title="No products yet"
+              hint="Add a product first, then record stock movements."
+            />
+          </div>
         ) : (
-          <div className="stock-form-grid space-y-3 pb-2">
-            {/* Product picker */}
+          <div className="space-y-5 pt-4">
+            {/* Product selector */}
             <button
+              type="button"
               onClick={() => {
                 setQ('');
                 setPickerOpen(true);
               }}
-              className="stock-picker glass press flex w-full items-center gap-3 rounded-[26px] p-3.5 text-left"
+              aria-haspopup="dialog"
+              className="press flex w-full items-center gap-3 rounded-2xl border border-transparent px-2 py-2 text-left transition-colors hover:border-(--stroke-dim) hover:bg-(--glass-soft)"
             >
-              {selected ? (
-                <>
-                  {selected.image ? (
-                    <img
-                      src={selected.image}
-                      alt=""
-                      loading="lazy"
-                      decoding="async"
-                      className="h-12 w-12 shrink-0 rounded-2xl border border-(--stroke-dim) object-cover"
-                      onError={(e) => {
-                        (e.target as HTMLImageElement).style.display = 'none';
-                      }}
-                    />
-                  ) : (
-                    <span className="flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl bg-(--accent-soft) text-[17px] font-bold text-(--ink) dark:text-(--accent)">
-                      {selected.name.slice(0, 1).toUpperCase()}
-                    </span>
-                  )}
-                  <span className="min-w-0 flex-1">
-                    <span className="block truncate text-[15px] font-bold text-(--ink)">{selected.name}</span>
-                    <span className="tnum block text-xs text-(--ink-2)">
-                      {selected.costPrice > 0
-                        ? `${selected.currentStock} in stock · ${formatMoney(selected.costPrice)}`
-                        : `${selected.currentStock} in stock`}
-                    </span>
-                  </span>
-                </>
+              {selected?.image ? (
+                <img src={selected.image} alt="" className="h-11 w-11 shrink-0 rounded-xl object-cover" onError={(e) => { (e.currentTarget as HTMLImageElement).style.display = 'none'; }} />
               ) : (
-                <>
-                  <span className="glass-soft flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl text-(--ink-3)">
-                    <Search size={20} />
-                  </span>
-                  <span className="flex-1 text-[15px] font-semibold text-(--ink-3)">Tap to choose a product…</span>
-                </>
+                <span className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-(--accent-soft) text-[15px] font-bold text-(--ink) dark:text-(--accent)">
+                  {selected ? selected.name.slice(0, 1).toUpperCase() : <Search size={18} aria-hidden="true" />}
+                </span>
               )}
-              <ChevronRight size={18} className="shrink-0 text-(--ink-3)" />
+              <span className="min-w-0 flex-1">
+                {selected ? (
+                  <>
+                    <span className="block truncate text-[16px] font-bold text-(--ink)">{selected.name}</span>
+                    <span className="tnum mt-0.5 block text-[12.5px] text-(--ink-2)">
+                      {selected.currentStock} in stock
+                      {selected.costPrice > 0 ? ` · ${formatMoney(selected.costPrice)}` : ''}
+                    </span>
+                  </>
+                ) : (
+                  <span className="block text-[16px] font-medium text-(--ink-3)">Search products…</span>
+                )}
+              </span>
+              <ChevronRight size={18} className="shrink-0 text-(--ink-3)" aria-hidden="true" />
             </button>
 
             {/* Quantity */}
-            <div className={`stock-qty glass rounded-[26px] p-5 ${overdraw ? 'border-rose-500/30' : ''}`}>
-              <div className="flex flex-wrap items-center justify-between gap-x-3 gap-y-2">
-                <p className="text-[12px] font-bold uppercase tracking-wider text-(--ink-2)">Quantity</p>
-                <div className="flex gap-1.5">
+            <div className="stock-quantity-panel">
+              <div className="flex items-center justify-between gap-3">
+                <p id="stock-qty-label" className="text-[11px] font-extrabold uppercase tracking-[0.14em] text-(--ink-2)">
+                  Quantity
+                </p>
+                <div className="flex gap-1.5" aria-label="Quick add">
                   {QUICK_QTY.map((n) => (
                     <button
                       key={n}
+                      type="button"
                       onClick={() => bump(n)}
-                      className="chip-glass glass-soft tnum rounded-full px-2.5 py-1 text-[12px] font-bold text-(--ink)"
+                      aria-label={`Add ${n} to quantity`}
+                      className="tnum press rounded-full bg-(--bg) px-2.5 py-1 text-[12px] font-extrabold text-(--ink) transition-colors hover:bg-(--accent-soft)"
                     >
                       +{n}
                     </button>
                   ))}
                 </div>
               </div>
-              <div className="stock-qty-stepper mt-4 flex items-center justify-center gap-6">
+              <div className="mt-2.5 flex items-center justify-between gap-4">
                 <button
+                  type="button"
                   onClick={() => bump(-1)}
                   aria-label="Decrease quantity"
-                  className="press glass-soft flex h-13 w-13 items-center justify-center rounded-full p-3.5 text-(--ink)"
+                  disabled={qtyNum <= 0}
+                  className="press flex h-11 w-11 shrink-0 items-center justify-center rounded-full border border-(--stroke-dim) text-(--ink) transition-colors hover:bg-(--bg) disabled:opacity-30 disabled:hover:bg-transparent"
                 >
-                  <Minus size={20} />
+                  <Minus size={18} />
                 </button>
                 <input
                   value={qty}
                   onChange={(e) => setQty(e.target.value.replace(/[^0-9]/g, '').slice(0, 6))}
                   inputMode="numeric"
                   placeholder="0"
-                  aria-label="Quantity"
-                  className="stock-qty-input tnum w-28 bg-transparent text-center text-[56px] font-bold leading-none tracking-tight text-(--ink) outline-none placeholder:text-(--ink-3)"
+                  aria-labelledby="stock-qty-label"
+                  className="tnum min-w-0 flex-1 bg-transparent text-center text-[40px] font-black leading-none tracking-tight text-(--ink) outline-none placeholder:text-(--ink-3)"
                 />
                 <button
+                  type="button"
                   onClick={() => bump(1)}
                   aria-label="Increase quantity"
-                  className="press glass-soft flex h-13 w-13 items-center justify-center rounded-full p-3.5 text-(--ink)"
+                  className="press flex h-11 w-11 shrink-0 items-center justify-center rounded-full bg-[#151515] text-[#C7FF4D] transition-transform hover:scale-105 active:scale-95 dark:bg-[#C7FF4D] dark:text-[#151515]"
                 >
-                  <Plus size={20} />
+                  <Plus size={18} />
                 </button>
               </div>
-
-              {/* Live movement preview */}
-              <div
-                className={`mt-4 flex items-center justify-center gap-2 rounded-2xl px-4 py-3 ${
-                  !selected || qtyNum <= 0
-                    ? 'glass-soft text-(--ink-2)'
-                    : overdraw
-                      ? 'bg-rose-500/10 text-rose-600 dark:text-rose-300'
-                      : isIn
-                        ? 'bg-(--accent-soft) text-(--ink)'
-                        : 'glass-soft text-(--ink)'
-                }`}
-              >
-                {!selected || qtyNum <= 0 ? (
-                  <span className="text-[12.5px] font-medium">
-                    {selected
-                      ? `${selected.currentStock} currently in stock`
-                      : 'Choose a product and quantity'}
-                  </span>
-                ) : (
-                  <span className="tnum flex items-center gap-2 text-[14px] font-bold">
-                    {selected.currentStock}
-                    <ArrowRight size={16} />
-                    {resulting}
-                    <span
-                      className={`rounded-full px-2 py-0.5 text-[11px] font-extrabold ${
-                        overdraw ? 'bg-rose-500/15' : 'bg-[#151515] text-[#C7FF4D]'
-                      }`}
-                    >
-                      {isIn ? `+${qtyNum}` : `−${qtyNum}`}
-                    </span>
-                  </span>
-                )}
+              {/* Reserved space keeps the form stable when hints appear. */}
+              <div className="flex min-h-[22px] items-center justify-center pt-1" aria-live="polite">
+                {overdraw ? (
+                  <p className="text-[13px] font-bold text-rose-600 dark:text-rose-300">
+                    Only {selected?.currentStock} available.
+                  </p>
+                ) : hitsLow ? (
+                  <p className="text-[13px] font-semibold text-amber-600 dark:text-amber-300">
+                    Hits the low-stock level ({selected?.minimumStock}).
+                  </p>
+                ) : selected && qtyNum > 0 ? (
+                  <p className="tnum text-[13px] font-bold text-(--ink-2)">
+                    {selected.currentStock} → {resulting}
+                  </p>
+                ) : null}
               </div>
             </div>
 
-            {/* Price / Reason */}
-            <div className="stock-context glass rounded-[26px] p-4">
-              {isIn ? (
-                <Field label="Price (optional)" hint="Updates the product cost price.">
+            {/* Cost (In) / Reason (Out) */}
+            {isIn ? (
+              <Field label="Cost price">
+                <div className="relative">
+                  <span aria-hidden="true" className="pointer-events-none absolute left-4 top-1/2 -translate-y-1/2 text-[15px] font-bold text-(--ink-3)">₹</span>
                   <input
                     value={price}
                     onChange={(e) => setPrice(e.target.value.replace(/[^0-9.]/g, ''))}
                     inputMode="decimal"
-                    placeholder="e.g. 120"
-                    className={inputCls}
+                    placeholder="120"
+                    aria-label="Cost price, optional"
+                    className={`${inputCls} pl-9`}
                   />
-                </Field>
-              ) : (
-                <Field label="Reason">
-                  <div className="flex flex-wrap gap-2">
-                    {STOCK_OUT_REASONS.map((r) => (
-                      <button
-                        key={r}
-                        type="button"
-                        onClick={() => setReason(r)}
-                        className={`chip-glass rounded-full px-3.5 py-2 text-[13px] font-bold ${
-                          reason === r ? 'bg-rose-600 text-white' : 'glass-soft text-(--ink-2)'
-                        }`}
-                      >
-                        {r}
-                      </button>
-                    ))}
-                  </div>
-                </Field>
-              )}
-            </div>
-
-            {/* Note (full width) */}
-            <div className="stock-note glass rounded-[26px] p-4">
-              <Field label="Note (optional)">
-                <textarea
-                  value={note}
-                  onChange={(e) => setNote(e.target.value)}
-                  rows={2}
-                  placeholder={isIn ? 'Invoice no., batch…' : 'Customer, damage details…'}
-                  className={`${inputCls} resize-none`}
-                />
+                </div>
               </Field>
-            </div>
+            ) : (
+              <fieldset>
+                <legend className="mb-2 block text-[13px] font-semibold text-(--ink)">Reason</legend>
+                <div className="flex flex-wrap gap-2">
+                  {STOCK_OUT_REASONS.map((r) => (
+                    <button
+                      key={r}
+                      type="button"
+                      onClick={() => setReason(r)}
+                      aria-pressed={reason === r}
+                      className={`press flex items-center gap-1.5 rounded-full px-3.5 py-2 text-[13px] font-bold transition-colors ${
+                        reason === r
+                          ? 'bg-[#151515] text-[#C7FF4D] dark:bg-[#C7FF4D] dark:text-[#151515]'
+                          : 'bg-(--glass-soft) text-(--ink-2) hover:text-(--ink)'
+                      }`}
+                    >
+                      {REASON_ICONS[r] ?? null}
+                      {r}
+                    </button>
+                  ))}
+                </div>
+              </fieldset>
+            )}
 
-            {err ? (
-              <div className="stock-error animate-pop-in rounded-2xl border border-rose-500/25 bg-rose-500/10 px-4 py-3 text-[13.5px] font-medium text-rose-600 dark:text-rose-300">
-                {err}
-              </div>
-            ) : null}
+            {/* Note */}
+            <Field label="Note">
+              <textarea
+                value={note}
+                onChange={(e) => setNote(e.target.value)}
+                rows={2}
+                placeholder="Invoice number or reason (optional)"
+                className={`${inputCls} resize-none`}
+              />
+            </Field>
 
-            {/* Confirm */}
-            <div className="stock-confirm glass-strong rounded-3xl p-2">
-              <PrimaryBtn onClick={submit} disabled={busy || overdraw}>
-                {busy
-                  ? 'Saving…'
-                  : selected && qtyNum > 0
-                    ? isIn
-                      ? `Add ${qtyNum} · stock → ${resulting}`
-                      : `Remove ${qtyNum} · stock → ${resulting}`
-                    : isIn
-                      ? 'Add to stock'
-                      : 'Remove from stock'}
-              </PrimaryBtn>
+            {/* Reserved space prevents layout shift on error/success. */}
+            <div className="flex min-h-[22px] items-center justify-center" aria-live="polite">
+              {err ? (
+                <p className="text-[13px] font-semibold text-rose-600 dark:text-rose-300">{err}</p>
+              ) : savedMsg ? (
+                <p className="text-[13px] font-semibold text-(--ink-2)">{savedMsg}</p>
+              ) : null}
             </div>
-            <p className="stock-foot px-2 text-center text-xs leading-relaxed text-(--ink-2)">
-              {isIn ? 'Stock In increases inventory.' : 'Stock Out never goes below zero.'} Duplicate taps are
-              safely ignored.
-            </p>
           </div>
         )}
       </Sheet>
 
       {/* Product picker sheet (opens on top) */}
-      <Sheet open={pickerOpen} onClose={() => setPickerOpen(false)} title="Choose product">
+      <Sheet open={pickerOpen} onClose={() => setPickerOpen(false)} title="Choose product" backdropCls="bg-black/30">
         <div className="mb-3">
           <SearchBar value={q} onChange={setQ} placeholder="Search name, SKU…" />
         </div>
@@ -360,6 +398,7 @@ export default function StockSheet({
         <div className="sheet-scroll max-h-[50dvh] space-y-1 overflow-y-auto pb-2">
           {filtered.slice(0, 100).map((p) => {
             const activeRow = p.id === productId;
+            const low = p.currentStock <= p.minimumStock;
             return (
               <button
                 key={p.id}
@@ -369,19 +408,23 @@ export default function StockSheet({
                   setErr(null);
                   setPickerOpen(false);
                 }}
-                className={`press flex w-full items-center gap-3 rounded-2xl px-3 py-2.5 text-left ${
+                className={`press flex w-full items-center gap-3 rounded-2xl px-3 py-2.5 text-left transition-colors ${
                   activeRow ? 'bg-(--accent-soft)' : 'hover:bg-(--accent-soft)/50'
                 }`}
               >
-                <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-(--accent-soft) text-[14px] font-bold text-(--ink) dark:text-(--accent)">
-                  {p.name.slice(0, 1).toUpperCase()}
-                </span>
+                {p.image ? (
+                  <img src={p.image} alt="" loading="lazy" className="h-10 w-10 shrink-0 rounded-xl object-cover" onError={(e) => { (e.currentTarget as HTMLImageElement).style.display = 'none'; }} />
+                ) : (
+                  <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-(--accent-soft) text-[14px] font-bold text-(--ink) dark:text-(--accent)">
+                    {p.name.slice(0, 1).toUpperCase()}
+                  </span>
+                )}
                 <span className="min-w-0 flex-1">
                   <span className="block truncate text-[14px] font-semibold text-(--ink)">{p.name}</span>
-                  <span className="tnum block text-xs text-(--ink-2)">
+                  <span className={`tnum block text-xs ${low ? 'font-bold text-amber-600 dark:text-amber-300' : 'text-(--ink-2)'}`}>
                     {(p.sku || '').trim()
-                      ? `${p.sku} · ${p.currentStock} in stock`
-                      : `${p.currentStock} in stock`}
+                      ? `${p.sku} · ${p.currentStock} in stock${low ? ' · low' : ''}`
+                      : `${p.currentStock} in stock${low ? ' · low' : ''}`}
                   </span>
                 </span>
                 {activeRow ? <Check size={18} className="shrink-0 text-(--accent)" /> : null}
@@ -394,43 +437,5 @@ export default function StockSheet({
         </div>
       </Sheet>
     </>
-  );
-}
-
-function ModeCard({
-  active,
-  onClick,
-  icon,
-  title,
-  hint,
-  activeCls,
-}: {
-  active: boolean;
-  onClick: () => void;
-  icon: React.ReactNode;
-  title: string;
-  hint: string;
-  activeCls: string;
-}) {
-  return (
-    <button
-      onClick={onClick}
-      aria-pressed={active}
-      className={`press flex items-center gap-3 rounded-[24px] p-3.5 text-left ${
-        active ? activeCls : 'glass text-(--ink)'
-      }`}
-    >
-      <span
-        className={`flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl ${
-          active ? 'bg-white/15 text-inherit' : 'glass-soft text-(--ink-2)'
-        }`}
-      >
-        {icon}
-      </span>
-      <span>
-        <span className="block text-[15px] font-bold leading-tight">{title}</span>
-        <span className={`block text-xs ${active ? 'opacity-70' : 'text-(--ink-2)'}`}>{hint}</span>
-      </span>
-    </button>
   );
 }

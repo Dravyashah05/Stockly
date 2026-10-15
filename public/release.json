@@ -10,7 +10,6 @@
     "- Release script: safe entry-point check plus validated CLI arguments",
     "- Release workflow: pin explicit SDK packages, drop obsolete tools default",
     "- Automated releases: GitHub pipeline, App Store page, live release metadata, in-app updater",
-    "- QR device linking: show QR and scan to connect in Cloud database",
     "- Add Stockly Android APK download to website store",
     "- History detail: hero presence, wrapping names, richer related rows",
     "- Product detail: richer description and stock history sections",

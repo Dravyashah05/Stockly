@@ -38,6 +38,6 @@
     <!-- Permissions -->
 
     <uses-permission android:name="android.permission.INTERNET" />
-    <!-- Optional "Scan to connect" QR scanner in Settings → Cloud database. -->
+    <!-- Device linking: QR/code scanner in Settings → Linked Devices. -->
     <uses-permission android:name="android.permission.CAMERA" />
 </manifest>
