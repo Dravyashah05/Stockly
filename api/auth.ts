@@ -1,4 +1,5 @@
 import { ensureSchemaCached } from './schema.ts';
+import { applyApiCors } from './cors.ts';
 /* Stockly account-auth API (Vercel serverless, server-side only).
  *
  * Email/password sign-in, verified HERE. Passwords are hashed with scrypt
@@ -217,11 +218,7 @@ function publicUser(u: AuthUser, accountStatus: string): Record<string, unknown>
 
 export default async function handler(req: AuthReq, res: AuthRes): Promise<void> {
   res.setHeader('Cache-Control', 'no-store');
-  // Native Android WebViews call the deployed backend cross-origin:
-  // allow preflight + Authorization/device headers (no cookies used).
-  res.setHeader('Access-Control-Allow-Origin', '*');
-  res.setHeader('Access-Control-Allow-Methods', 'GET, POST, OPTIONS');
-  res.setHeader('Access-Control-Allow-Headers', 'Content-Type, Authorization, X-Device-Session');
+  applyApiCors(req, res);
   if (req.method === 'OPTIONS') {
     res.status(200).json({ success: true });
     return;

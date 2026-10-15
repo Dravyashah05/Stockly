@@ -1,4 +1,5 @@
 import { ensureSchemaCached } from './schema.ts';
+import { applyApiCors } from './cors.ts';
 /* Stockly private-admin API (Vercel serverless, server-side only).
  *
  * Storage goes through the bound Apps Script project
@@ -295,11 +296,7 @@ async function audit(
 
 export default async function handler(req: AdminReq, res: AdminRes): Promise<void> {
   res.setHeader('Cache-Control', 'no-store');
-  // Native Android WebViews call the deployed backend cross-origin:
-  // allow preflight + Authorization/device headers (no cookies used).
-  res.setHeader('Access-Control-Allow-Origin', '*');
-  res.setHeader('Access-Control-Allow-Methods', 'GET, POST, OPTIONS');
-  res.setHeader('Access-Control-Allow-Headers', 'Content-Type, Authorization, X-Device-Session');
+  applyApiCors(req, res);
   if (req.method === 'OPTIONS') {
     res.status(200).json({ success: true });
     return;

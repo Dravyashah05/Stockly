@@ -3,9 +3,12 @@ import type { CapacitorConfig } from '@capacitor/cli';
 const config: CapacitorConfig = {
   appId: 'com.stockly.inventory',
   appName: 'Stockly',
-  webDir: 'dist',
+  // The mobile frontend builds this app-only bundle in mobile-app/dist.
+  webDir: 'mobile-app/dist',
   backgroundColor: '#f7f7f2',
   android: {
+    // Custom native-project location (default would be ./android).
+    path: 'mobile/android',
     allowMixedContent: false,
     captureInput: true,
     webContentsDebuggingEnabled: false,

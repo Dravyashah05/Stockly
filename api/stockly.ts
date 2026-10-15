@@ -1,3 +1,5 @@
+import { applyApiCors } from './cors.ts';
+
 /* Vercel serverless proxy for the Stockly Apps Script backend.
  *
  * Browsers cannot call Apps Script directly (its ContentService redirect
@@ -14,6 +16,7 @@ type QueryValue = string | string[] | undefined;
 
 interface ProxyReq {
   method?: string;
+  headers?: Record<string, string | string[] | undefined>;
   query: Record<string, QueryValue>;
   body?: unknown;
 }
@@ -30,6 +33,11 @@ function first(v: QueryValue): string | undefined {
 }
 
 export default async function handler(req: ProxyReq, res: ProxyRes): Promise<void> {
+  applyApiCors(req, res);
+  if (req.method === 'OPTIONS') {
+    res.status(200).json({ success: true });
+    return;
+  }
   if (req.method !== 'GET' && req.method !== 'POST') {
     res.status(405).json({ success: false, error: 'Method not allowed.' });
     return;

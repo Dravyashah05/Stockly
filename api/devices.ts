@@ -1,4 +1,5 @@
 import { ensureSchemaCached } from './schema.ts';
+import { applyApiCors } from './cors.ts';
 import { adminScriptConfigured, scriptAppendRow, scriptReadTab, scriptUpdateRowById } from './apps-script-client.ts';
 /* Stockly device-linking API (Vercel serverless, server-side only).
  *
@@ -304,11 +305,7 @@ function setupHelp(): Record<string, string[]> {
 
 export default async function handler(req: DevicesReq, res: DevicesRes): Promise<void> {
   res.setHeader('Cache-Control', 'no-store');
-  // Native Android WebViews call the deployed backend cross-origin:
-  // allow preflight + Authorization/device headers (no cookies used).
-  res.setHeader('Access-Control-Allow-Origin', '*');
-  res.setHeader('Access-Control-Allow-Methods', 'GET, POST, OPTIONS');
-  res.setHeader('Access-Control-Allow-Headers', 'Content-Type, Authorization, X-Device-Session');
+  applyApiCors(req, res);
   if (req.method === 'OPTIONS') {
     res.status(200).json({ success: true });
     return;

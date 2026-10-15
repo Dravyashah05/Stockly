@@ -143,21 +143,21 @@ test('Google sign-in is fully removed (server + client)', async () => {
   assert.doesNotMatch(route, /googleLogin|verifyGoogleIdToken|GoogleTokenInfo|GOOGLE_CLIENT_ID|resolveGoogleAccount/);
   const logic = readFileSync(new URL('../api/auth-logic.ts', import.meta.url), 'utf8');
   assert.doesNotMatch(logic, /resolveGoogleAccount|verifyGoogleIdToken|tokeninfo/);
-  const client = readFileSync(new URL('../src/lib/auth.ts', import.meta.url), 'utf8');
+  const client = readFileSync(new URL('../src/shared/auth.ts', import.meta.url), 'utf8');
   assert.doesNotMatch(client, /googleLogin|gsi\/client|renderGoogleButton|loadGoogleIdentity/);
-  const screen = readFileSync(new URL('../src/screens/AuthScreen.tsx', import.meta.url), 'utf8');
+  const screen = readFileSync(new URL('../src/app/screens/AuthScreen.tsx', import.meta.url), 'utf8');
   assert.doesNotMatch(screen, /googleLogin|Google sign-in|continue with Google|gsi\/client|GOOGLE_CLIENT_ID|loginWithGoogle/);
-  const config = readFileSync(new URL('../src/lib/config.ts', import.meta.url), 'utf8');
+  const config = readFileSync(new URL('../src/shared/config.ts', import.meta.url), 'utf8');
   assert.doesNotMatch(config, /VITE_GOOGLE_CLIENT_ID/);
 });
 
 test('inventory client never holds or forwards raw exec URLs', async () => {  const { readFileSync } = await import('node:fs');
-  const api = readFileSync(new URL('../src/lib/api.ts', import.meta.url), 'utf8');
+  const api = readFileSync(new URL('../src/shared/api.ts', import.meta.url), 'utf8');
   assert.doesNotMatch(api, /script\.google\.com/);
   assert.doesNotMatch(api, /getApiUrl|LS_KEYS\.apiUrl/);
   assert.match(api, /\/api\/sheets/);
   assert.match(api, /X-Device-Session/);
-  const store = readFileSync(new URL('../src/lib/store.tsx', import.meta.url), 'utf8');
+  const store = readFileSync(new URL('../src/shared/store.tsx', import.meta.url), 'utf8');
   assert.doesNotMatch(store, /setApiUrl|getApiUrl\(\)/);
 });
 
@@ -172,11 +172,11 @@ test('login verifies against the stored hash, and guards bind one account', asyn
 });
 
 test('native builds route API calls to the deployed backend; web stays same-origin', async () => {
-  const config = await import('../src/lib/config.ts');
+  const config = await import('../src/shared/config.ts');
   assert.equal(typeof config.apiUrl, 'function');
   assert.equal(config.apiUrl('/api/auth'), '/api/auth');
   const { readFileSync } = await import('node:fs');
-  for (const f of ['../src/lib/api.ts', '../src/lib/auth.ts', '../src/lib/connection.ts', '../src/lib/devices.ts', '../src/lib/admin-api.ts']) {
+  for (const f of ['../src/shared/api.ts', '../src/shared/auth.ts', '../src/shared/connection.ts', '../src/shared/devices.ts', '../src/shared/admin-api.ts']) {
     const src = readFileSync(new URL(f, import.meta.url), 'utf8');
     assert.match(src, /fetch\(apiUrl\(/, f + ' must route through apiUrl()');
   }
@@ -186,15 +186,19 @@ test('API routes answer CORS preflight for native WebViews', async () => {
   const { readFileSync } = await import('node:fs');
   for (const f of ['../api/auth.ts', '../api/sheets.ts', '../api/devices.ts', '../api/admin.ts']) {
     const src = readFileSync(new URL(f, import.meta.url), 'utf8');
-    assert.match(src, /Access-Control-Allow-Origin/, f + ' must allow cross-origin native calls');
+    assert.match(src, /applyApiCors\(req, res\)/, f + ' must use the shared origin policy');
     assert.match(src, /req\.method === 'OPTIONS'/, f + ' must answer preflight');
-    assert.match(src, /X-Device-Session/, f + ' must allow the device header');
   }
+  const cors = readFileSync(new URL('../api/cors.ts', import.meta.url), 'utf8');
+  assert.match(cors, /Access-Control-Allow-Origin/);
+  assert.match(cors, /X-Device-Session/);
+  assert.match(cors, /capacitor:\/\/localhost/);
+  assert.doesNotMatch(cors, /'\*'/, 'CORS must not allow every origin');
 });
 
 test('every gate phase hides the native splash screen', async () => {
   const { readFileSync } = await import('node:fs');
-  const app = readFileSync(new URL('../src/App.tsx', import.meta.url), 'utf8');
+  const app = readFileSync(new URL('../src/app/App.tsx', import.meta.url), 'utf8');
   const gateBlock = app.slice(app.indexOf('function Gate()'));
   assert.ok(/SplashScreen/.test(gateBlock) && /hide\(\)/.test(gateBlock));
 });

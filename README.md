@@ -1,179 +1,97 @@
-# Stockly — Mobile Stock Management
+# Stockly
 
-A premium, mobile-first inventory app for small business: products, Stock In/Out,
-low-stock alerts, transaction history, categories, and a dashboard —
-with **Google Sheets as the cloud database** (via Google Apps Script) so stock
-syncs across multiple devices.
+Stockly provides a dedicated mobile inventory app, responsive inventory
+website, and owner console. They share one authenticated backend and the
+existing Google Sheets data integration. Architecture details are in
+[`docs/STRUCTURE.md`](docs/STRUCTURE.md); setup for auth, devices, and admin is
+in [`docs/`](docs/).
 
-**Stack:** React 19 + TypeScript + Vite + Tailwind CSS v4 + Capacitor 8
-(Android) + Lucide icons + Google Apps Script + Google Sheets.
+## Requirements
 
----
+- Node.js 22 or newer (Vite 8)
+- Android Studio/SDK and Java 21 for native Android builds
+- Existing Google Apps Script deployment and its Google Sheet for live data
 
-## 1. Run the app in a browser
+## Install and develop
 
-```bash
+Install repository dependencies once, then run each service in its own shell:
+
+```sh
 npm install
-npm run dev        # → http://localhost:5173 (use mobile viewport / device toolbar)
+npm --prefix server ci   # server has its own lockfile and private runtime deps
+npm run dev:server       # shared backend, http://localhost:5000
+npm run dev:user         # mobile app browser frontend, http://localhost:3001
+npm run dev:website      # website frontend, http://localhost:3003
+npm run dev:admin        # owner console, http://localhost:3002
+npm run dev:all          # start the backend and all three frontends together
 ```
 
-Without a backend URL the app shows an "not connected" banner. Everything else
-(cached data, themes, navigation) works.
+The app, website, and admin Vite servers proxy `/api/*` to the one backend.
+Set `STOCKLY_API_URL` if the backend is not at `http://localhost:5000`.
+For separate deployments, set public `VITE_API_BASE_URL` to the shared backend
+origin in each frontend's build environment. Do not place credentials or
+private tokens in any `VITE_*` variable.
 
-When running under Vite, Apps Script requests pass through a local server proxy
-because Apps Script `ContentService` responses redirect to a Google content
-host without browser CORS headers. This proxy is development-only; a deployed
-web app or Android build needs a server-side proxy with a stable URL if its
-runtime cannot read Apps Script responses directly.
+## Build and validate
 
-Useful scripts:
-
-| Command        | What it does                              |
-| -------------- | ----------------------------------------- |
-| `npm run dev`  | Vite dev server                           |
-| `npm run build`| Type-check (`tsc -b`) + production build |
-| `npm run lint` | oxlint                                    |
-| `npm run preview` | Preview the production build           |
-
-## 2. Connect the Google Sheets database (required for real data)
-
-The Google Sheets backend is [`apps-script/Code.gs`](apps-script/Code.gs).
-Deploy the Apps Script Web App as **Execute as: Me** and **Who has access:
-Anyone**, then paste its `/exec` URL into Settings. The app stores that URL on
-the device and uses it for inventory reads and writes.
-
-1. Create a Google Sheet and open **Extensions → Apps Script**.
-2. Paste the full contents of `apps-script/Code.gs` and save.
-3. Run `setupDatabase` once. It creates missing inventory tabs and validates
-   headers without clearing existing data. `setupDemoData` is optional.
-4. Deploy as a Web App and copy the URL ending in `/exec`.
-5. In Stockly Settings, paste the URL and save.
-
-Stockly does not provide user accounts, administrator management, or device
-pairing. The Apps Script endpoint is public; anyone who obtains its URL can
-access the connected Sheet through the inventory API. Use a Sheet and deployment
-only for data you are comfortable making accessible to holders of that URL.
-
-> **Updating the backend later:** edit `Code.gs`, then choose **Deploy → Manage
-deployments → Edit → New version**. `setupDatabase` is safe to rerun; it does
-not clear existing data.
-
-### How syncing works
-
-- Stock In/Out run inside `LockService.getScriptLock()`: the product row update
-  and transaction row are written in one atomic operation.
-- Each stock request carries an `idempotencyKey`; retries do not double-add.
-- Stock Out is rejected when quantity exceeds available stock.
-- On-device `localStorage` stores a cache, the backend URL, and theme preference.
-## 3. Generate the Android APK
-
-Prerequisites: Android Studio + SDK installed (this machine already has the SDK
-at `%LOCALAPPDATA%\Android\Sdk`, incl. platform `android-36`).
-
-```bash
-npm run build          # web assets → dist/
-npx cap sync android   # copy web assets + plugins into android/
+```sh
+npm run build:user       # mobile-app/dist
+npm run build:mobile     # independently build the mobile app browser frontend
+npm run build:website    # website/dist
+npm run build:admin      # admin/dist
+npm run build:app        # alias for mobile-app/dist
+npm run cap:sync         # sync Android project from mobile-app/dist
+npm run android:build    # build the app bundle and sync Android
+npm test                 # backend and compatibility tests
+npm run lint             # repository lint
+npm --prefix server run typecheck
 ```
 
-Then either open in Android Studio:
+Each frontend has its own package manifest and lockfile. Install and build one
+in isolation with `npm --prefix mobile-app ci && npm --prefix mobile-app run build`, or the
+same `ci`/`build` commands for `website` and `admin`.
 
-```bash
-npx cap open android   # → Build → Build APK(s)
+For a native APK, open `mobile/android` in Android Studio or run from the
+repository root:
+
+```powershell
+Set-Location mobile/android
+.\gradlew.bat assembleDebug
 ```
 
-or build from the command line (needs `android/local.properties` with
-`sdk.dir=<path-to-your-SDK>` — already created on this machine):
+The generated debug APK is under
+`mobile/android/app/build/outputs/apk/debug/app-debug.apk`. A release APK
+requires release signing configuration.
 
-```bash
-cd android
-.\gradlew.bat assembleDebug     # → app\build\outputs\apk\debug\app-debug.apk
-.\gradlew.bat assembleRelease   # release APK (configure signing first)
-```
+## Google Sheets and authentication
 
-Install `app-debug.apk` on a phone (enable *Install unknown apps*) or
-`adb install -r app-debug.apk`.
+The backend and Google Apps Script sources remain in `api/`, `server/`, and
+`apps-script/`. Copy `server/.env.example` to `server/.env` for local private
+backend settings, then configure the existing Apps Script deployment and
+linked sheet as described in [`docs/auth-setup.md`](docs/auth-setup.md),
+[`docs/device-linking.md`](docs/device-linking.md), and
+[`docs/admin-setup.md`](docs/admin-setup.md). Existing data and schema are
+preserved; setup does not reset user sheets.
 
-> A signed release build (upload to Play / share outside the device) additionally
-> needs a keystore wired into `android/app/build.gradle`. Debug APKs are signed
-> with a debug key automatically.
+## Deployment
 
-## 4. Project layout
+- Build and deploy `mobile-app/dist`, `website/dist`, and `admin/dist` as separate
+  static frontends.
+- Deploy `server/` to a long-running Node host using its private environment
+  settings, or deploy the canonical `api/*.ts` handlers to Vercel as serverless
+  functions. Do not run a second API implementation.
+- Configure each frontend with the same public backend origin, or configure
+  its host to proxy `/api/*` to the shared backend.
+- Build and publish Android independently with Capacitor/Gradle.
 
-```
-src/
-  main.tsx / App.tsx        shell, bottom tabs, back-button, splash hide
-  index.css                 Tailwind v4 + safe-area helpers + animations
-  lib/
-    config.ts               THE single API config (backend URL, currency, formats)
-    api.ts                  reusable GET/POST service, timeouts, de-duplication
-    types.ts                Product / Category / Transaction / Stats
-    store.tsx               global state, sync, mutations, toasts, theme, offline
-  components/
-    ui.tsx                  Header, BottomNav, Sheet, inputs, EmptyState, Toasts
-    ProductForm.tsx         add/edit product sheet with validation
-  screens/
-    HomeScreen.tsx          dashboard stats, value card, quick actions, alerts
-    ProductsScreen.tsx      search, sort, category/status filters, CRUD
-    StockSheet.tsx          Stock In / Stock Out transaction form
-    HistoryScreen.tsx       transaction list + filters
-    SettingsScreen.tsx      backend URL, theme, categories, sync, app settings
-apps-script/
-  Code.gs                   complete backend: doGet/doPost/setupDatabase/
-                            setupDemoData/CRUD/stockIn/stockOut/dashboard
-android/                    Capacitor native project (appId com.stockly.inventory)
-capacitor.config.ts         app name/ID, splash, status bar, keyboard
-```
+Root `src/`, root HTML entries, and root Vite configurations are retained for
+legacy landing/store compatibility during migration. See
+[`docs/STRUCTURE.md`](docs/STRUCTURE.md) before changing or removing them.
 
-## 5. App ID / names
+## Releases
 
-- App name: **Stockly** · Android package: **`com.stockly.inventory`**
-- Inventory value = Σ (current stock × cost price), computed from live data.
-
-## 6. Remaining configuration for you
-
-1. **Deploy `apps-script/Code.gs`** (section 2) and paste the `/exec` URL into
-   Settings — the app has no data until this is done.
-2. **App icon:** the launcher currently uses Capacitor's default icon. Replace
-   `android/app/src/main/res/mipmap-*` + `assets/icon.png` (or run
-   `npx capacitor-assets`) with your Stockly artwork.
-3. **Release signing:** create a keystore and add the four `ANDROID_*` secrets
-   listed in section 7 (until then releases are debug-signed).
-4. **Play listing** (if publishing): privacy policy, screenshots, data-safety
-   form (the app sends inventory data to *your own* Google Sheet).
-
-## 7. Releasing Stockly (automated)
-
-Pushing to `main` runs `.github/workflows/release.yml`: lint → type-check →
-tests → website build → (only for a **new** version) Android APK → GitHub
-Release. Normal pushes stay green without publishing anything.
-
-**To cut a release**, bump the version in **both** places and push:
-
-| File | Field | Example |
-| ---- | ----- | ------- |
-| `package.json` | `version` | `1.1.0` |
-| `android/app/build.gradle` | `versionName` | `"1.1.0"` |
-| `android/app/build.gradle` | `versionCode` | `2` (always increase, never reset) |
-
-The workflow fails fast if the names differ or the tag already exists. Each
-release publishes `stockly-<version>.apk` + `SHA256SUMS.txt` + `release.json`
-(machine-readable metadata: version, code, size, checksum, notes, commit) and
-links them from the release notes.
-
-**Where releases surface (no committed APKs):**
-- Website store section (`index.html#store`) and dedicated App Store page
-  (`/app-store`) read a static `public/release.json` first (refreshed by the
-  release workflow on every publish), falling back to the live GitHub
-  Releases API.
-- Settings → App update in the installed app uses the same source.
-- The website itself deploys automatically through the existing Vercel Git
-  integration — no tokens or extra steps needed.
-
-**Release signing secrets** (repo Settings → Secrets and variables → Actions;
-values are never printed in logs — without them the APK is debug-signed and
-labeled as such, which is fine for sideloading but uses a different
-certificate than a future store key, so keep using one keystore forever):
-`ANDROID_KEYSTORE_BASE64`, `ANDROID_KEY_ALIAS`,
-`ANDROID_KEYSTORE_PASSWORD`, `ANDROID_KEY_PASSWORD`.
-
-Verify a release locally any time with `node scripts/release-info.mjs check`.
+The GitHub Actions release workflow builds the website and, when a new app
+version is tagged, the Android APK. Keep `package.json` and
+`mobile/android/app/build.gradle` version values aligned. Signing secrets and
+release steps are documented in `.github/workflows/release.yml` and the
+repository Actions settings.

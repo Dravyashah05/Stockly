@@ -9,14 +9,28 @@ lerna-debug.log*
 
 node_modules
 dist
+mobile-app/dist
+admin/dist
+website/dist
+server/dist
+mobile/dist-app
+dist-web
 dist-ssr
 *.local
 .env
 .env.*
-android/local.properties
-android/.gradle
-android/app/build
-android/build
+!.env.example
+!mobile-app/.env.example
+!admin/.env.example
+!server/.env.example
+!website/.env.example
+mobile-app/.env
+admin/.env
+server/.env
+mobile/android/local.properties
+mobile/android/.gradle
+mobile/android/app/build
+mobile/android/build
 
 # Editor directories and files
 .vscode/*
