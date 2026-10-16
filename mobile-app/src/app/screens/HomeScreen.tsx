@@ -40,7 +40,7 @@ export default function HomeScreen({
   goProducts: (filter?: 'low' | 'out') => void;
   goHistory: () => void;
 }) {
-  const { dashboard, products, transactions, loading, refreshing, error, refresh, online, lastSync, isPending } =
+  const { dashboard, products, transactions, loading, refreshing, error, refresh, online, isPending } =
     useStore();
 
   const stats = useMemo(() => {
@@ -158,12 +158,7 @@ export default function HomeScreen({
 
   return (
     <div className="app-page-viewport mx-auto max-w-md">
-      <Header
-        title="Overview"
-        subtitle={
-          lastSync ? `Synced ${lastSync.toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit' })}` : 'Inventory dashboard'
-        }
-      />
+      <Header title="Overview" />
 
       <div className="dashboard-content mx-auto max-w-md space-y-5 px-4 pt-4">
         {/* Greeting — compact header with Add button */}
@@ -215,8 +210,7 @@ export default function HomeScreen({
 
         {!online ? (
           <div className="dashboard-banner glass flex items-center gap-2 rounded-2xl border-amber-500/25 px-4 py-3 text-[13px] font-medium text-amber-600 dark:text-amber-300">
-            <WifiOff size={16} /> Offline — showing last synced data
-            {lastSync ? ` from ${lastSync.toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit' })}` : ''}.
+            <WifiOff size={16} /> Offline — showing last synced data.
           </div>
         ) : null}
         {error && products.length === 0 && !loading ? (
