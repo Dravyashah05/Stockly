@@ -1096,3 +1096,40 @@ button:disabled,
   .dashboard-attention-actions button { width: 32px; height: 36px; }
   .dashboard-attention-mark { width: 28px; height: 28px; }
 }
+
+/* ------------------------- Admin console -------------------------
+ * Desktop-first owner UI: cards + data tables. The user app keeps its
+ * own mobile system above; these classes are admin-only. */
+.admin-card {
+  background: var(--glass);
+  border: 1px solid var(--stroke-dim);
+  border-radius: 20px;
+  box-shadow: var(--card-shadow);
+}
+
+.admin-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 13.5px;
+}
+.admin-table th {
+  text-align: left;
+  font-size: 11px;
+  font-weight: 800;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: var(--ink-2);
+  padding: 10px 16px;
+  border-bottom: 1px solid var(--stroke-dim);
+  white-space: nowrap;
+}
+.admin-table td {
+  padding: 11px 16px;
+  border-bottom: 1px solid var(--stroke-dim);
+  vertical-align: middle;
+}
+.admin-table tbody tr:last-child td { border-bottom: 0; }
+.admin-table tbody tr { transition: background 0.15s ease; }
+.admin-table tbody tr:hover { background: var(--glass-soft); }
+.admin-table tbody tr.is-selected { background: var(--accent-soft); }
+.admin-table tbody tr.is-selected:hover { background: var(--accent-soft); }
