@@ -4,7 +4,7 @@ import { StoreProvider, useStore } from '../shared/store';
 import { LS_KEYS } from '../shared/config';
 import { authApi, getAuthSession } from '../shared/auth';
 import { sheetsApi, SheetsApiError } from '../shared/connection';
-import { signOutAccount } from '../shared/users';
+import { consumeFreshAuth, getCachedProfile, signOutAccount } from '../shared/users';
 import AuthScreen from './screens/AuthScreen';
 import { RestrictedScreen, SheetSetupScreen } from './screens/AccessScreens';
 import type { Product } from '../shared/types';
@@ -343,14 +343,23 @@ function Gate() {
       setPhase({ name: 'login' });
       return;
     }
-    let accountStatus = 'active';
-    try {
-      const me = await authApi.me();
-      accountStatus = me.user.accountStatus;
-    } catch (e) {
+    /* Fast path: a just-verified login/register/adopt proved identity +
+     * status seconds ago — skip the duplicate me() round-trip. The sheet
+     * check below still re-validates session + suspension server-side.
+     * Otherwise both independent checks run in parallel (each is slow:
+     * separate Apps Script round-trips), account verdict first. */
+    const skipAccountCheck =
+      consumeFreshAuth() && getCachedProfile()?.accountStatus === 'active';
+    const [meRes, connRes] = await Promise.allSettled([
+      skipAccountCheck
+        ? Promise.resolve({ user: { accountStatus: 'active' } })
+        : authApi.me(),
+      sheetsApi.getConnection(),
+    ]);
+    if (meRes.status === 'rejected') {
       // Dead/expired session → back to login. Anything else keeps the
       // cached shell away from protected data until retry.
-      const status = (e as { status?: number }).status;
+      const status = (meRes.reason as { status?: number })?.status;
       if (status === 401) {
         signOutAccount();
         setPhase({ name: 'login' });
@@ -359,21 +368,12 @@ function Gate() {
       }
       return;
     }
-    if (accountStatus !== 'active') {
-      setPhase({ name: 'restricted', status: accountStatus });
+    if (meRes.value.user.accountStatus !== 'active') {
+      setPhase({ name: 'restricted', status: meRes.value.user.accountStatus });
       return;
     }
-    try {
-      const conn = await sheetsApi.getConnection();
-      if (conn.connected && conn.status === 'verified') {
-        setConfiguredFlag();
-        setPhase({ name: 'app' });
-      } else if (conn.status === 'failed' || conn.status === 'revoked') {
-        setPhase({ name: 'repair', message: 'Your sheet connection failed verification. Reconnect below.' });
-      } else {
-        setPhase({ name: 'setup' });
-      }
-    } catch (e) {
+    if (connRes.status === 'rejected') {
+      const e = connRes.reason;
       if (e instanceof SheetsApiError && e.status === 401) {
         signOutAccount();
         setPhase({ name: 'login' });
@@ -382,6 +382,16 @@ function Gate() {
       } else {
         setPhase({ name: 'setup', message: 'Could not check your sheet connection. Try again.' });
       }
+      return;
+    }
+    const conn = connRes.value;
+    if (conn.connected && conn.status === 'verified') {
+      setConfiguredFlag();
+      setPhase({ name: 'app' });
+    } else if (conn.status === 'failed' || conn.status === 'revoked') {
+      setPhase({ name: 'repair', message: 'Your sheet connection failed verification. Reconnect below.' });
+    } else {
+      setPhase({ name: 'setup' });
     }
   }, [setConfiguredFlag]);
 

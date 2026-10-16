@@ -116,3 +116,42 @@ test('unauthorized callers get no session without the server secret', () => {
   // the server-side ADMIN_SESSION_SECRET they never see.
   assert.equal(verifySessionToken('eyJhZG1pbklkIjoieCJ9.fakesig', SECRET), null);
 });
+
+test('adminLogin and bootstrap throttle setup-key guessing per IP', async () => {
+  const { default: handler } = await import('../api/admin.ts');
+  process.env.ADMIN_SETUP_KEY = 'correct-horse-setup-key';
+  process.env.ADMIN_SESSION_SECRET = 'test-admin-session-secret-xyz';
+  async function call(action: string, ip: string) {
+    let status = 0;
+    let payload: unknown;
+    const res = {
+      status(code: number) {
+        status = code;
+        return res;
+      },
+      setHeader() {},
+      json(body: unknown) {
+        payload = body;
+      },
+    };
+    await handler(
+      { method: 'POST', headers: { 'x-forwarded-for': ip }, body: { action, setupKey: 'wrong-key' } },
+      res,
+    );
+    return { status, payload };
+  }
+  async function expectThrottled(action: string) {
+    // Random TEST-NET IP per action so the per-IP buckets never collide
+    // with other runs in the same process.
+    const ip = `203.0.113.${1 + Math.floor(Math.random() * 200)}`;
+    for (let i = 0; i < 10; i++) {
+      const r = await call(action, ip);
+      assert.equal(r.status, 401, `${action}: wrong setup key must fail closed before the limit`);
+    }
+    const limited = await call(action, ip);
+    assert.equal(limited.status, 429);
+    assert.match(String((limited.payload as { error?: unknown })?.error ?? ''), /too many attempts/i);
+  }
+  await expectThrottled('adminLogin');
+  await expectThrottled('bootstrap');
+});

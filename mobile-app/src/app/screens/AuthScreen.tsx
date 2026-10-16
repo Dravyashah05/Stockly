@@ -4,25 +4,28 @@
  * passwords. The browser never decides who anyone is.
  */
 
-import { useState } from 'react';
+import { Suspense, lazy, useState } from 'react';
 import {
   ArrowRight,
   Check,
   CircleAlert,
-  Database,
   Eye,
   EyeOff,
+  Link2,
   Loader2,
   Lock as LockIcon,
   Mail,
   ShieldCheck,
-  Smartphone,
   User as UserIcon,
 } from 'lucide-react';
 import { AuthApiError } from '../../shared/auth';
 import { API_BASE_URL, isNativeApp } from '../../shared/config';
-import { loginAccount, registerAccount } from '../../shared/users';
+import { loginAccount, registerAccount, signOutAccount, type AuthProgressStep } from '../../shared/users';
 import { BrandMark, Field, Segmented, inputCls } from '../components/ui';
+
+/* Device-linking screen loads on demand: it carries the QR/scanner UI that
+ * the sign-in form itself must never pay for upfront. */
+const LinkedDevicesScreen = lazy(() => import('./LinkedDevicesScreen'));
 
 function errMsg(e: unknown): string {
   return e instanceof AuthApiError ? e.message : 'Something went wrong. Try again.';
@@ -48,23 +51,53 @@ export default function AuthScreen({ onAuthed }: { onAuthed: () => void }) {
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState('');
   const [info, setInfo] = useState('');
+  // Staged progress: verification + device enrollment are separate slow
+  // server round-trips — narrate them instead of one static spinner.
+  const [progress, setProgress] = useState('');
+  /* Signed in, but this device isn't enrolled (account already has devices):
+   * inventory stays locked until the link flow completes — never drop the
+   * user into a Home that can't sync. */
+  const [linkNeeded, setLinkNeeded] = useState(false);
+
+  const stepText = (s: AuthProgressStep) =>
+    s === 'device'
+      ? 'Securing this device…'
+      : registering
+        ? 'Creating your account…'
+        : 'Verifying credentials…';
 
   const submit = async () => {
     setBusy(true);
     setError('');
     setInfo('');
+    setProgress(registering ? 'Creating your account…' : 'Verifying credentials…');
     try {
-      if (mode === 'register') {
-        await registerAccount(name, email, password);
-      } else {
-        await loginAccount(email, password);
+      const { device } =
+        mode === 'register'
+          ? await registerAccount(name, email, password, (s) => setProgress(stepText(s)))
+          : await loginAccount(email, password, (s) => setProgress(stepText(s)));
+      if (device === 'link-required') {
+        // Authenticated but not enrolled: stay here on the link step.
+        setLinkNeeded(true);
+        return;
       }
       onAuthed();
     } catch (e) {
       setError(errMsg(e));
     } finally {
       setBusy(false);
+      setProgress('');
     }
+  };
+
+  const backToForm = () => {
+    signOutAccount();
+    setLinkNeeded(false);
+    setBusy(false);
+    setError('');
+    setInfo('');
+    setProgress('');
+    setPassword('');
   };
 
   const valid =
@@ -78,6 +111,51 @@ export default function AuthScreen({ onAuthed }: { onAuthed: () => void }) {
     { ok: password.length >= 8, label: 'At least 8 characters' },
     { ok: /\d/.test(password), label: 'Includes a number' },
   ];
+
+  /* Authenticated but unenrolled: link this device before entering the app.
+   * Showing Home here would fail every sync with a device error. */
+  if (linkNeeded) {
+    return (
+      <div className="relative min-h-dvh bg-(--bg) text-(--ink)">
+        <div className="ambient" aria-hidden="true" />
+        <div className="relative z-[1] pb-8">
+          <div className="mx-auto max-w-md space-y-3 px-4 pt-6">
+            <p role="status" className="flex items-start gap-2 rounded-2xl border border-amber-500/25 bg-amber-500/10 px-3.5 py-3 text-[12.5px] font-semibold leading-relaxed text-(--ink)">
+              <Link2 size={15} className="mt-0.5 shrink-0" />
+              Signed in — one more step: this device isn’t linked yet, so inventory stays locked until you link it below.
+            </p>
+            {error ? (
+              <p role="alert" className="flex items-start gap-2 rounded-2xl border border-rose-500/25 bg-rose-500/10 px-3.5 py-3 text-[12.5px] font-semibold leading-relaxed text-rose-600 dark:text-rose-300">
+                <CircleAlert size={15} className="mt-0.5 shrink-0" />
+                {error}
+              </p>
+            ) : null}
+            {info ? (
+              <p className="text-[12.5px] font-semibold text-emerald-600 dark:text-emerald-300">{info}</p>
+            ) : null}
+          </div>
+          <Suspense
+            fallback={
+              <div className="mx-auto max-w-md space-y-3 p-4" aria-label="Loading device linking">
+                <div className="h-14 animate-pulse rounded-2xl bg-(--accent-soft)" />
+                <div className="h-40 animate-pulse rounded-[26px] bg-(--accent-soft)" />
+              </div>
+            }
+          >
+            <LinkedDevicesScreen
+              initialMode="link"
+              onBack={backToForm}
+              notify={(t, k) => (k === 'error' ? setError(t) : setInfo(t))}
+              onLinked={() => {
+                setLinkNeeded(false);
+                onAuthed();
+              }}
+            />
+          </Suspense>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="relative min-h-dvh bg-(--bg) text-(--ink)">
@@ -97,18 +175,6 @@ export default function AuthScreen({ onAuthed }: { onAuthed: () => void }) {
               ? 'One account for your shop — your inventory syncs everywhere.'
               : 'Sign in to pick up where you left off.'}
           </p>
-          <div className="mt-4 flex flex-wrap items-center justify-center gap-1.5" aria-label="Highlights">
-            {[
-              { icon: <Database size={12} />, label: 'Google Sheets sync' },
-              { icon: <Smartphone size={12} />, label: 'Multi-device' },
-              { icon: <LockIcon size={12} />, label: 'Private by design' },
-            ].map((c) => (
-              <span key={c.label} className="glass-soft flex items-center gap-1.5 rounded-full px-2.5 py-1.5 text-[11px] font-bold text-(--ink-2)">
-                {c.icon}
-                {c.label}
-              </span>
-            ))}
-          </div>
         </div>
 
         {/* Mode switch */}
@@ -239,7 +305,7 @@ export default function AuthScreen({ onAuthed }: { onAuthed: () => void }) {
             ) : (
               <ArrowRight size={17} className="transition-transform group-enabled:group-hover:translate-x-0.5" />
             )}
-            {busy ? (registering ? 'Creating account…' : 'Signing in…') : registering ? 'Create account' : 'Sign in'}
+            {busy ? (registering ? (progress || 'Creating account…') : progress || 'Signing in…') : registering ? 'Create account' : 'Sign in'}
           </button>
           <p className="flex items-start justify-center gap-1.5 text-center text-[11.5px] leading-relaxed text-(--ink-3)">
             <ShieldCheck size={13} className="mt-0.5 shrink-0" />

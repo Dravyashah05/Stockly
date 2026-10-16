@@ -21,7 +21,7 @@
     "build:user": "npm --prefix mobile-app run build",
     "build:admin": "npm --prefix admin run build",
     "lint": "oxlint",
-    "test": "node --experimental-strip-types --test tests/api-response.test.ts tests/releases.test.ts tests/user-registry.test.ts tests/admin-auth.test.ts tests/device-link.test.ts tests/auth.test.ts",
+    "test": "node --experimental-strip-types --test tests/api-response.test.ts tests/releases.test.ts tests/user-registry.test.ts tests/admin-auth.test.ts tests/device-link.test.ts tests/auth.test.ts tests/server.test.ts",
     "preview": "vite preview",
     "cap:sync": "cap sync android",
     "cap:open": "cap open android",

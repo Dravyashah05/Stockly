@@ -28,9 +28,13 @@ both are loaded, `server/.env` wins). Required:
 
 `ADMIN_SCRIPT_URL`, `ADMIN_SCRIPT_TOKEN`, `ADMIN_SETUP_KEY`,
 `ADMIN_SESSION_SECRET`, `AUTH_SESSION_SECRET`, `DEVICE_SESSION_SECRET`,
-optional `ADMIN_MIRROR_SECRET`, `ADMIN_SESSION_TTL_HOURS`, `PORT`, and
+optional `ADMIN_MIRROR_SECRET`, `ADMIN_SESSION_TTL_HOURS`, `PORT`,
+`STOCKLY_UPSTREAM_TIMEOUT_MS` (per Google round-trip budget in ms, default
+50000, clamped 5000–120000), and
 `CORS_ORIGINS` (comma-separated production website origins). Local Vite and
 Capacitor origins are allowed by default; other browser origins are denied.
+Missing required vars are reported at startup and on `GET /api/health`
+(`missing` array, names only) instead of failing silently per route.
 
 Never expose these via `VITE_*` variables.
 

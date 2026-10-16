@@ -1,16 +1,17 @@
-import { useEffect, useMemo, useState } from "react";
+import { Suspense, lazy, useCallback, useDeferredValue, useEffect, useMemo, useRef, useState } from "react";
 import {
   Activity,
   BarChart3,
   Boxes,
   ChevronDown,
   CircleAlert,
+  Eye,
+  EyeOff,
   LayoutDashboard,
   LogOut,
   Plus,
   Search,
   Settings,
-  TrendingDown,
   TrendingUp,
   UserRound,
   X,
@@ -33,9 +34,49 @@ import { formatMoney } from "./shared/config";
 import {
   stockStatus,
   useStore,
-  type ProductFormInput,
 } from "./shared/store";
 import type { Product } from "./shared/types";
+import ProductTable from "./table";
+
+/* Below-the-fold chunks: reports tab, first-run setup, and all dialogs load
+ * on demand instead of in the initial bundle. Brand + fallbacks stay inline
+ * below — importing them from the lazy modules would drag those chunks
+ * into the initial bundle. */
+const Reports = lazy(() => import("./reports"));
+const ConnectSheet = lazy(() => import("./connect").then((m) => ({ default: m.ConnectSheet })));
+const ProductDialog = lazy(() => import("./dialogs").then((m) => ({ default: m.ProductDialog })));
+const StockDialog = lazy(() => import("./dialogs").then((m) => ({ default: m.StockDialog })));
+const ConfirmDialog = lazy(() => import("./dialogs").then((m) => ({ default: m.ConfirmDialog })));
+
+function Brand() {
+  return (
+    <a className="brand" href="/">
+      <span className="brand-mark">S</span>
+      <span>stockly</span>
+      <ChevronDown size={14} />
+    </a>
+  );
+}
+
+function DialogFallback() {
+  return (
+    <div className="scrim" role="presentation">
+      <div className="dialog">
+        <p className="empty">Loading…</p>
+      </div>
+    </div>
+  );
+}
+
+function ConnectFallback() {
+  return (
+    <main className="login-wrap">
+      <section className="login-card">
+        <p className="empty">Loading…</p>
+      </section>
+    </main>
+  );
+}
 
 type Tab = "overview" | "products" | "reports" | "history" | "settings";
 type ProductFilter = "all" | "ok" | "low" | "out";
@@ -76,6 +117,7 @@ function Login({ onSignedIn }: { onSignedIn: () => void }) {
   const [register, setRegister] = useState(false);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState("");
+  const [showPassword, setShowPassword] = useState(false);
   async function submit(event: React.FormEvent<HTMLFormElement>) {
     event.preventDefault();
     setBusy(true);
@@ -105,13 +147,39 @@ function Login({ onSignedIn }: { onSignedIn: () => void }) {
   }
   return (
     <main className="login-wrap">
-      <section className="login-card">
+      <section className="login-card" aria-labelledby="login-title">
         <Brand />
-        <p className="eyebrow">INVENTORY WORKSPACE</p>
-        <h1>{register ? "Create your account" : "Welcome back"}</h1>
+        <p className="eyebrow">STOCKLY</p>
+        <h1 id="login-title">{register ? "Create your account" : "Welcome back"}</h1>
         <p className="muted">
-          Sign in to manage your products and stock activity.
+          {register
+            ? "One account for your shop — your inventory syncs everywhere."
+            : "Sign in to pick up where you left off."}
         </p>
+        <div className="segmented" role="group" aria-label="Sign-in mode">
+          <button
+            type="button"
+            aria-pressed={!register}
+            className={!register ? "active" : ""}
+            onClick={() => {
+              setRegister(false);
+              setError("");
+            }}
+          >
+            Sign in
+          </button>
+          <button
+            type="button"
+            aria-pressed={register}
+            className={register ? "active" : ""}
+            onClick={() => {
+              setRegister(true);
+              setError("");
+            }}
+          >
+            Create account
+          </button>
+        </div>
         <form onSubmit={submit} className="form-stack">
           {register && (
             <label>
@@ -125,30 +193,43 @@ function Login({ onSignedIn }: { onSignedIn: () => void }) {
           </label>
           <label>
             Password
-            <input
-              name="password"
-              type="password"
-              autoComplete={register ? "new-password" : "current-password"}
-              minLength={register ? 10 : undefined}
-              required
-            />
+            <span className="password-wrap">
+              <input
+                name="password"
+                type={showPassword ? "text" : "password"}
+                autoComplete={register ? "new-password" : "current-password"}
+                minLength={register ? 10 : undefined}
+                required
+              />
+              <button
+                type="button"
+                className="password-toggle"
+                onClick={() => setShowPassword((v) => !v)}
+                aria-label={showPassword ? "Hide password" : "Show password"}
+                aria-pressed={showPassword}
+              >
+                {showPassword ? <EyeOff size={16} /> : <Eye size={16} />}
+              </button>
+            </span>
           </label>
-          {error && <p className="error-text">{error}</p>}
+          {error && (
+            <p className="error-text" role="alert">
+              {error}
+            </p>
+          )}
           <button className="primary-btn" disabled={busy}>
-            {busy ? "Please wait…" : register ? "Create account" : "Sign in"}
+            {busy
+              ? register
+                ? "Creating account…"
+                : "Signing in…"
+              : register
+                ? "Create account"
+                : "Sign in"}
           </button>
         </form>
-        <button
-          className="text-btn"
-          onClick={() => {
-            setRegister(!register);
-            setError("");
-          }}
-        >
-          {register
-            ? "Already registered? Sign in"
-            : "New to Stockly? Create an account"}
-        </button>
+        <p className="muted login-note">
+          Passwords are hashed on the server and never stored as plain text.
+        </p>
       </section>
     </main>
   );
@@ -160,6 +241,8 @@ function Inventory({ onSignOut }: { onSignOut: () => void }) {
   const setConfiguredFlag = store.setConfiguredFlag;
   const [tab, setTab] = useWorkspaceRoute();
   const [query, setQuery] = useState("");
+  // Defer filtering a frame so typing stays smooth on large catalogs.
+  const deferredQuery = useDeferredValue(query);
   const [productFilter, setProductFilter] = useState<ProductFilter>("all");
   const [productSort, setProductSort] = useState("name");
   const [product, setProduct] = useState<Product | null | "new">(null);
@@ -177,6 +260,10 @@ function Inventory({ onSignOut }: { onSignOut: () => void }) {
   const [deviceLink, setDeviceLink] = useState<CreatedLink | null>(null);
   const [deviceLinkView, setDeviceLinkView] = useState<LinkView | null>(null);
   const [deviceLinkBusy, setDeviceLinkBusy] = useState(false);
+  // Pending delete target for the accessible confirm dialog (replaces
+  // blocking window.confirm, which traps neither focus nor styling).
+  const [deleting, setDeleting] = useState<Product | null>(null);
+  const [deleteBusy, setDeleteBusy] = useState(false);
   useEffect(() => {
     void refreshMyProfile().then(setProfile);
   }, []);
@@ -233,10 +320,11 @@ function Inventory({ onSignOut }: { onSignOut: () => void }) {
     };
   }, [deviceLink, deviceLinkStatus]);
   const filtered = useMemo(() => {
+    const needle = deferredQuery.toLowerCase();
     const result = store.products.filter((p) => {
       const matchesQuery = `${p.name} ${p.sku} ${p.categoryName || ""}`
         .toLowerCase()
-        .includes(query.toLowerCase());
+        .includes(needle);
       const matchesStatus = productFilter === "all" || stockStatus(p) === productFilter;
       return matchesQuery && matchesStatus;
     });
@@ -246,7 +334,28 @@ function Inventory({ onSignOut }: { onSignOut: () => void }) {
       if (productSort === "value") return b.sellingPrice - a.sellingPrice;
       return a.name.localeCompare(b.name);
     });
-  }, [store.products, query, productFilter, productSort]);
+  }, [store.products, deferredQuery, productFilter, productSort]);
+  // Overview preview + reports loader use ref-stable wrappers so the memoized
+  // table/reports below skip re-renders on unrelated store ticks.
+  const lowStockPreview = useMemo(
+    () => store.products.filter((p) => stockStatus(p) !== "ok").slice(0, 6),
+    [store.products],
+  );
+  const loadOlderRef = useRef(() => {});
+  loadOlderRef.current = () =>
+    void store.loadMoreTransactions(store.transactions.length + 100);
+  const loadOlder = useCallback(() => loadOlderRef.current(), []);
+  const confirmDelete = useCallback(async () => {
+    if (!deleting) return;
+    setDeleteBusy(true);
+    try {
+      const ok = await store.removeProduct(deleting.id);
+      setNotice(ok ? "Product deleted." : "Could not delete product.");
+      if (ok) setDeleting(null);
+    } finally {
+      setDeleteBusy(false);
+    }
+  }, [deleting, store]);
   async function signOut() {
     signOutAccount();
     onSignOut();
@@ -272,16 +381,18 @@ function Inventory({ onSignOut }: { onSignOut: () => void }) {
   }
   if (connection === false)
     return (
-      <ConnectSheet
-        initialError={connectionError}
-        onConnected={() => {
-          setConnection(true);
-          setConnectionError("");
-          setConfiguredFlag();
-          void refresh();
-        }}
-        onSignOut={signOut}
-      />
+      <Suspense fallback={<ConnectFallback />}>
+        <ConnectSheet
+          initialError={connectionError}
+          onConnected={() => {
+            setConnection(true);
+            setConnectionError("");
+            setConfiguredFlag();
+            void refresh();
+          }}
+          onSignOut={signOut}
+        />
+      </Suspense>
     );
   return (
     <div className="workspace">
@@ -420,9 +531,7 @@ function Inventory({ onSignOut }: { onSignOut: () => void }) {
                 </button>
               </div>
               <ProductTable
-                products={store.products
-                  .filter((p) => stockStatus(p) !== "ok")
-                  .slice(0, 6)}
+                products={lowStockPreview}
                 onStock={setStock}
                 onEdit={setProduct}
               />
@@ -477,14 +586,7 @@ function Inventory({ onSignOut }: { onSignOut: () => void }) {
               products={filtered}
               onStock={setStock}
               onEdit={setProduct}
-              onDelete={async (p) => {
-                if (confirm(`Delete ${p.name}?`)) {
-                  const ok = await store.removeProduct(p.id);
-                  setNotice(
-                    ok ? "Product deleted." : "Could not delete product.",
-                  );
-                }
-              }}
+              onDelete={setDeleting}
             />
           </section>
         )}
@@ -498,7 +600,7 @@ function Inventory({ onSignOut }: { onSignOut: () => void }) {
                 </p>
               </div>
             </div>
-            <div className="table-scroll">
+            <div className="table-scroll history-table-wrap">
               <table>
                 <thead>
                   <tr>
@@ -538,6 +640,37 @@ function Inventory({ onSignOut }: { onSignOut: () => void }) {
                 </p>
               )}
             </div>
+            {/* Card layout for narrow screens: same rows, stacked. */}
+            <div className="tx-cards">
+              {store.transactions.map((t) => (
+                <article className="tx-card" key={t.id} aria-label={`${t.type === "IN" ? "Stock in" : "Stock out"} ${t.productName}`}>
+                  <div className="tx-card-head">
+                    <strong>{t.productName}</strong>
+                    <span
+                      className={t.type === "IN" ? "tag green" : "tag orange"}
+                    >
+                      {t.type === "IN" ? "Stock in" : "Stock out"}
+                    </span>
+                  </div>
+                  <div className="tx-card-meta">
+                    <span>
+                      Qty{" "}
+                      <strong>
+                        {t.type === "IN" ? "+" : "−"}
+                        {t.quantity}
+                      </strong>
+                    </span>
+                    <span>{t.reason || "—"}</span>
+                    <span>{new Date(t.createdAt).toLocaleString()}</span>
+                  </div>
+                </article>
+              ))}
+              {!store.transactions.length && (
+                <p className="empty">
+                  Transactions will appear here after stock changes.
+                </p>
+              )}
+            </div>
             {!store.txExhausted && (
               <div className="load-more-row">
                 <button
@@ -554,15 +687,21 @@ function Inventory({ onSignOut }: { onSignOut: () => void }) {
           </section>
         )}
         {tab === "reports" && (
-          <Reports
-            transactions={store.transactions}
-            products={store.products}
-            onLoadOlder={() =>
-              void store.loadMoreTransactions(store.transactions.length + 100)
+          <Suspense
+            fallback={
+              <section className="panel">
+                <p className="empty">Loading reports…</p>
+              </section>
             }
-            loadingMore={store.txLoadingMore}
-            exhausted={store.txExhausted}
-          />
+          >
+            <Reports
+              transactions={store.transactions}
+              products={store.products}
+              onLoadOlder={loadOlder}
+              loadingMore={store.txLoadingMore}
+              exhausted={store.txExhausted}
+            />
+          </Suspense>
         )}
         {tab === "settings" && (
           <>
@@ -692,495 +831,57 @@ function Inventory({ onSignOut }: { onSignOut: () => void }) {
         )}
       </main>
       {product && (
-        <ProductDialog
-          item={product === "new" ? null : product}
-          categories={store.categories}
-          onClose={() => setProduct(null)}
-          onSave={async (input) => {
-            const ok = await store.saveProduct(
-              input,
-              product === "new" ? undefined : product.id,
-            );
-            setNotice(ok ? "Product saved." : "Could not save product.");
-            if (ok) setProduct(null);
-          }}
-        />
+        <Suspense fallback={<DialogFallback />}>
+          <ProductDialog
+            item={product === "new" ? null : product}
+            categories={store.categories}
+            onClose={() => setProduct(null)}
+            onSave={async (input) => {
+              const ok = await store.saveProduct(
+                input,
+                product === "new" ? undefined : product.id,
+              );
+              setNotice(ok ? "Product saved." : "Could not save product.");
+              if (ok) setProduct(null);
+            }}
+          />
+        </Suspense>
       )}
       {stock && (
-        <StockDialog
-          data={stock}
-          onClose={() => setStock(null)}
-          onSubmit={async (quantity, reason) => {
-            const ok =
-              stock.type === "IN"
-                ? await store.doStockIn({
-                    productId: stock.product.id,
-                    quantity,
-                  })
-                : await store.doStockOut({
-                    productId: stock.product.id,
-                    quantity,
-                    reason,
-                  });
-            setNotice(ok ? "Stock updated." : "Could not update stock.");
-            if (ok) setStock(null);
-          }}
-        />
+        <Suspense fallback={<DialogFallback />}>
+          <StockDialog
+            data={stock}
+            onClose={() => setStock(null)}
+            onSubmit={async (quantity, reason) => {
+              const ok =
+                stock.type === "IN"
+                  ? await store.doStockIn({
+                      productId: stock.product.id,
+                      quantity,
+                    })
+                  : await store.doStockOut({
+                      productId: stock.product.id,
+                      quantity,
+                      reason,
+                    });
+              setNotice(ok ? "Stock updated." : "Could not update stock.");
+              if (ok) setStock(null);
+            }}
+          />
+        </Suspense>
+      )}
+      {deleting && (
+        <Suspense fallback={<DialogFallback />}>
+          <ConfirmDialog
+            title="Delete product?"
+            body={`“${deleting.name}” will be removed from your catalog. Past transactions are kept for records. This cannot be undone.`}
+            confirmLabel="Delete"
+            busy={deleteBusy}
+            onCancel={() => setDeleting(null)}
+            onConfirm={() => void confirmDelete()}
+          />
+        </Suspense>
       )}
     </div>
-  );
-}
-
-function ConnectSheet({
-  initialError,
-  onConnected,
-  onSignOut,
-}: {
-  initialError: string;
-  onConnected: () => void;
-  onSignOut: () => void;
-}) {
-  const [error, setError] = useState(initialError);
-  const [busy, setBusy] = useState(false);
-  async function submit(e: React.FormEvent<HTMLFormElement>) {
-    e.preventDefault();
-    setBusy(true);
-    setError("");
-    try {
-      await sheetsApi.connectSheet(
-        String(new FormData(e.currentTarget).get("url")).trim(),
-      );
-      onConnected();
-    } catch (err) {
-      setError(
-        err instanceof Error
-          ? err.message
-          : "Could not verify this Google Sheet.",
-      );
-    } finally {
-      setBusy(false);
-    }
-  }
-  return (
-    <main className="login-wrap">
-      <section className="login-card">
-        <Brand />
-        <p className="eyebrow">FIRST TIME SETUP</p>
-        <h1>Connect your inventory</h1>
-        <p className="muted">
-          Paste your private Google Apps Script Web App URL. Stockly verifies it
-          through the shared backend and never stores the URL in this browser.
-        </p>
-        <form className="form-stack" onSubmit={submit}>
-          <label>
-            Apps Script Web App URL
-            <input
-              name="url"
-              type="url"
-              placeholder="https://script.google.com/macros/s/…/exec"
-              required
-            />
-          </label>
-          {error && <p className="error-text">{error}</p>}
-          <button className="primary-btn" disabled={busy}>
-            {busy ? "Verifying…" : "Verify and connect"}
-          </button>
-        </form>
-        <p className="muted">
-          Deploy `apps-script/Code.gs` as a Web App, then keep your Google Sheet
-          private.
-        </p>
-        <button className="text-btn" onClick={onSignOut}>
-          Sign out
-        </button>
-      </section>
-    </main>
-  );
-}
-
-function Reports({
-  transactions,
-  products,
-  onLoadOlder,
-  loadingMore,
-  exhausted,
-}: {
-  transactions: import("./shared/types").StockTransaction[];
-  products: Product[];
-  onLoadOlder: () => void;
-  loadingMore: boolean;
-  exhausted: boolean;
-}) {
-  const added = transactions
-    .filter((t) => t.type === "IN")
-    .reduce((n, t) => n + t.quantity, 0);
-  const removed = transactions
-    .filter((t) => t.type === "OUT")
-    .reduce((n, t) => n + t.quantity, 0);
-  function exportCsv() {
-    const rows = [
-      ["Date", "Product", "Type", "Quantity", "Price", "Reason"],
-      ...transactions.map((t) => [
-        new Date(t.createdAt).toISOString(),
-        t.productName,
-        t.type,
-        String(t.quantity),
-        String(t.price),
-        t.reason,
-      ]),
-    ];
-    const csv = rows
-      .map((row) =>
-        row.map((cell) => `"${cell.replaceAll('"', '""')}"`).join(","),
-      )
-      .join("\r\n");
-    const url = URL.createObjectURL(new Blob([csv], { type: "text/csv" }));
-    const a = document.createElement("a");
-    a.href = url;
-    a.download = "stockly-transactions.csv";
-    a.click();
-    URL.revokeObjectURL(url);
-  }
-  return (
-    <>
-      <section className="stats-grid">
-        <article className="stat-card">
-          <span>Units received</span>
-          <strong>{added}</strong>
-        </article>
-        <article className="stat-card">
-          <span>Units removed</span>
-          <strong>{removed}</strong>
-        </article>
-        <article className="stat-card">
-          <span>Net movement</span>
-          <strong>{added - removed}</strong>
-        </article>
-        <article className="stat-card">
-          <span>Catalog value</span>
-          <strong>
-            {formatMoney(
-              products.reduce((n, p) => n + p.currentStock * p.costPrice, 0),
-            )}
-          </strong>
-        </article>
-      </section>
-      <section className="panel">
-        <div className="panel-head">
-          <div>
-            <h2>Inventory activity report</h2>
-            <p className="muted">Based on the synced transaction history</p>
-          </div>
-          <button className="outline-btn" onClick={exportCsv}>
-            Download CSV
-          </button>
-        </div>
-        <p className="muted">
-          {transactions.length} loaded transactions · {products.length} products
-        </p>
-        {!exhausted && (
-          <button
-            className="outline-btn"
-            disabled={loadingMore}
-            onClick={onLoadOlder}
-          >
-            {loadingMore ? "Loading…" : "Load older transactions"}
-          </button>
-        )}
-      </section>
-    </>
-  );
-}
-
-function ProductTable({
-  products,
-  onStock,
-  onEdit,
-  onDelete,
-}: {
-  products: Product[];
-  onStock: (x: { product: Product; type: "IN" | "OUT" }) => void;
-  onEdit: (p: Product) => void;
-  onDelete?: (p: Product) => void;
-}) {
-  return (
-    <div className="table-scroll">
-      <table aria-label="Inventory products">
-        <thead>
-          <tr>
-            <th>Product</th>
-            <th>SKU</th>
-            <th>Category</th>
-            <th>Stock</th>
-            <th>Price</th>
-            <th>Actions</th>
-          </tr>
-        </thead>
-        <tbody>
-            {products.map((p) => (
-            <tr key={p.id}>
-              <td>
-                <strong>{p.name}</strong>
-                <small>{p.description}</small>
-              </td>
-              <td>{p.sku || "—"}</td>
-              <td>{p.categoryName || "Uncategorized"}</td>
-              <td>
-                <span
-                  className={
-                    stockStatus(p) === "ok" ? "tag green" : "tag orange"
-                  }
-                >
-                  {p.currentStock} {stockStatus(p) === "low" ? "· Low" : ""}
-                  {stockStatus(p) === "out" ? "· Out" : ""}
-                </span>
-              </td>
-              <td>{formatMoney(p.sellingPrice)}</td>
-              <td>
-                <div className="row-actions">
-                  <button
-                    title={`Stock in ${p.name}`}
-                    aria-label={`Stock in ${p.name}`}
-                    onClick={() => onStock({ product: p, type: "IN" })}
-                  >
-                    <TrendingUp size={16} />
-                  </button>
-                  <button
-                    title={`Stock out ${p.name}`}
-                    aria-label={`Stock out ${p.name}`}
-                    disabled={p.currentStock <= 0}
-                    onClick={() => onStock({ product: p, type: "OUT" })}
-                  >
-                    <TrendingDown size={16} />
-                  </button>
-                  <button onClick={() => onEdit(p)} aria-label={`Edit ${p.name}`}>Edit</button>
-                  {onDelete && (
-                    <button
-                      className="delete-action"
-                      aria-label={`Delete ${p.name}`}
-                      onClick={() => onDelete(p)}
-                    >
-                      Delete
-                    </button>
-                  )}
-                </div>
-              </td>
-            </tr>
-          ))}
-        </tbody>
-      </table>
-      {!products.length && <p className="empty">No products to show.</p>}
-    </div>
-  );
-}
-
-function ProductDialog({
-  item,
-  categories,
-  onClose,
-  onSave,
-}: {
-  item: Product | null;
-  categories: { id: string; name: string }[];
-  onClose: () => void;
-  onSave: (input: ProductFormInput) => Promise<void>;
-}) {
-  const [busy, setBusy] = useState(false);
-  async function submit(e: React.FormEvent<HTMLFormElement>) {
-    e.preventDefault();
-    setBusy(true);
-    try {
-      const f = new FormData(e.currentTarget);
-      await onSave({
-        name: String(f.get("name")),
-        sku: String(f.get("sku")),
-        categoryId: String(f.get("categoryId")),
-        description: String(f.get("description")),
-        image: "",
-        costPrice: Number(f.get("costPrice")),
-        sellingPrice: Number(f.get("sellingPrice")),
-        currentStock: Number(f.get("currentStock")),
-        minimumStock: Number(f.get("minimumStock")),
-      });
-    } finally {
-      setBusy(false);
-    }
-  }
-  return (
-    <div
-      className="scrim"
-      role="presentation"
-      onMouseDown={(e) => {
-        if (e.target === e.currentTarget) onClose();
-      }}
-    >
-      <form className="dialog" onSubmit={submit} role="dialog" aria-modal="true" aria-labelledby="product-dialog-title">
-        <div className="dialog-head">
-          <h2 id="product-dialog-title">{item ? "Edit product" : "Add product"}</h2>
-          <button type="button" onClick={onClose} aria-label="Close product form">
-            <X size={18} />
-          </button>
-        </div>
-        <label>
-          Product name
-          <input name="name" required defaultValue={item?.name} />
-        </label>
-        <div className="two-col">
-          <label>
-            SKU
-            <input name="sku" defaultValue={item?.sku} />
-          </label>
-          <label>
-            Category
-            <select name="categoryId" defaultValue={item?.categoryId || ""}>
-              <option value="">Uncategorized</option>
-              {categories.map((c) => (
-                <option key={c.id} value={c.id}>
-                  {c.name}
-                </option>
-              ))}
-            </select>
-          </label>
-        </div>
-        <label>
-          Description
-          <input name="description" defaultValue={item?.description} />
-        </label>
-        <div className="two-col">
-          <label>
-            Cost price
-            <input
-              name="costPrice"
-              type="number"
-              min="0"
-              step="0.01"
-              defaultValue={item?.costPrice ?? 0}
-            />
-          </label>
-          <label>
-            Selling price
-            <input
-              name="sellingPrice"
-              type="number"
-              min="0"
-              step="0.01"
-              defaultValue={item?.sellingPrice ?? 0}
-            />
-          </label>
-        </div>
-        <div className="two-col">
-          <label>
-            Current stock
-            <input
-              name="currentStock"
-              type="number"
-              min="0"
-              defaultValue={item?.currentStock ?? 0}
-            />
-          </label>
-          <label>
-            Low stock threshold
-            <input
-              name="minimumStock"
-              type="number"
-              min="0"
-              defaultValue={item?.minimumStock ?? 0}
-            />
-          </label>
-        </div>
-        <div className="dialog-actions">
-          <button type="button" className="outline-btn" onClick={onClose}>
-            Cancel
-          </button>
-          <button className="primary-btn" disabled={busy}>
-            {busy ? "Saving…" : "Save product"}
-          </button>
-        </div>
-      </form>
-    </div>
-  );
-}
-
-function StockDialog({
-  data,
-  onClose,
-  onSubmit,
-}: {
-  data: { product: Product; type: "IN" | "OUT" };
-  onClose: () => void;
-  onSubmit: (q: number, r: string) => Promise<void>;
-}) {
-  const [busy, setBusy] = useState(false);
-  async function submit(e: React.FormEvent<HTMLFormElement>) {
-    e.preventDefault();
-    setBusy(true);
-    try {
-      const f = new FormData(e.currentTarget);
-      await onSubmit(Number(f.get("quantity")), String(f.get("reason") || ""));
-    } finally {
-      setBusy(false);
-    }
-  }
-  return (
-    <div
-      className="scrim"
-      role="presentation"
-      onMouseDown={(e) => {
-        if (e.target === e.currentTarget) onClose();
-      }}
-    >
-      <form className="dialog" onSubmit={submit} role="dialog" aria-modal="true" aria-labelledby="stock-dialog-title">
-        <div className="dialog-head">
-          <h2 id="stock-dialog-title">Stock {data.type === "IN" ? "in" : "out"}</h2>
-          <button type="button" onClick={onClose} aria-label="Close stock adjustment">
-            <X size={18} />
-          </button>
-        </div>
-        <p className="muted">
-          {data.product.name} · Available: {data.product.currentStock}
-        </p>
-        <label>
-          Quantity
-          <input
-            name="quantity"
-            type="number"
-            min="1"
-            max={data.type === "OUT" ? data.product.currentStock : undefined}
-            required
-            autoFocus
-          />
-        </label>
-        {data.type === "OUT" && (
-          <label>
-            Reason
-            <select name="reason">
-              <option>Sale</option>
-              <option>Damaged</option>
-              <option>Lost</option>
-              <option>Return</option>
-              <option>Other</option>
-            </select>
-          </label>
-        )}
-        <div className="dialog-actions">
-          <button type="button" className="outline-btn" onClick={onClose}>
-            Cancel
-          </button>
-          <button className="primary-btn" disabled={busy}>
-            {busy ? "Saving…" : "Confirm"}
-          </button>
-        </div>
-      </form>
-    </div>
-  );
-}
-
-function Brand() {
-  return (
-    <a className="brand" href="/">
-      <span className="brand-mark">S</span>
-      <span>stockly</span>
-      <ChevronDown size={14} />
-    </a>
   );
 }

@@ -97,6 +97,22 @@ function adapt(handler: ApiHandler) {
   };
 }
 
+/** Required secrets (names only — values are never read here beyond
+ *  presence). Missing entries are logged at startup so a misconfigured
+ *  deploy fails visibly instead of serving 501s from every route. */
+const REQUIRED_ENV = [
+  'ADMIN_SCRIPT_URL',
+  'ADMIN_SCRIPT_TOKEN',
+  'ADMIN_SETUP_KEY',
+  'ADMIN_SESSION_SECRET',
+  'DEVICE_SESSION_SECRET',
+  'AUTH_SESSION_SECRET',
+] as const;
+
+export function missingEnvVars(env: NodeJS.ProcessEnv = process.env): string[] {
+  return REQUIRED_ENV.filter((name) => !(env[name] ?? '').trim());
+}
+
 export function createApp(): express.Express {
   const app = express();
   app.disable('x-powered-by');
@@ -114,7 +130,13 @@ export function createApp(): express.Express {
   const stockly = adapt(stocklyHandler as unknown as ApiHandler);
 
   app.get('/api/health', (_req, res) => {
-    res.json({ success: true, data: { ok: true, time: new Date().toISOString(), version: '1.0.0' } });
+    // Liveness + configuration report (secret names and booleans only —
+    // never values). A healthy-looking 200 with missing_* entries explains
+    // per-route 501s without exposing anything sensitive.
+    res.json({
+      success: true,
+      data: { ok: true, time: new Date().toISOString(), version: '1.0.0', missing: missingEnvVars() },
+    });
   });
 
   // Canonical routes (identical paths to the Vercel deployment).
@@ -141,6 +163,10 @@ export function createApp(): express.Express {
 
 const PORT = Number(process.env.PORT || '5000');
 if (process.env.NODE_ENV !== 'test') {
+  const missing = missingEnvVars();
+  if (missing.length > 0) {
+    console.warn(`[stockly-server] missing env (routes using them answer 501): ${missing.join(', ')}`);
+  }
   createApp().listen(PORT, () => {
     console.info(`[stockly-server] listening on http://localhost:${PORT}`);
   });

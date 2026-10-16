@@ -393,6 +393,102 @@ td small {
 .row-actions .delete-action {
   color: #a34a40;
 }
+/* Card layout for narrow screens: same data and actions as the table,
+ * stacked instead of scrolled sideways. Hidden on desktop. */
+.product-cards {
+  display: none;
+}
+@media (max-width: 720px) {
+  .table-scroll.products-table-wrap {
+    display: none;
+  }
+  .product-cards {
+    display: grid;
+    gap: 10px;
+  }
+  .product-card {
+    background: #fff;
+    border: 1px solid #eceee8;
+    border-radius: 14px;
+    padding: 13px 14px;
+  }
+  .product-card-head {
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: 10px;
+  }
+  .product-card-head strong {
+    display: block;
+    color: #242921;
+    font-size: 13.5px;
+  }
+  .product-card-head small {
+    display: block;
+    color: #959990;
+    margin-top: 3px;
+    font-size: 11.5px;
+  }
+  .product-card-meta {
+    display: flex;
+    gap: 18px;
+    margin-top: 9px;
+    font-size: 12px;
+    color: #959990;
+  }
+  .product-card-meta strong {
+    color: #242921;
+    font-variant-numeric: tabular-nums;
+  }
+  .product-card-foot {
+    margin-top: 10px;
+    padding-top: 10px;
+    border-top: 1px solid #f0f1ed;
+  }
+  .product-card-foot .row-actions button {
+    min-height: 38px;
+    padding: 0 12px;
+    font-size: 12px;
+  }
+  .table-scroll.history-table-wrap {
+    display: none;
+  }
+  .tx-cards {
+    display: grid;
+    gap: 10px;
+  }
+  .tx-card {
+    background: #fff;
+    border: 1px solid #eceee8;
+    border-radius: 14px;
+    padding: 13px 14px;
+  }
+  .tx-card-head {
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: 10px;
+  }
+  .tx-card-head strong {
+    color: #242921;
+    font-size: 13.5px;
+  }
+  .tx-card-meta {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px 16px;
+    margin-top: 8px;
+    font-size: 12px;
+    color: #959990;
+  }
+  .tx-card-meta strong {
+    color: #242921;
+    font-variant-numeric: tabular-nums;
+  }
+}
+.tx-cards {
+  display: none;
+}
 .empty {
   text-align: center;
   color: #90958d;
@@ -592,6 +688,65 @@ td small {
   font-size: 12px;
   color: #b24237;
   margin: 0;
+}
+/* Two-option mode switch (Sign in / Create account), shared login pattern. */
+.segmented {
+  display: flex;
+  gap: 4px;
+  background: #eef0ea;
+  border-radius: 12px;
+  padding: 4px;
+  margin: 0 0 20px;
+}
+.segmented button {
+  flex: 1;
+  border: 0;
+  background: none;
+  border-radius: 9px;
+  min-height: 40px;
+  font-size: 13px;
+  font-weight: 700;
+  color: #62685f;
+  cursor: pointer;
+}
+.segmented button.active {
+  background: #fff;
+  color: #242921;
+  box-shadow: 0 1px 4px #15200e26;
+}
+/* Password field with show/hide toggle. */
+.password-wrap {
+  position: relative;
+  display: block;
+}
+.password-wrap input {
+  width: 100%;
+  padding-right: 40px;
+  box-sizing: border-box;
+}
+.password-toggle {
+  position: absolute;
+  right: 6px;
+  top: 50%;
+  transform: translateY(-50%);
+  border: 0;
+  background: none;
+  color: #787e75;
+  width: 30px;
+  height: 30px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 7px;
+  cursor: pointer;
+}
+.password-toggle:hover {
+  color: #242921;
+}
+.login-note {
+  text-align: center;
+  margin: 18px 0 0;
+  font-size: 11.5px;
 }
 @media (max-width: 1050px) {
   .stats-grid {

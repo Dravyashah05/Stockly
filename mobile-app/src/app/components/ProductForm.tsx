@@ -439,7 +439,7 @@ export default function ProductForm({
         </div>
 
         {err ? (
-          <div className="animate-pop-in rounded-2xl border border-rose-500/25 bg-rose-500/10 px-4 py-3 text-[13.5px] font-medium text-rose-600 dark:text-rose-300">
+          <div role="alert" className="animate-pop-in rounded-2xl border border-rose-500/25 bg-rose-500/10 px-4 py-3 text-[13.5px] font-medium text-rose-600 dark:text-rose-300">
             {err}
           </div>
         ) : null}

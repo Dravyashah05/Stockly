@@ -286,3 +286,55 @@ test('Admin.gs guards every action with the server token and stores no secrets',
     assert.match(code, new RegExp(tab + ": \\['" + [...headers].join("', '") + "'\\]"), tab + ' headers must match');
   }
 });
+
+test('upstream timeout budget is tunable within safe bounds', async () => {
+  const { upstreamTimeoutMs, isUpstreamTimeout } = await import('../api/upstream.ts');
+  const prev = process.env.STOCKLY_UPSTREAM_TIMEOUT_MS;
+  try {
+    delete process.env.STOCKLY_UPSTREAM_TIMEOUT_MS;
+    assert.equal(upstreamTimeoutMs(), 50_000);
+    process.env.STOCKLY_UPSTREAM_TIMEOUT_MS = '7000';
+    assert.equal(upstreamTimeoutMs(), 7000);
+    process.env.STOCKLY_UPSTREAM_TIMEOUT_MS = '1000';
+    assert.equal(upstreamTimeoutMs(), 5000, 'clamped to the floor');
+    process.env.STOCKLY_UPSTREAM_TIMEOUT_MS = '9999999';
+    assert.equal(upstreamTimeoutMs(), 120_000, 'clamped to the ceiling');
+    process.env.STOCKLY_UPSTREAM_TIMEOUT_MS = 'not-a-number';
+    assert.equal(upstreamTimeoutMs(), 50_000, 'garbage falls back to default');
+  } finally {
+    if (prev === undefined) delete process.env.STOCKLY_UPSTREAM_TIMEOUT_MS;
+    else process.env.STOCKLY_UPSTREAM_TIMEOUT_MS = prev;
+  }
+  assert.equal(isUpstreamTimeout(new DOMException('x', 'TimeoutError')), true);
+  assert.equal(isUpstreamTimeout(new Error('nope')), false);
+  assert.equal(isUpstreamTimeout('TimeoutError'), false);
+});
+
+test('admin-script calls carry an abort signal and map timeouts to 502', async () => {
+  const { scriptCall } = await import('../api/apps-script-client.ts');
+  const realFetch = globalThis.fetch;
+  let seenSignal: unknown;
+  (globalThis as unknown as { fetch: unknown }).fetch = (async (_url: unknown, init?: RequestInit) => {
+    seenSignal = init?.signal;
+    throw new DOMException('The operation timed out', 'TimeoutError');
+  }) as typeof fetch;
+  const prevUrl = process.env.ADMIN_SCRIPT_URL;
+  const prevToken = process.env.ADMIN_SCRIPT_TOKEN;
+  process.env.ADMIN_SCRIPT_URL = 'https://script.google.com/macros/s/TEST/exec';
+  process.env.ADMIN_SCRIPT_TOKEN = 'test-token-0123456789abcdef';
+  try {
+    await assert.rejects(() => scriptCall('readTab', { tab: 'UserAuth' }), (e: unknown) => {
+      const err = e as { status?: unknown; message?: unknown };
+      assert.equal(err.status, 502);
+      assert.match(String(err.message), /timed out/i);
+      return true;
+    });
+    assert.ok(seenSignal instanceof AbortSignal, 'every upstream call races a timeout signal');
+  } finally {
+    (globalThis as unknown as { fetch: unknown }).fetch = realFetch;
+    if (prevUrl === undefined) delete process.env.ADMIN_SCRIPT_URL;
+    else process.env.ADMIN_SCRIPT_URL = prevUrl;
+    if (prevToken === undefined) delete process.env.ADMIN_SCRIPT_TOKEN;
+    else process.env.ADMIN_SCRIPT_TOKEN = prevToken;
+  }
+});

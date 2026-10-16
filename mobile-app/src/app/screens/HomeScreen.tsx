@@ -4,14 +4,12 @@ import {
   ArrowDownToLine,
   ArrowRight,
   ArrowUpFromLine,
-  Boxes,
   ChevronRight,
   CircleCheck,
+  OctagonX,
   PackagePlus,
-  PackageX,
   Plus,
   Minus,
-  Sparkles,
   WifiOff,
 } from 'lucide-react';
 import { stockStatus, useStore } from '../../shared/store';
@@ -77,7 +75,7 @@ export default function HomeScreen({
       {
         label: 'Stock In',
         sub: 'Receive goods',
-        icon: <ArrowDownToLine size={24} />,
+        icon: <ArrowDownToLine size={20} />,
         grad: 'bg-[#151515] dark:bg-[#C7FF4D]',
         iconCls: 'text-[#C7FF4D] dark:text-[#151515]',
         onClick: onStockIn,
@@ -85,7 +83,7 @@ export default function HomeScreen({
       {
         label: 'Stock Out',
         sub: 'Sell / issue goods',
-        icon: <ArrowUpFromLine size={24} />,
+        icon: <ArrowUpFromLine size={20} />,
         grad: 'bg-[#151515] dark:bg-[#C7FF4D]',
         iconCls: 'text-[#C7FF4D] dark:text-[#151515]',
         onClick: onStockOut,
@@ -100,8 +98,6 @@ export default function HomeScreen({
         label: 'Products',
         value: String(stats.totalProducts),
         foot: `${stats.totalUnits.toLocaleString('en-IN')} units`,
-        icon: <Boxes size={18} />,
-        iconCls: 'bg-(--accent-soft) text-(--ink) dark:text-(--accent)',
         ringCls: 'hover:border-(--accent)/40',
         onClick: () => goProducts(),
       },
@@ -109,8 +105,6 @@ export default function HomeScreen({
         label: 'Low stock',
         value: String(stats.lowStockCount),
         foot: 'needs restock',
-        icon: <AlertTriangle size={18} />,
-        iconCls: 'bg-amber-500/14 text-amber-600 dark:text-amber-300',
         ringCls: 'hover:border-amber-500/40',
         onClick: () => goProducts('low'),
       },
@@ -118,8 +112,6 @@ export default function HomeScreen({
         label: 'Out of stock',
         value: String(stats.outOfStockCount),
         foot: 'urgent',
-        icon: <PackageX size={18} />,
-        iconCls: 'bg-rose-500/12 text-rose-600 dark:text-rose-300',
         ringCls: 'hover:border-rose-500/40',
         onClick: () => goProducts('out'),
       },
@@ -174,16 +166,15 @@ export default function HomeScreen({
       />
 
       <div className="dashboard-content mx-auto max-w-md space-y-5 px-4 pt-4">
-        {/* Greeting — modern editorial header with Add button */}
+        {/* Greeting — compact header with Add button */}
         <div className="dashboard-greeting px-1 pt-1">
           <span className="inline-flex items-center gap-1.5 rounded-full bg-[#151515] px-3 py-1 text-[11px] font-bold uppercase tracking-wider text-[#F7F7F2] dark:bg-[#C7FF4D] dark:text-[#151515]">
             <span className={`h-1.5 w-1.5 rounded-full ${online ? 'bg-emerald-500' : 'bg-amber-500'}`} />
             {today}
           </span>
           <div className="mt-2 flex items-center justify-between gap-3">
-            <h2 className="min-w-0 flex-1 text-[28px] font-extrabold leading-[1.05] tracking-tight text-(--ink) lg:text-[32px]">
+            <h2 className="min-w-0 flex-1 text-[24px] font-extrabold leading-[1.1] tracking-tight text-(--ink)">
               {greet}
-              <Sparkles size={24} className="ml-2 inline-block -translate-y-1 text-(--accent)" />
             </h2>
             <button
               type="button"
@@ -195,22 +186,19 @@ export default function HomeScreen({
               <PackagePlus size={19} /><span>Add Product</span>
             </button>
           </div>
-          <p className="mt-1 text-[13.5px] leading-relaxed text-(--ink-2)">
-              Your inventory, at a glance.
-          </p>
         </div>
 
-        {/* Stock In / Out — big action buttons */}
+        {/* Stock In / Out — compact action buttons */}
         <div className="dashboard-actions grid grid-cols-2 gap-2.5">
           {quickActions.map((a) => (
             <button
               key={a.label}
               type="button"
               onClick={a.onClick}
-              className="glass press group flex min-h-[104px] flex-col items-start justify-between gap-2 rounded-[24px] border border-transparent p-4 text-left transition-colors hover:border-(--accent)/30"
+              className="glass press group flex min-h-[88px] flex-col items-start justify-between gap-2 rounded-[20px] border border-transparent p-4 text-left transition-colors hover:border-(--accent)/30"
             >
               <span
-                className={`flex h-12 w-12 items-center justify-center rounded-2xl ${a.grad} ${a.iconCls} transition-transform group-active:scale-95`}
+                className={`flex h-10 w-10 items-center justify-center rounded-2xl ${a.grad} ${a.iconCls} transition-transform group-active:scale-95`}
               >
                 {a.icon}
               </span>
@@ -254,7 +242,7 @@ export default function HomeScreen({
         ) : (
           <>
             {/* Primary inventory metric */}
-            <div className="dashboard-hero relative overflow-hidden rounded-[28px] bg-[#151515] p-5 text-white dark:bg-[#C7FF4D] dark:text-[#151515]">
+            <div className="dashboard-hero relative overflow-hidden rounded-[24px] bg-[#151515] p-5 text-white dark:bg-[#C7FF4D] dark:text-[#151515]">
               <div className="relative flex items-end justify-between gap-3">
                 <div className="min-w-0">
                   <p className="text-[11px] font-extrabold uppercase tracking-[0.18em] text-white/60 dark:text-[#151515]/65">
@@ -303,7 +291,7 @@ export default function HomeScreen({
                 ) : undefined}
               </div>
               {stats.lowStockItems.length === 0 ? (
-                <div className="glass rounded-[24px] px-4 py-7 text-center">
+                <div className="glass rounded-[20px] px-4 py-7 text-center">
                   <span className="mx-auto mb-2.5 flex h-12 w-12 items-center justify-center rounded-2xl bg-[#1E7B3C] text-white">
                     <CircleCheck size={24} />
                   </span>
@@ -315,7 +303,7 @@ export default function HomeScreen({
                   {attentionRows.map(({ p, isOut, fillPct, meta }) => (
                     <div key={p.id} className="dashboard-attention-row">
                       <button type="button" onClick={() => goProducts(isOut ? 'out' : 'low')} className="dashboard-attention-item press">
-                        <span className={`dashboard-attention-mark ${isOut ? 'is-out' : 'is-low'}`}>{isOut ? '!' : '↘'}</span>
+                        <span className={`dashboard-attention-mark ${isOut ? 'is-out' : 'is-low'}`} aria-hidden="true">{isOut ? <OctagonX size={15} /> : <AlertTriangle size={15} />}</span>
                         <span className="min-w-0 flex-1">
                           <span className="block truncate text-[14px] font-bold text-(--ink)">{p.name}</span>
                           <span className="block text-[11.5px] text-(--ink-2)">
@@ -353,7 +341,7 @@ export default function HomeScreen({
                   No stock movements yet.
                 </div>
               ) : (
-                <div className="glass space-y-1 rounded-[24px] p-2">
+                <div className="glass space-y-1 rounded-[20px] p-2">
                   {recentRows.map(({ t, isIn, when, pending }) => (
                     <div key={t.id} className="flex items-center gap-3 rounded-[18px] px-2.5 py-2.5 transition-colors hover:bg-(--accent-soft)/40">
                       <span

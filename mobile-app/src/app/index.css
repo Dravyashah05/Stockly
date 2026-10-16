@@ -1096,3 +1096,84 @@ button:disabled,
   .dashboard-attention-actions button { width: 32px; height: 36px; }
   .dashboard-attention-mark { width: 28px; height: 28px; }
 }
+
+/* Small-screen finishing pass: keep the three headline stock numbers on one
+   balanced row instead of leaving the last metric stranded below. */
+@media (max-width: 639px) {
+  .dashboard-hero {
+    min-height: 0;
+    padding: 18px;
+    border-radius: 20px !important;
+    box-shadow: 0 12px 28px -20px rgb(0 0 0 / 0.55);
+  }
+
+  .dashboard-hero::after {
+    position: absolute;
+    top: -46px;
+    right: -32px;
+    width: 132px;
+    height: 132px;
+    border: 1px solid rgb(255 255 255 / 0.12);
+    border-radius: 50%;
+    box-shadow: 0 0 0 18px rgb(255 255 255 / 0.035), 0 0 0 38px rgb(255 255 255 / 0.025);
+    content: "";
+    pointer-events: none;
+  }
+
+  .dark .dashboard-hero::after {
+    border-color: rgb(21 21 21 / 0.14);
+    box-shadow: 0 0 0 18px rgb(21 21 21 / 0.035), 0 0 0 38px rgb(21 21 21 / 0.025);
+  }
+
+  .dashboard-hero > div,
+  .dashboard-hero > p { z-index: 1; }
+
+  .dashboard-stats-grid {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 8px;
+  }
+
+  .dashboard-metric {
+    min-height: 100px;
+    justify-content: flex-start;
+    border: 1px solid var(--stroke-dim);
+    border-radius: 16px;
+    background: var(--bg-elev);
+    box-shadow: var(--card-shadow);
+    padding: 11px 10px;
+  }
+
+  .dashboard-metric-label {
+    min-height: 28px;
+    align-items: flex-start;
+    font-size: 9px;
+    letter-spacing: 0.035em;
+  }
+
+  .dashboard-metric-label svg { flex: 0 0 auto; }
+  .dashboard-metric-value { margin-top: 7px; font-size: clamp(1.45rem, 7vw, 1.8rem); }
+  .dashboard-metric-foot { font-size: 10px; }
+
+  .dashboard-actions > button {
+    min-height: 72px;
+    border-radius: 16px;
+    border: 1px solid var(--stroke-dim);
+    background: var(--bg-elev);
+    box-shadow: var(--card-shadow);
+  }
+
+  .dashboard-attention > div:first-child,
+  .dashboard-activity > div:first-child { margin-bottom: 10px; }
+
+  .dashboard-attention-mark { border-radius: 11px; }
+  .dashboard-attention-actions button { width: 40px; height: 40px; }
+}
+
+@media (max-width: 360px) {
+  .dashboard-content { padding-inline: 12px; }
+  .dashboard-metric { padding-inline: 8px; }
+  .dashboard-metric-label { font-size: 9px; }
+  .dashboard-metric-foot { font-size: 9px; }
+  .dashboard-greeting h2 { font-size: 1.65rem; }
+  .dashboard-greeting > div button { gap: 6px; padding-inline: 9px; font-size: 12px; }
+}

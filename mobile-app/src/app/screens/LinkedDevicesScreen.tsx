@@ -10,8 +10,10 @@
  * rejected/expired/failed). No WhatsApp integration of any kind.
  */
 
-import { useCallback, useEffect, useRef, useState } from 'react';
-import QRCode from 'react-qr-code';
+import { Suspense, lazy, useCallback, useEffect, useRef, useState } from 'react';
+/* QR renderer loads only when the user actually shows a QR code — the
+ * code-based flow never pays for it. */
+const QRCodeView = lazy(() => import('react-qr-code'));
 import {
   ArrowLeft,
   Camera,
@@ -414,7 +416,15 @@ function LinkADevice({ notify, onDone }: { notify: (t: string, k?: 'success' | '
         <div className="space-y-3">
           {method === 'qr' ? (
             <div className="mx-auto w-fit rounded-3xl bg-white p-4">
-              <QRCode value={buildQrText(link.linkId, link.token)} size={216} bgColor="#FFFFFF" fgColor="#151515" aria-label="Stockly device linking QR code" />
+              <Suspense
+                fallback={
+                  <div className="flex h-[216px] w-[216px] items-center justify-center text-[12.5px] font-bold text-(--ink-3)">
+                    Loading…
+                  </div>
+                }
+              >
+                <QRCodeView value={buildQrText(link.linkId, link.token)} size={216} bgColor="#FFFFFF" fgColor="#151515" aria-label="Stockly device linking QR code" />
+              </Suspense>
             </div>
           ) : (
             <div className="rounded-2xl bg-(--glass-soft) px-4 py-4 text-center">

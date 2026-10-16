@@ -119,6 +119,29 @@ test('reports unauthenticated HTTP 401 as a deployment access problem', () => {
   assert.equal(result.status, 401);
 });
 
+test('prefers our gateway JSON envelope over the deployment text on 401/403', () => {
+  // Device-auth failure: must NOT blame the Google deployment.
+  const device = interpretApiResponse(
+    meta({ status: 401, ok: false, contentType: 'application/json; charset=utf-8' }),
+    '{"success":false,"error":"This device is not authorized. Re-link it from Settings.","reason":"device-unauthorized"}',
+  );
+  assert.equal(device.ok, false);
+  if (device.ok) return;
+  assert.match(device.message, /not authorized.*Linked Devices/i);
+  assert.doesNotMatch(device.message, /execute as you/i);
+  assert.equal(device.status, 401);
+  assert.equal(device.unknownOutcome, false);
+
+  // Expired session: same rule.
+  const expired = interpretApiResponse(
+    meta({ status: 401, ok: false, contentType: 'application/json; charset=utf-8' }),
+    '{"success":false,"error":"Sign-in required."}',
+  );
+  assert.equal(expired.ok, false);
+  if (expired.ok) return;
+  assert.match(expired.message, /session expired/i);
+});
+
 test('reports a missing Vercel API route distinctly from a bad exec URL', () => {
   const missingRoute = interpretApiResponse(
     meta({ status: 404, ok: false, upstreamHost: undefined }),

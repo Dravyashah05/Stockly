@@ -38,7 +38,10 @@ export default defineConfig({
       output: {
         manualChunks(id) {
           if (id.includes('node_modules')) {
-            if (id.includes('html5-qrcode')) return undefined;
+            // Lazily imported by rarely-opened screens (QR scanner, QR
+            // renderer): keep them in their own on-demand chunks instead of
+            // the upfront `libs` bundle.
+            if (id.includes('html5-qrcode') || id.includes('react-qr-code')) return undefined;
             if (id.includes('react') || id.includes('react-dom')) return 'vendor';
             return 'libs';
           }
