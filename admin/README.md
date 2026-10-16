@@ -7,8 +7,8 @@ management, administrative logs, application settings.
 ## Source
 
 `src/admin/AdminScreen.tsx` (sections: users, devices, roles, settings,
-logs) + `src/shared/` (public clients: `admin-api.ts`, `devices.ts`,
-`config.ts`). **Never touches the private admin spreadsheet directly** —
+logs) + `src/shared/` (re-exports of the neutral `../shared/` clients:
+`admin-api.ts`, `devices.ts`, `config.ts`). **Never touches the private admin spreadsheet directly** —
 all storage goes through the shared backend's `/api/admin` and
 `/api/devices` routes, which enforce owner authorization server-side on
 every request.

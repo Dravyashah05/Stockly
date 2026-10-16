@@ -7,16 +7,24 @@ components, styling, and build outputs. The website does not import mobile UI.
 
 ```text
 Stockly/
+├── shared/                 # ONE implementation of the shared domain layer
+│   ├── api*.ts, auth.ts,   #   API clients, response helpers, device linking,
+│   │   connection.ts,      #   account/users, releases, env config, types
+│   │   devices.ts, users.ts
+│   ├── store.tsx           #   inventory synchronization store (React)
+│   └── brand.css           #   shared brand/platform design tokens
 ├── mobile-app/             # customer mobile app UI; Vite + Capacitor frontend
 │   ├── src/app/             # mobile shell, screens, components
-│   ├── src/shared/          # customer API client, types, auth and sync layer
+│   ├── src/shared/          # thin re-exports of ../../../shared/* (no copies)
 │   ├── capacitor.config.ts  # points to android/
 │   └── android/             # Capacitor native project and Gradle source
 ├── website/                # separate responsive inventory website
 │   ├── src/website.tsx      # website-only shell, pages and forms
 │   ├── src/website.css      # website-only styling
+│   ├── src/shared/          # thin re-exports of ../../../shared/*
 │   └── vite.config.ts       # dev :3003; proxies /api to :5000
 ├── admin/                  # separate owner/admin console
+│   └── src/shared/          # thin re-exports of ../../../shared/*
 ├── server/                 # one Express transport adapter, default :5000
 ├── api/                    # canonical auth, inventory, device and admin handlers
 ├── apps-script/            # existing Google Sheets integration
@@ -24,6 +32,12 @@ Stockly/
 ├── docs/                   # setup and architecture documentation
 └── src/ + root HTML/Vite   # retained legacy marketing/store build during migration
 ```
+
+Root `shared/` is the **single source of truth** for the domain layer. Every
+frontend reaches it through its own `src/shared/*` re-export modules, which
+contain no implementation — so a change to a shared client, type, or the
+inventory store takes effect in the app, the website, and the console at once.
+Do not copy shared files into a frontend: edit `shared/` instead.
 
 ## One backend and data source
 
@@ -74,6 +88,8 @@ development proxy target. For separately deployed frontends, set the same
 
 Root `src/`, `index.html`, `app.html`, `store.html`, and root Vite configs are
 kept while the independent website and app builds are validated. Do not remove
-them until release/deployment references are migrated. Generated `dist/`,
-`mobile-app/dist/`, build outputs, local env files, Android `local.properties`,
-and dependency folders are ignored by Git.
+them until release/deployment references are migrated. The shared domain layer
+was moved out of that legacy tree to the repository root (`shared/`) so it can
+no longer be mistaken for legacy code; every frontend now re-exports it.
+Generated `dist/`, `mobile-app/dist/`, build outputs, local env files, Android
+`local.properties`, and dependency folders are ignored by Git.

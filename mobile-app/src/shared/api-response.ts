@@ -1,1 +1,1 @@
-export * from '../../../src/shared/api-response';
+export * from '../../../shared/api-response';

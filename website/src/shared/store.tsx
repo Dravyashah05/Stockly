@@ -1,2 +1,2 @@
 /* eslint-disable react/only-export-components */
-export * from '../../../src/shared/store';
+export * from '../../../shared/store';

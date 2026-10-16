@@ -4,8 +4,8 @@ The mobile app owns its screens, touch navigation, mobile styling, native
 Capacitor integration, offline cache, and barcode/device-linking workflows.
 The independent inventory website lives in `../website/`. UI modules stay
 inside each frontend. Shared account, API, and inventory state code lives in
-the neutral `../src/shared/` domain layer; mobile imports it through local
-compatibility modules in `src/shared/`.
+the neutral `../shared/` domain layer; mobile imports it through local
+re-export modules in `src/shared/`.
 
 ```sh
 npm --prefix server run dev  # shared API on :5000

@@ -143,21 +143,21 @@ test('Google sign-in is fully removed (server + client)', async () => {
   assert.doesNotMatch(route, /googleLogin|verifyGoogleIdToken|GoogleTokenInfo|GOOGLE_CLIENT_ID|resolveGoogleAccount/);
   const logic = readFileSync(new URL('../api/auth-logic.ts', import.meta.url), 'utf8');
   assert.doesNotMatch(logic, /resolveGoogleAccount|verifyGoogleIdToken|tokeninfo/);
-  const client = readFileSync(new URL('../src/shared/auth.ts', import.meta.url), 'utf8');
+  const client = readFileSync(new URL('../shared/auth.ts', import.meta.url), 'utf8');
   assert.doesNotMatch(client, /googleLogin|gsi\/client|renderGoogleButton|loadGoogleIdentity/);
   const screen = readFileSync(new URL('../src/app/screens/AuthScreen.tsx', import.meta.url), 'utf8');
   assert.doesNotMatch(screen, /googleLogin|Google sign-in|continue with Google|gsi\/client|GOOGLE_CLIENT_ID|loginWithGoogle/);
-  const config = readFileSync(new URL('../src/shared/config.ts', import.meta.url), 'utf8');
+  const config = readFileSync(new URL('../shared/config.ts', import.meta.url), 'utf8');
   assert.doesNotMatch(config, /VITE_GOOGLE_CLIENT_ID/);
 });
 
 test('inventory client never holds or forwards raw exec URLs', async () => {  const { readFileSync } = await import('node:fs');
-  const api = readFileSync(new URL('../src/shared/api.ts', import.meta.url), 'utf8');
+  const api = readFileSync(new URL('../shared/api.ts', import.meta.url), 'utf8');
   assert.doesNotMatch(api, /script\.google\.com/);
   assert.doesNotMatch(api, /getApiUrl|LS_KEYS\.apiUrl/);
   assert.match(api, /\/api\/sheets/);
   assert.match(api, /X-Device-Session/);
-  const store = readFileSync(new URL('../src/shared/store.tsx', import.meta.url), 'utf8');
+  const store = readFileSync(new URL('../shared/store.tsx', import.meta.url), 'utf8');
   assert.doesNotMatch(store, /setApiUrl|getApiUrl\(\)/);
 });
 
@@ -172,11 +172,11 @@ test('login verifies against the stored hash, and guards bind one account', asyn
 });
 
 test('native builds route API calls to the deployed backend; web stays same-origin', async () => {
-  const config = await import('../src/shared/config.ts');
+  const config = await import('../shared/config.ts');
   assert.equal(typeof config.apiUrl, 'function');
   assert.equal(config.apiUrl('/api/auth'), '/api/auth');
   const { readFileSync } = await import('node:fs');
-  for (const f of ['../src/shared/api.ts', '../src/shared/auth.ts', '../src/shared/connection.ts', '../src/shared/devices.ts', '../src/shared/admin-api.ts']) {
+  for (const f of ['../shared/api.ts', '../shared/auth.ts', '../shared/connection.ts', '../shared/devices.ts', '../shared/admin-api.ts']) {
     const src = readFileSync(new URL(f, import.meta.url), 'utf8');
     assert.match(src, /fetch\(apiUrl\(/, f + ' must route through apiUrl()');
   }

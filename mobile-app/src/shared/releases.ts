@@ -1,1 +1,1 @@
-export * from '../../../src/shared/releases';
+export * from '../../../shared/releases';

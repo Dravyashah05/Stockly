@@ -1,15 +1,2 @@
-/* Shared Stockly brand and platform-inspired design tokens. */
-:root {
-  --st-bg: #f5f5f7;
-  --st-ink: #1d1d1f;
-  --st-lime: #007aff;
-  --st-grey: #efeff4;
-  --st-dark: #111114;
-  --st-line: #d2d2d7;
-  --st-blue: #007aff;
-  --st-blue-soft: #e8f2ff;
-  --st-secondary: #6e6e73;
-  --st-success: #34c759;
-  --st-warning: #ff9f0a;
-  --st-error: #ff3b30;
-}
+/* One shared design-token layer for every Stockly frontend. */
+@import "../../../shared/brand.css";

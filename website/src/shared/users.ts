@@ -1,1 +1,1 @@
-export * from '../../../src/shared/users';
+export * from '../../../shared/users';

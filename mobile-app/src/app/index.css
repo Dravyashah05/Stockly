@@ -1104,25 +1104,6 @@ button:disabled,
     min-height: 0;
     padding: 18px;
     border-radius: 20px !important;
-    box-shadow: 0 12px 28px -20px rgb(0 0 0 / 0.55);
-  }
-
-  .dashboard-hero::after {
-    position: absolute;
-    top: -46px;
-    right: -32px;
-    width: 132px;
-    height: 132px;
-    border: 1px solid rgb(255 255 255 / 0.12);
-    border-radius: 50%;
-    box-shadow: 0 0 0 18px rgb(255 255 255 / 0.035), 0 0 0 38px rgb(255 255 255 / 0.025);
-    content: "";
-    pointer-events: none;
-  }
-
-  .dark .dashboard-hero::after {
-    border-color: rgb(21 21 21 / 0.14);
-    box-shadow: 0 0 0 18px rgb(21 21 21 / 0.035), 0 0 0 38px rgb(21 21 21 / 0.025);
   }
 
   .dashboard-hero > div,
@@ -1179,34 +1160,223 @@ button:disabled,
 }
 
 
-/* Liquid Glass design finish: opaque content, glass reserved for floating chrome. */
-:root { --radius-card: 20px; --radius-control: 12px; --button-height: 46px; --input-height: 48px; }
-.dark { --bg: #111114; --bg-elev: #1c1c20; --ink: #f5f5f7; --ink-2: #a1a1a6; --ink-3: #8e8e93; --glass: #1c1c20; --glass-strong: #232327; --glass-soft: rgba(255,255,255,.07); --stroke: rgba(255,255,255,.15); --stroke-dim: rgba(255,255,255,.1); }
-.glass { background: var(--bg-elev); border-color: var(--stroke-dim); border-radius: var(--radius-card); box-shadow: 0 2px 10px rgba(29,29,31,.035); }
-.glass-strong { background: #fff; border-color: rgba(29,29,31,.12); border-radius: 22px; box-shadow: 0 10px 32px rgba(29,29,31,.1), inset 0 1px rgba(255,255,255,.72); }
-@supports ((backdrop-filter: blur(12px)) or (-webkit-backdrop-filter: blur(12px))) { .glass-strong { background: rgba(255,255,255,.82); backdrop-filter: blur(16px) saturate(1.35); -webkit-backdrop-filter: blur(16px) saturate(1.35); } }
-.dark .glass-strong { background: #232327; border-color: rgba(255,255,255,.12); }
-@supports ((backdrop-filter: blur(12px)) or (-webkit-backdrop-filter: blur(12px))) { .dark .glass-strong { background: rgba(35,35,39,.86); } }
-.desktop-sidebar { background: var(--bg-elev) !important; }
-.desktop-side-link.is-active { background: var(--accent-soft); color: var(--accent); }
-.dashboard-hero { box-shadow: 0 14px 34px -24px rgba(0,122,255,.45); }
-:where(button,a,input,select,textarea,[tabindex]):focus-visible { outline-color: var(--accent); }
-@media (prefers-reduced-motion: reduce) { *,*::before,*::after { animation-duration: .01ms !important; animation-iteration-count: 1 !important; transition-duration: .01ms !important; scroll-behavior: auto !important; } }
+/* ==========================================================================
+   iOS 26 Liquid Glass material
+   --------------------------------------------------------------------------
+   Apple's HIG is explicit that Liquid Glass belongs to the *floating
+   navigation/control layer only* — never to content, and never stacked on
+   other glass. These three roles encode exactly that split:
 
-.nav-slide-pill { background: var(--accent-soft); }
-.nav-pill[aria-current="page"] { color: var(--accent); }
+     .glass-strong  floating chrome: bottom nav capsule, sheets/dialogs,
+                    toasts, desktop toolbar. Gets real lensing (blur +
+                    saturation), a specular top highlight and an adaptive
+                    shadow. The nav matches iOS 26's inset floating capsule.
+     .glass         content surface: cards, rows, lists. Deliberately opaque —
+                    glass on content muddles hierarchy and costs GPU.
+     .glass-soft    a quiet nested fill for chips/controls inside content.
+
+   Glass is GPU-heavy, so lensing is limited to a few chrome surfaces rather
+   than hundreds of list rows, and shaved down on touch devices.
+   ========================================================================== */
+
+:root {
+  --radius-card: 20px;
+  --radius-control: 12px;
+  --button-height: 46px;
+  --input-height: 48px;
+
+  /* Regular-variant glass, light appearance. */
+  --glass-strong-bg: rgba(255, 255, 255, 0.70);
+  --glass-strong-border: rgba(255, 255, 255, 0.70);
+  --glass-strong-rim: rgba(29, 29, 31, 0.10);
+  --glass-specular: inset 0 1px 0 rgba(255, 255, 255, 0.78);
+  --glass-shadow: 0 1px 2px rgba(21, 21, 21, 0.04), 0 14px 36px -20px rgba(21, 21, 21, 0.30);
+  --glass-blur: blur(24px) saturate(1.8);
+}
+
+.dark {
+  --bg: #111114;
+  --bg-elev: #1c1c20;
+  --ink: #f5f5f7;
+  --ink-2: #a1a1a6;
+  --ink-3: #8e8e93;
+  --glass: #1c1c20;
+  --glass-strong: #232327;
+  --glass-soft: rgba(255, 255, 255, 0.07);
+  --stroke: rgba(255, 255, 255, 0.15);
+  --stroke-dim: rgba(255, 255, 255, 0.10);
+
+  --glass-strong-bg: rgba(38, 38, 43, 0.68);
+  --glass-strong-border: rgba(255, 255, 255, 0.16);
+  --glass-strong-rim: rgba(255, 255, 255, 0.11);
+  --glass-specular: inset 0 1px 0 rgba(255, 255, 255, 0.13);
+  --glass-shadow: 0 1px 2px rgba(0, 0, 0, 0.30), 0 18px 44px -22px rgba(0, 0, 0, 0.72);
+}
+
+/* --- Content surface: intentionally opaque ------------------------------- */
+.glass {
+  background: var(--bg-elev);
+  border: 1px solid var(--stroke-dim);
+  border-radius: var(--radius-card);
+  box-shadow: 0 2px 10px rgba(29, 29, 31, 0.035);
+  contain: layout style;
+}
+
+.dark .glass {
+  box-shadow: 0 2px 10px rgba(0, 0, 0, 0.22);
+}
+
+/* --- Floating chrome: the Liquid Glass layer ----------------------------- */
+.glass-strong {
+  background: var(--glass-strong);
+  border: 1px solid var(--glass-strong-rim);
+  border-radius: 22px;
+  box-shadow: var(--glass-specular), var(--glass-shadow);
+  contain: layout style;
+}
+
+/* Progressive enhancement: take on real lensing only where backdrop-filter
+   works. The declarations above stay a complete solid fallback. */
+@supports ((-webkit-backdrop-filter: blur(1px)) or (backdrop-filter: blur(1px))) {
+  .glass-strong {
+    background: var(--glass-strong-bg);
+    border-color: var(--glass-strong-border);
+    -webkit-backdrop-filter: var(--glass-blur);
+    backdrop-filter: var(--glass-blur);
+  }
+}
+
+/* --- Quiet nested fill inside content ------------------------------------ */
+.glass-soft {
+  background: var(--glass-soft);
+  border: 1px solid var(--stroke-dim);
+}
+
+/* Accessibility: iOS adapts glass to Reduce Transparency by frosting it much
+   harder. Mirror that so text never fights the content behind it. */
+@media (prefers-reduced-transparency: reduce) {
+  .glass-strong {
+    background: var(--bg-elev);
+    border-color: var(--stroke);
+    -webkit-backdrop-filter: none;
+    backdrop-filter: none;
+  }
+}
+
+/* Higher contrast: firm the rim and drop lensing so the control layer
+   stays unambiguously distinct from content. */
+@media (prefers-contrast: more) {
+  .glass-strong {
+    background: var(--bg-elev);
+    border-color: var(--stroke);
+    -webkit-backdrop-filter: none;
+    backdrop-filter: none;
+  }
+}
+
+/* --- Chrome layer placement ---------------------------------------------- */
+.desktop-sidebar { background: var(--bg-elev) !important; }
+.desktop-toolbar { background: var(--bg) !important; }
+.desktop-side-link.is-active { background: var(--accent-soft); color: var(--accent); }
+
+/* --- Bottom navigation: iOS 26 inset floating capsule -------------------- */
+/* The <nav> is only the positioning wrapper; the visible glass is its inner
+   capsule, so the wrapper stays free of surface styling. */
+.bottom-navigation { background: transparent; box-shadow: none; }
 .bottom-navigation.is-keyboard-open { display: none; }
-.bottom-navigation { background: transparent !important; box-shadow: none !important; backdrop-filter: none !important; -webkit-backdrop-filter: none !important; }
 .bottom-navigation > div { min-height: 64px; }
 .nav-bottom-offset { bottom: calc(0.65rem + env(safe-area-inset-bottom, 0px)); }
+.nav-slide-pill { background: var(--accent-soft); }
+.nav-pill[aria-current="page"] { color: var(--accent); }
+
+/* --- Sheets and dialogs -------------------------------------------------- */
+/* Blur is sampled by the panel itself; the backdrop button behind it only
+   dims. The panel's own safe-area padding keeps content off the gesture bar. */
+.sheet-dialog-panel {
+  background: var(--glass-strong);
+  border-color: var(--glass-strong-rim);
+  max-height: min(86dvh, 720px);
+  box-shadow: var(--glass-specular), 0 18px 56px rgba(29, 29, 31, 0.16);
+  padding-bottom: env(safe-area-inset-bottom, 0px);
+}
+
+@supports ((-webkit-backdrop-filter: blur(1px)) or (backdrop-filter: blur(1px))) {
+  .sheet-dialog-panel {
+    background: var(--glass-strong-bg);
+    border-color: var(--glass-strong-border);
+    -webkit-backdrop-filter: var(--glass-blur);
+    backdrop-filter: var(--glass-blur);
+  }
+}
+
+@media (prefers-reduced-transparency: reduce) {
+  .sheet-dialog-panel {
+    background: var(--bg-elev);
+    -webkit-backdrop-filter: none;
+    backdrop-filter: none;
+  }
+}
+
 .app-page-viewport { padding-bottom: 1rem; }
-.sheet-dialog-panel { max-height: min(86dvh, 720px); }
-.dashboard-hero { background: var(--bg-elev) !important; color: var(--ink) !important; box-shadow: 0 8px 28px -22px rgba(0,122,255,.38); }
-.dashboard-hero::after { border-color: rgba(0,102,204,.16) !important; box-shadow: 0 0 0 18px rgba(0,102,204,.035), 0 0 0 38px rgba(0,102,204,.025) !important; }
-.dark .dashboard-hero::after { border-color: rgba(122,176,255,.22) !important; box-shadow: 0 0 0 18px rgba(122,176,255,.045), 0 0 0 38px rgba(122,176,255,.03) !important; }
-.glass-strong { box-shadow: 0 8px 24px rgba(29,29,31,.08), inset 0 1px rgba(255,255,255,.72); }
-@media (pointer: coarse) and (max-width: 640px) { @supports ((backdrop-filter: blur(1px)) or (-webkit-backdrop-filter: blur(1px))) { .glass-strong { backdrop-filter: blur(12px) saturate(1.2); -webkit-backdrop-filter: blur(12px) saturate(1.2); } } }
 
+/* --- Focus, motion and the dashboard focal card -------------------------- */
+:where(button, a, input, select, textarea, [tabindex]):focus-visible { outline-color: var(--accent); }
 
-.sheet-dialog-panel { background: var(--bg-elev); border-color: var(--stroke); box-shadow: 0 18px 56px rgba(29,29,31,.16); backdrop-filter: none; -webkit-backdrop-filter: none; }
-.dark .sheet-dialog-panel { background: var(--bg-elev); border-color: var(--stroke); }
+/* The dashboard hero is the single tinted focal card. It stays opaque (it is
+   content, not chrome) and carries one soft accent bloom instead of the old
+   hard shadow, which read as a dull grey rectangle on the light surface. */
+.dashboard-hero {
+  background: var(--bg-elev) !important;
+  color: var(--ink) !important;
+  box-shadow: 0 10px 30px -24px rgba(0, 122, 255, 0.38);
+}
+
+/* The decorative ring was originally drawn in white against a dark hero. Now
+   that the hero is a light surface, a white ring reads as a bright blob, so it
+   becomes a faint accent glow instead — present, but never competing with the
+   headline number. Geometry is declared once; the small-screen block above no
+   longer has to be overridden. */
+.dashboard-hero::after {
+  content: "" !important;
+  position: absolute !important;
+  top: -46px !important;
+  right: -32px !important;
+  width: 132px !important;
+  height: 132px !important;
+  border: 0 !important;
+  border-radius: 50% !important;
+  box-shadow: none !important;
+  background: radial-gradient(
+    circle at center,
+    rgba(0, 122, 255, 0.07) 0%,
+    rgba(0, 122, 255, 0.045) 42%,
+    rgba(0, 122, 255, 0.018) 62%,
+    transparent 74%
+  );
+  pointer-events: none;
+}
+.dark .dashboard-hero::after {
+  background: radial-gradient(
+    circle at center,
+    rgba(122, 176, 255, 0.11) 0%,
+    rgba(122, 176, 255, 0.07) 42%,
+    rgba(122, 176, 255, 0.03) 62%,
+    transparent 74%
+  );
+}
+
+/* Touch devices: a shallower blur is far cheaper and still reads as glass. */
+@media (pointer: coarse) {
+  :root { --glass-blur: blur(16px) saturate(1.6); }
+}
+
+/* One authoritative reduced-motion rule. iOS gates every kinetic glass
+   effect (morphs, bounces) behind Reduce Motion. */
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after {
+    animation-duration: .01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: .01ms !important;
+    scroll-behavior: auto !important;
+  }
+}

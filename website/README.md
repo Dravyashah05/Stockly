@@ -2,7 +2,7 @@
 
 Independent responsive inventory website. It owns its UI, navigation,
 forms, browser routes, API client facade, and build output. Shared account,
-API, and inventory state code lives in the neutral `../src/shared/` domain
+API, and inventory state code lives in the neutral `../shared/` domain
 layer; the website imports no files from `mobile-app/`. Both frontends call
 the same `/api/*` backend routes.
 

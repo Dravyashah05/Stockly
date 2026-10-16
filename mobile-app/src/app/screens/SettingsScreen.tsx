@@ -137,7 +137,7 @@ export default function SettingsScreen() {
   };
 
   // ---- App update (top of Settings) ----
-  // Primary source is the published GitHub release (see src/shared/releases.ts);
+  // Primary source is the published GitHub release (see shared/releases.ts);
   // a hosted version.json manifest is still honoured when configured.
   type UpdateStatus = 'idle' | 'checking' | 'uptodate' | 'available' | 'error';
   const [updStatus, setUpdStatus] = useState<UpdateStatus>('idle');

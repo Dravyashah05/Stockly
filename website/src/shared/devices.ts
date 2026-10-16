@@ -1,1 +1,1 @@
-export * from '../../../src/shared/devices';
+export * from '../../../shared/devices';

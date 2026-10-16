@@ -496,7 +496,7 @@ function Features() {
 /* ---------------- store / download ---------------- */
 
 /* ---------------- store / download ----------------
- * Live release data comes from GitHub Releases (see src/shared/releases.ts):
+ * Live release data comes from GitHub Releases (see shared/releases.ts):
  * no committed APKs, no invented versions. History links to real releases. */
 
 function Store() {

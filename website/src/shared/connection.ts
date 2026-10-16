@@ -1,1 +1,1 @@
-export * from '../../../src/shared/connection';
+export * from '../../../shared/connection';
