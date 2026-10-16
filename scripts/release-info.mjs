@@ -23,12 +23,12 @@ const rootDir = join(here, '..');
 
 export function readVersions(root = rootDir) {
   const pkg = JSON.parse(readFileSync(join(root, 'package.json'), 'utf8'));
-  const gradle = readFileSync(join(root, 'mobile/android/app/build.gradle'), 'utf8');
+  const gradle = readFileSync(join(root, 'mobile-app/android/app/build.gradle'), 'utf8');
   const code = gradle.match(/versionCode\s+(\d+)/)?.[1];
   const name = gradle.match(/versionName\s+"([^"]+)"/)?.[1];
   if (!pkg.version) throw new Error('package.json has no version.');
   if (!code || !name) {
-    throw new Error('Could not read versionCode/versionName from mobile/android/app/build.gradle.');
+    throw new Error('Could not read versionCode/versionName from mobile-app/android/app/build.gradle.');
   }
   return { appVersion: String(pkg.version), versionCode: Number(code), versionName: String(name) };
 }

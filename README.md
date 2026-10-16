@@ -26,6 +26,9 @@ npm run dev:admin        # owner console, http://localhost:3002
 npm run dev:all          # start the backend and all three frontends together
 ```
 
+On Windows, double-click [`run-all.bat`](run-all.bat) to start the same four
+services in one command window. Press Ctrl+C to stop them.
+
 The app, website, and admin Vite servers proxy `/api/*` to the one backend.
 Set `STOCKLY_API_URL` if the backend is not at `http://localhost:5000`.
 For separate deployments, set public `VITE_API_BASE_URL` to the shared backend

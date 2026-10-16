@@ -1,5 +1,11 @@
 import type { CapacitorConfig } from '@capacitor/cli';
 
+// NOTE: scheme/cleartext must match the backend protocol in
+// mobile-app/.env (VITE_API_BASE_URL), otherwise Android blocks sync:
+// - http:// backend (same-WiFi LAN testing) → 'http' + cleartext true (set below)
+// - https:// backend (production)          → 'https' + cleartext false
+// This file must stay import-free (only `import type`): the Capacitor CLI
+// loads it through a CJS interop loader that breaks on runtime imports.
 const config: CapacitorConfig = {
   appId: 'com.stockly.inventory',
   appName: 'Stockly',
@@ -8,14 +14,14 @@ const config: CapacitorConfig = {
   backgroundColor: '#f7f7f2',
   android: {
     // Custom native-project location (default would be ./android).
-    path: 'mobile/android',
+    path: 'mobile-app/android',
     allowMixedContent: false,
     captureInput: true,
     webContentsDebuggingEnabled: false,
   },
   server: {
-    androidScheme: 'https',
-    cleartext: false,
+    androidScheme: 'http',
+    cleartext: true,
   },
   plugins: {
     SplashScreen: {

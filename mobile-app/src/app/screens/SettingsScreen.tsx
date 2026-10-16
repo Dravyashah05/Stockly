@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { Suspense, lazy, useEffect, useState } from 'react';
 import {
   CheckCircle2,
   ChevronRight,
@@ -24,7 +24,9 @@ import { useStore } from '../../shared/store';
 import type { Category, UserProfile } from '../../shared/types';
 import { getCachedProfile, refreshMyProfile, signOutAccount } from '../../shared/users';
 import { sheetsApi } from '../../shared/connection';
-import LinkedDevicesScreen from './LinkedDevicesScreen';
+// Rarely-opened device-linking page (pulls react-qr-code + scanner UI):
+// split out so opening Settings stays light. Preloaded on hover/tap below.
+const LinkedDevicesScreen = lazy(() => import('./LinkedDevicesScreen'));
 import { SheetSetupScreen } from './AccessScreens';
 import { Confirm, Field, Header, Sheet, BrandMark, inputCls } from '../components/ui';
 
@@ -843,18 +845,28 @@ export default function SettingsScreen() {
       {/* Linked devices */}
       {devicesOpen ? (
         <div className="fixed inset-0 z-40 overflow-y-auto bg-(--bg)">
-          <LinkedDevicesScreen
-            onBack={() => setDevicesOpen(false)}
-            notify={notify}
-            initialMode={devicesMode}
-            onLinked={() => {
-              void refreshMyProfile().then((p) => {
-                if (p) setProfile(p);
-                setDevicesOpen(false);
-                void refresh();
-              });
-            }}
-          />
+          <Suspense
+            fallback={
+              <div className="mx-auto max-w-md space-y-3 p-4" aria-label="Loading device linking">
+                <div className="h-14 animate-pulse rounded-2xl bg-(--accent-soft)" />
+                <div className="h-40 animate-pulse rounded-[26px] bg-(--accent-soft)" />
+                <div className="h-24 animate-pulse rounded-[26px] bg-(--accent-soft)" />
+              </div>
+            }
+          >
+            <LinkedDevicesScreen
+              onBack={() => setDevicesOpen(false)}
+              notify={notify}
+              initialMode={devicesMode}
+              onLinked={() => {
+                void refreshMyProfile().then((p) => {
+                  if (p) setProfile(p);
+                  setDevicesOpen(false);
+                  void refresh();
+                });
+              }}
+            />
+          </Suspense>
         </div>
       ) : null}
 

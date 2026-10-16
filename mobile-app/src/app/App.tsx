@@ -63,7 +63,7 @@ function Shell() {
   const showSync = !overlayOpen && (pendingIds.length > 0 || failedOps.length > 0);
 
   /* Branded startup loader: shows on every cold start for a minimum
-   *  brand moment (~1.5s) while screens mount + fetch underneath. Cached
+   *  brand moment (~1s) while screens mount + fetch underneath. Cached
    *  screens are usable immediately after; uncached first installs keep
    *  the loader until the initial request settles. A 12s safety forces it
    *  away on hung networks — the app behind shows skeletons/offline
@@ -77,7 +77,7 @@ function Shell() {
     return () => window.clearTimeout(t);
   }, []);
   useEffect(() => {
-    const t = window.setTimeout(() => setMinElapsed(true), 1500);
+    const t = window.setTimeout(() => setMinElapsed(true), 1000);
     return () => window.clearTimeout(t);
   }, []);
   const dataReady = ready || !configured;

@@ -1,6 +1,6 @@
 # Android project
 
-The native Android project is in `mobile/android/`; web assets are generated
+The native Android project is in `mobile-app/android/`; web assets are generated
 into `mobile-app/dist/` from the dedicated customer app frontend. Required
 Gradle source and wrapper files are committed. Generated assets, Gradle
 caches, build outputs, and `local.properties` are ignored.
@@ -18,7 +18,7 @@ npm run cap:open
 Build a local debug APK from PowerShell with:
 
 ```powershell
-Set-Location mobile/android
+Set-Location mobile-app/android
 .\gradlew.bat assembleDebug
 ```
 

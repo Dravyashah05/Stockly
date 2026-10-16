@@ -27,10 +27,10 @@ dist-ssr
 mobile-app/.env
 admin/.env
 server/.env
-mobile/android/local.properties
-mobile/android/.gradle
-mobile/android/app/build
-mobile/android/build
+mobile-app/android/local.properties
+mobile-app/android/.gradle
+mobile-app/android/app/build
+mobile-app/android/build
 
 # Editor directories and files
 .vscode/*

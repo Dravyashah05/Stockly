@@ -10,7 +10,8 @@ Stockly/
 ├── mobile-app/             # customer mobile app UI; Vite + Capacitor frontend
 │   ├── src/app/             # mobile shell, screens, components
 │   ├── src/shared/          # customer API client, types, auth and sync layer
-│   └── capacitor.config.ts  # points to ../mobile/android
+│   ├── capacitor.config.ts  # points to android/
+│   └── android/             # Capacitor native project and Gradle source
 ├── website/                # separate responsive inventory website
 │   ├── src/website.tsx      # website-only shell, pages and forms
 │   ├── src/website.css      # website-only styling
@@ -19,7 +20,6 @@ Stockly/
 ├── server/                 # one Express transport adapter, default :5000
 ├── api/                    # canonical auth, inventory, device and admin handlers
 ├── apps-script/            # existing Google Sheets integration
-├── mobile/android/         # Capacitor native project and Gradle source
 ├── tests/                  # backend logic and compatibility tests
 ├── docs/                   # setup and architecture documentation
 └── src/ + root HTML/Vite   # retained legacy marketing/store build during migration

@@ -11,7 +11,7 @@ compatibility modules in `src/shared/`.
 npm --prefix server run dev  # shared API on :5000
 npm --prefix mobile-app run dev # browser app on :3001
 npm run build:mobile         # Capacitor bundle at mobile-app/dist
-npm run cap:sync             # sync into mobile/android
+npm run cap:sync             # sync into mobile-app/android
 npm run android:build        # app build + Android sync
 ```
 
