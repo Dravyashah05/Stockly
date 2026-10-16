@@ -51,7 +51,7 @@ export function initials(name: string): string {
 export type Tone = 'ink' | 'green' | 'amber' | 'rose' | 'sky' | 'violet';
 
 export const TONE_TILE: Record<Tone, string> = {
-  ink: 'bg-[#151515] text-[#C7FF4D] dark:bg-[#C7FF4D] dark:text-[#151515]',
+  ink: 'bg-(--primary) text-white dark:bg-(--primary) dark:text-[#151515]',
   green: 'bg-emerald-500/12 text-emerald-600 dark:text-emerald-300',
   amber: 'bg-amber-500/15 text-amber-600 dark:text-amber-300',
   rose: 'bg-rose-500/12 text-rose-600 dark:text-rose-300',

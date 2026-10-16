@@ -100,7 +100,7 @@ export default function ProductsScreen({
           <button
             onClick={onAdd}
             aria-label="Add product"
-            className="press flex h-10 w-10 shrink-0 items-center justify-center rounded-2xl bg-[#151515] text-white dark:bg-[#C7FF4D] dark:text-[#151515]"
+            className="press flex h-10 w-10 shrink-0 items-center justify-center rounded-2xl bg-(--primary) text-white dark:bg-(--primary) dark:text-[#151515]"
           >
             <Plus size={20} />
           </button>
@@ -527,7 +527,7 @@ function DetailPage({
           {(p.description || '').trim() ? (
             <div className="product-detail-desc glass rounded-[26px] p-5">
               <p className="mb-1.5 flex items-center gap-2 text-[12px] font-bold uppercase tracking-wider text-(--ink-2)">
-                <span aria-hidden="true" className="h-3 w-1 rounded-full bg-[#C7FF4D]" />
+                <span aria-hidden="true" className="h-3 w-1 rounded-full bg-[#007AFF]" />
                 Description
               </p>
               <p className="whitespace-pre-wrap break-words text-[14.5px] leading-relaxed text-(--ink)">{p.description}</p>
@@ -538,7 +538,7 @@ function DetailPage({
           <div className="product-detail-history glass rounded-[26px] p-4">
             <div className="mb-2 flex items-center justify-between gap-2">
               <p className="flex items-center gap-2 text-[12px] font-bold uppercase tracking-wider text-(--ink-2)">
-                <span aria-hidden="true" className="h-3 w-1 rounded-full bg-[#C7FF4D]" />
+                <span aria-hidden="true" className="h-3 w-1 rounded-full bg-[#007AFF]" />
                 Stock history{history.length > 0 ? ` · ${history.length}` : ''}
               </p>
               {history.length > 0 ? (
@@ -597,14 +597,14 @@ function DetailPage({
             <button
               type="button"
               onClick={onStockIn}
-              className="press flex min-h-[48px] items-center justify-center gap-1.5 rounded-[20px] bg-[#151515] py-3.5 text-[14.5px] font-bold text-white dark:bg-[#C7FF4D] dark:text-[#151515]"
+              className="press flex min-h-[48px] items-center justify-center gap-1.5 rounded-[20px] bg-(--primary) py-3.5 text-[14.5px] font-bold text-white dark:bg-(--primary) dark:text-[#151515]"
             >
               <ArrowDownToLine size={16} /> Stock In
             </button>
             <button
               type="button"
               onClick={onStockOut}
-              className="press flex min-h-[48px] items-center justify-center gap-1.5 rounded-[20px] bg-[#151515] py-3.5 text-[14.5px] font-bold text-white dark:bg-[#C7FF4D] dark:text-[#151515]"
+              className="press flex min-h-[48px] items-center justify-center gap-1.5 rounded-[20px] bg-(--accent-soft) py-3.5 text-[14.5px] font-bold text-(--accent)"
             >
               <ArrowUpFromLine size={16} /> Stock Out
             </button>

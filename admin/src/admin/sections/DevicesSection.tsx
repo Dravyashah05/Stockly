@@ -108,7 +108,7 @@ export default function DevicesSection({ notify }: { notify: (t: string, k?: 'su
           <Field label="User ID">
             <input value={userId} onChange={(e) => setUserId(e.target.value)} placeholder="usr_…" autoCapitalize="off" autoCorrect="off" className={inputCls} />
           </Field>
-          <button type="submit" disabled={busy || !userId.trim()} className="press flex min-h-[48px] w-full items-center justify-center gap-2 rounded-2xl bg-[#151515] text-[14px] font-extrabold text-white disabled:opacity-50 dark:bg-[#C7FF4D] dark:text-[#151515]">
+          <button type="submit" disabled={busy || !userId.trim()} className="press flex min-h-[48px] w-full items-center justify-center gap-2 rounded-2xl bg-(--primary) text-[14px] font-extrabold text-white disabled:opacity-50 dark:bg-(--primary) dark:text-[#151515]">
             {busy ? <Loader2 size={16} className="animate-spin" /> : null}
             {busy ? 'Loading…' : 'Look up devices'}
           </button>

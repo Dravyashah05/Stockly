@@ -187,7 +187,7 @@ export default function StockSheet({
             aria-hidden="true"
             className={`absolute inset-y-1.5 left-1.5 w-[calc(50%-6px)] rounded-full transition-transform duration-300 ${
               isIn ? 'translate-x-0' : 'translate-x-full'
-            } bg-[#151515] dark:bg-[#C7FF4D]`}
+            } bg-(--primary) dark:bg-(--primary)`}
           />
           {(
             [
@@ -204,7 +204,7 @@ export default function StockSheet({
                 onClick={() => switchMode(o.m)}
                 className={`relative z-[1] flex items-center justify-center gap-2 rounded-full py-2.5 text-[13.5px] font-extrabold transition-colors ${
                   active
-                    ? 'text-[#C7FF4D] dark:text-[#151515]'
+                    ? 'text-white dark:text-[#151515]'
                     : 'text-(--ink-2) hover:text-(--ink)'
                 }`}
               >
@@ -300,7 +300,7 @@ export default function StockSheet({
                   type="button"
                   onClick={() => bump(1)}
                   aria-label="Increase quantity"
-                  className="press flex h-11 w-11 shrink-0 items-center justify-center rounded-full bg-[#151515] text-[#C7FF4D] transition-transform hover:scale-105 active:scale-95 dark:bg-[#C7FF4D] dark:text-[#151515]"
+                  className="press flex h-11 w-11 shrink-0 items-center justify-center rounded-full bg-(--primary) text-white transition-transform hover:scale-105 active:scale-95 dark:bg-(--primary) dark:text-[#151515]"
                 >
                   <Plus size={18} />
                 </button>
@@ -350,7 +350,7 @@ export default function StockSheet({
                       aria-pressed={reason === r}
                       className={`press flex items-center gap-1.5 rounded-full px-3.5 py-2 text-[13px] font-bold transition-colors ${
                         reason === r
-                          ? 'bg-[#151515] text-[#C7FF4D] dark:bg-[#C7FF4D] dark:text-[#151515]'
+                          ? 'bg-(--primary) text-white dark:bg-(--primary) dark:text-[#151515]'
                           : 'bg-(--glass-soft) text-(--ink-2) hover:text-(--ink)'
                       }`}
                     >

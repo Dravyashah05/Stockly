@@ -12,7 +12,7 @@ const config: CapacitorConfig = {
   // Mobile frontend bundle built by this package's `build` script (outDir `dist`).
   // Keep the native Android project alongside this mobile app.
   webDir: 'dist',
-  backgroundColor: '#f7f7f2',
+  backgroundColor: '#F5F5F7',
   android: {
     path: 'android',
     allowMixedContent: false,
@@ -27,7 +27,7 @@ const config: CapacitorConfig = {
     SplashScreen: {
       launchShowDuration: 1200,
       launchAutoHide: false,
-      backgroundColor: '#F7F7F2',
+      backgroundColor: '#F5F5F7',
       showSpinner: false,
       androidScaleType: 'CENTER_CROP',
       splashFullScreen: true,
@@ -35,10 +35,12 @@ const config: CapacitorConfig = {
     },
     StatusBar: {
       style: 'LIGHT',
-      backgroundColor: '#f7f7f2',
+      backgroundColor: '#F5F5F7',
     },
     Keyboard: {
-      resize: 'native',
+      // Keep this import-free for Capacitor's config loader while satisfying
+      // the plugin's string-enum TypeScript definition.
+      resize: 'native' as import('@capacitor/keyboard').KeyboardResize,
       resizeOnFullScreen: true,
     },
   },

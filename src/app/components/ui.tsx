@@ -119,7 +119,7 @@ export const Header = memo(function Header({
       <div className="mx-auto flex max-w-md items-center gap-3">
         <div className="min-w-0 flex-1">
           <h1 className="flex items-center gap-2 text-[22px] font-extrabold leading-tight tracking-tight text-(--ink)">
-            <span aria-hidden="true" className="h-[18px] w-[5px] shrink-0 rounded-full bg-[#C7FF4D]" />
+            <span aria-hidden="true" className="h-[18px] w-[5px] shrink-0 rounded-full bg-[#007AFF]" />
             <span className="min-w-0 truncate">{title}</span>
           </h1>
           {subtitle ? (
@@ -174,11 +174,11 @@ export const BottomNav = memo(function BottomNav({ tab, setTab }: { tab: TabKey;
   return (
     <nav className="bottom-navigation nav-bottom-offset fixed inset-x-0 z-30 px-4">
       <div className="glass-strong relative mx-auto grid max-w-md grid-cols-4 gap-0.5 rounded-[28px] p-1.5">
-        {/* Sliding active pill — solid ink (lime in dark mode). */}
+        {/* The selected tab uses a soft accent surface to keep the glass bar light. */}
         {pill ? (
           <span
             aria-hidden="true"
-            className="nav-slide-pill absolute left-0 top-1.5 rounded-[22px] bg-(--primary)"
+            className="nav-slide-pill absolute left-0 top-1.5 rounded-[22px] bg-(--accent-soft)"
             style={{ width: pill.w, height: pill.h, transform: `translateX(${pill.x}px)` }}
           />
         ) : null}
@@ -195,7 +195,7 @@ export const BottomNav = memo(function BottomNav({ tab, setTab }: { tab: TabKey;
               aria-label={t.label}
               aria-current={active ? 'page' : undefined}
               className={`nav-pill relative z-[1] flex min-h-[56px] flex-col items-center justify-center gap-1 rounded-[22px] text-[10.5px] font-semibold ${
-                active ? 'text-(--primary-foreground)' : 'text-(--ink-3)'
+                active ? 'text-(--accent)' : 'text-(--ink-3)'
               }`}
             >
               <span className={active ? 'animate-pop-in' : ''}>{t.icon}</span>
@@ -675,7 +675,7 @@ export const SyncStatus = memo(function SyncStatus({
             <button
               type="button"
               onClick={() => onRetry(f.key)}
-              className="press flex min-h-[44px] items-center justify-center gap-1.5 rounded-2xl bg-[#151515] text-[13.5px] font-extrabold text-white dark:bg-[#C7FF4D] dark:text-[#151515]"
+              className="press flex min-h-[44px] items-center justify-center gap-1.5 rounded-2xl bg-(--primary) text-[13.5px] font-extrabold text-white dark:bg-(--primary) dark:text-[#151515]"
             >
               <RotateCcw size={16} /> Retry
             </button>
@@ -749,13 +749,13 @@ export function AppLoader({ status, fading }: { status: string; fading?: boolean
         fading ? 'pointer-events-none opacity-0' : 'opacity-100'
       }`}
     >
-      <span className="animate-pop-in flex h-20 w-20 items-center justify-center rounded-[26px] bg-[#151515] text-[#C7FF4D]">
+      <span className="animate-pop-in flex h-20 w-20 items-center justify-center rounded-[26px] bg-(--primary) text-white">
         <BrandMark size={38} />
       </span>
       <h1 className="mt-5 text-[26px] font-extrabold tracking-tight text-(--ink)">Stockly</h1>
       <p className="mt-1 text-[13px] font-medium text-(--ink-2)">Small-business inventory</p>
       <div className="mt-7 h-1.5 w-44 overflow-hidden rounded-full bg-(--stroke-dim)" aria-hidden="true">
-        <div className="loader-bar h-full w-2/5 rounded-full bg-[#151515] dark:bg-[#C7FF4D]" />
+        <div className="loader-bar h-full w-2/5 rounded-full bg-(--primary) dark:bg-(--primary)" />
       </div>
       <p className="tnum mt-3.5 text-[12.5px] font-semibold text-(--ink-2)">{status}</p>
     </div>

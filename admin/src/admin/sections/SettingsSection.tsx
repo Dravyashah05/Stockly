@@ -77,7 +77,7 @@ export default function SettingsSection({ notify }: { notify: (t: string, k?: 's
           <Field label="Value">
             <input value={value} onChange={(e) => setValue(e.target.value)} placeholder="Value" className={inputCls} />
           </Field>
-          <button type="submit" disabled={busy || !key.trim()} className="press flex min-h-[48px] w-full items-center justify-center gap-2 rounded-2xl bg-[#151515] text-[14px] font-extrabold text-white disabled:opacity-50 dark:bg-[#C7FF4D] dark:text-[#151515]">
+          <button type="submit" disabled={busy || !key.trim()} className="press flex min-h-[48px] w-full items-center justify-center gap-2 rounded-2xl bg-(--primary) text-[14px] font-extrabold text-white disabled:opacity-50 dark:bg-(--primary) dark:text-[#151515]">
             {busy ? <Loader2 size={16} className="animate-spin" /> : null}
             {busy ? 'Saving…' : 'Save setting'}
           </button>

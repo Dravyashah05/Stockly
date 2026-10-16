@@ -285,27 +285,25 @@ export default function SettingsScreen() {
       <Header title="Settings" subtitle={`Stockly v${APP_VERSION}`} />
 
       <div className="settings-content mx-auto max-w-md space-y-5 px-4 pt-4">
-        {/* App identity — premium dark hero */}
-        <div className="relative overflow-hidden rounded-[28px] bg-[#111210] p-5 text-white">
-          <div aria-hidden="true" className="pointer-events-none absolute -right-20 -top-24 h-64 w-64 rounded-full bg-white/[0.07] blur-3xl" />
-          <div aria-hidden="true" className="pointer-events-none absolute -bottom-24 -left-16 h-56 w-56 rounded-full bg-white/10 blur-3xl" />
+        {/* App identity */}
+        <div className="glass relative overflow-hidden rounded-[28px] p-5">
           <div className="relative flex items-center gap-3.5">
-            <span className="flex h-14 w-14 shrink-0 items-center justify-center rounded-[20px] bg-[#C7FF4D] text-[#151515]">
+            <span className="flex h-14 w-14 shrink-0 items-center justify-center rounded-[20px] bg-(--accent-soft) text-(--accent)">
               <BrandMark size={32} />
             </span>
             <div className="min-w-0 flex-1">
               <p className="text-[18px] font-extrabold leading-tight tracking-tight">Stockly</p>
-              <p className="text-[12px] font-medium text-white/60">Inventory on Google Sheets · v{APP_VERSION}</p>
-              <span className="mt-1.5 inline-flex items-center gap-1.5 rounded-full px-2.5 py-1 text-[11px] font-extrabold bg-white/10 text-white/80">
-                <span className="h-1.5 w-1.5 rounded-full bg-[#C7FF4D]" />
+              <p className="text-[12px] font-medium text-(--ink-2)">Inventory on Google Sheets · v{APP_VERSION}</p>
+              <span className="mt-1.5 inline-flex items-center gap-1.5 rounded-full bg-(--accent-soft) px-2.5 py-1 text-[11px] font-extrabold text-(--accent)">
+                <span className="h-1.5 w-1.5 rounded-full bg-[#007AFF]" />
                 Signed in
               </span>
             </div>
           </div>
-          <div className="tnum relative mt-4 grid grid-cols-1 gap-2 border-t border-white/10 pt-3">
-            <div className="rounded-2xl bg-white/[0.07] px-3 py-2.5">
+          <div className="tnum relative mt-4 grid grid-cols-1 gap-2 border-t border-(--stroke-dim) pt-3">
+            <div className="rounded-2xl bg-(--glass-soft) px-3 py-2.5">
               <p className="text-[17px] font-extrabold leading-none">{String(products.length)}</p>
-              <p className="mt-1 text-[11px] font-semibold text-white/60">Products</p>
+              <p className="mt-1 text-[11px] font-semibold text-(--ink-2)">Products</p>
             </div>
           </div>
         </div>
@@ -313,7 +311,7 @@ export default function SettingsScreen() {
         {/* App update — version check against the hosted manifest */}
         <section className="glass rounded-[24px] p-4">
           <div className="flex items-center gap-3">
-            <span className="flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl bg-[#EAEAE4] text-[#151515] dark:bg-white/10 dark:text-[#C7FF4D]">
+            <span className="flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl bg-(--glass-soft) text-(--ink-2)">
               <Download size={20} />
             </span>
             <span className="min-w-0 flex-1">
@@ -328,7 +326,7 @@ export default function SettingsScreen() {
               </span>
             </span>
             {updStatus === 'available' ? (
-              <span className="shrink-0 rounded-full bg-[#151515] px-2.5 py-1 text-[11px] font-extrabold text-[#C7FF4D] dark:bg-[#C7FF4D] dark:text-[#151515]">
+              <span className="shrink-0 rounded-full bg-(--primary) px-2.5 py-1 text-[11px] font-extrabold text-white dark:bg-(--primary) dark:text-[#151515]">
                 New
               </span>
             ) : null}
@@ -345,7 +343,7 @@ export default function SettingsScreen() {
                 href={updApk}
                 target="_blank"
                 rel="noreferrer"
-                className="press flex min-h-[52px] items-center justify-center gap-1.5 rounded-2xl bg-[#151515] text-[15px] font-extrabold text-white dark:bg-[#C7FF4D] dark:text-[#151515]"
+                className="press flex min-h-[52px] items-center justify-center gap-1.5 rounded-2xl bg-(--primary) text-[15px] font-extrabold text-white dark:bg-(--primary) dark:text-[#151515]"
               >
                 <Download size={16} /> Download v{updLatest}
               </a>
@@ -384,7 +382,7 @@ export default function SettingsScreen() {
             onClick={() => setCloudOpen(true)}
             className="press flex w-full items-center gap-3 text-left"
           >
-            <span className="flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl bg-[#EAEAE4] text-[#151515] dark:bg-white/10 dark:text-[#C7FF4D]">
+            <span className="flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl bg-(--glass-soft) text-(--ink-2)">
               <Cloud size={20} />
             </span>
             <span className="min-w-0 flex-1">
@@ -409,7 +407,7 @@ export default function SettingsScreen() {
             onClick={() => setAccountOpen(true)}
             className="press flex w-full items-center gap-3 text-left"
           >
-            <span className="flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl bg-[#EAEAE4] text-[#151515] dark:bg-white/10 dark:text-[#C7FF4D]">
+            <span className="flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl bg-(--glass-soft) text-(--ink-2)">
               <UserIcon size={20} />
             </span>
             <span className="min-w-0 flex-1">
@@ -429,7 +427,7 @@ export default function SettingsScreen() {
             onClick={() => { setDevicesMode('manage'); setDevicesOpen(true); }}
             className="press flex w-full items-center gap-3 text-left"
           >
-            <span className="flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl bg-[#EAEAE4] text-[#151515] dark:bg-white/10 dark:text-[#C7FF4D]">
+            <span className="flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl bg-(--glass-soft) text-(--ink-2)">
               <Link2 size={20} />
             </span>
             <span className="min-w-0 flex-1">
@@ -450,7 +448,7 @@ export default function SettingsScreen() {
             rel="noreferrer"
             className="press flex w-full items-center gap-3 text-left"
           >
-            <span className="flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl bg-[#EAEAE4] text-[#151515] dark:bg-white/10 dark:text-[#C7FF4D]">
+            <span className="flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl bg-(--glass-soft) text-(--ink-2)">
               <ShieldCheck size={20} />
             </span>
             <span className="min-w-0 flex-1">
@@ -470,7 +468,7 @@ export default function SettingsScreen() {
             onClick={() => setCatListOpen(true)}
             className="press flex w-full items-center gap-3 text-left"
           >
-            <span className="flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl bg-[#EAEAE4] text-[#151515] dark:bg-white/10 dark:text-[#C7FF4D]">
+            <span className="flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl bg-(--glass-soft) text-(--ink-2)">
               <Tag size={20} />
             </span>
             <span className="min-w-0 flex-1">
@@ -490,7 +488,7 @@ export default function SettingsScreen() {
             </button>
             <button
               onClick={() => { setEditingCat(null); setQuickCat(''); setCatError(''); setCatListOpen(true); }}
-              className="press flex min-h-[48px] items-center justify-center gap-1 rounded-2xl bg-[#151515] text-[14px] font-extrabold text-white dark:bg-[#C7FF4D] dark:text-[#151515]"
+              className="press flex min-h-[48px] items-center justify-center gap-1 rounded-2xl bg-(--primary) text-[14px] font-extrabold text-white dark:bg-(--primary) dark:text-[#151515]"
             >
               <Plus size={16} /> Add
             </button>
@@ -500,7 +498,7 @@ export default function SettingsScreen() {
         {/* Sync status — durable outbox at a glance */}
         <section className="glass rounded-[24px] p-4">
           <div className="flex items-center gap-3">
-            <span className="flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl bg-[#EAEAE4] text-[#151515] dark:bg-white/10 dark:text-[#C7FF4D]">
+            <span className="flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl bg-(--glass-soft) text-(--ink-2)">
               <RefreshCw size={20} className={refreshing ? 'animate-spin' : ''} />
             </span>
             <span className="min-w-0 flex-1">
@@ -522,7 +520,7 @@ export default function SettingsScreen() {
                 type="button"
                 onClick={() => void retryAll()}
                 disabled={syncBusy}
-                className="press mt-2.5 flex min-h-[48px] w-full items-center justify-center gap-1.5 rounded-2xl bg-[#151515] text-[14px] font-extrabold text-white disabled:opacity-50 dark:bg-[#C7FF4D] dark:text-[#151515]"
+                className="press mt-2.5 flex min-h-[48px] w-full items-center justify-center gap-1.5 rounded-2xl bg-(--primary) text-[14px] font-extrabold text-white disabled:opacity-50 dark:bg-(--primary) dark:text-[#151515]"
               >
                 <RefreshCw size={16} className={syncBusy ? 'animate-spin' : ''} />
                 {syncBusy ? 'Retrying…' : `Retry all (${failedCount})`}
@@ -543,7 +541,7 @@ export default function SettingsScreen() {
         {/* Appearance — compact card matching Cloud style */}
         <section className="glass rounded-[20px] p-3">
           <div className="flex items-center gap-2.5 px-1 pb-2.5">
-            <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-2xl bg-[#EAEAE4] text-[#151515] dark:bg-white/10 dark:text-[#C7FF4D]">
+            <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-2xl bg-(--glass-soft) text-(--ink-2)">
               <Sun size={18} />
             </span>
             <div className="min-w-0 flex-1">
@@ -563,7 +561,7 @@ export default function SettingsScreen() {
                   aria-pressed={active}
                   className={`press flex items-center justify-center gap-1.5 rounded-xl px-2 py-2.5 text-[12.5px] font-extrabold transition ${
                     active
-                      ? 'bg-[#151515] text-white dark:bg-[#C7FF4D] dark:text-[#151515]'
+                      ? 'bg-(--primary) text-white dark:bg-(--primary) dark:text-[#151515]'
                       : 'text-(--ink-2) hover:bg-(--accent-soft)/50'
                   }`}
                 >
@@ -578,7 +576,7 @@ export default function SettingsScreen() {
         {/* Data & about */}
         <section className="glass rounded-[24px] p-4">
           <div className="flex items-start gap-3">
-            <span className="flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl bg-[#EAEAE4] text-[#151515] dark:bg-white/10 dark:text-[#C7FF4D]">
+            <span className="flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl bg-(--glass-soft) text-(--ink-2)">
               <Database size={20} />
             </span>
             <p className="text-[13px] leading-relaxed text-(--ink-2)">
@@ -587,7 +585,7 @@ export default function SettingsScreen() {
           </div>
           <div className="mt-3 overflow-hidden rounded-[18px] bg-(--glass-soft)">
             <div className="flex w-full items-center gap-3 px-3.5 py-3.5">
-              <span className="flex h-9 w-9 items-center justify-center rounded-xl bg-[#EAEAE4] text-[#151515] dark:bg-white/10 dark:text-[#C7FF4D]">
+              <span className="flex h-9 w-9 items-center justify-center rounded-xl bg-(--glass-soft) text-(--ink-2)">
                 <ShieldCheck size={16} />
               </span>
               <span className="flex-1 text-[14px] font-bold text-(--ink)">Version</span>
@@ -658,7 +656,7 @@ export default function SettingsScreen() {
           <button
             type="button"
             onClick={() => { setCloudOpen(false); setSheetChangeOpen(true); }}
-            className="press flex min-h-[52px] w-full items-center justify-center gap-1.5 rounded-2xl bg-[#151515] text-[15px] font-extrabold text-white dark:bg-[#C7FF4D] dark:text-[#151515]"
+            className="press flex min-h-[52px] w-full items-center justify-center gap-1.5 rounded-2xl bg-(--primary) text-[15px] font-extrabold text-white dark:bg-(--primary) dark:text-[#151515]"
           >
             Change sheet
           </button>
@@ -717,7 +715,7 @@ export default function SettingsScreen() {
           <button
             type="submit"
             disabled={quickBusy}
-            className="press flex min-h-11 items-center gap-1.5 rounded-xl bg-[#151515] px-4 text-[13px] font-extrabold text-white disabled:opacity-50 dark:bg-[#C7FF4D] dark:text-[#151515]"
+            className="press flex min-h-11 items-center gap-1.5 rounded-xl bg-(--primary) px-4 text-[13px] font-extrabold text-white disabled:opacity-50 dark:bg-(--primary) dark:text-[#151515]"
           >
             {quickBusy ? 'Saving…' : editingCat ? 'Save category' : 'Add category'}
           </button>

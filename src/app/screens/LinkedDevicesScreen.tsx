@@ -191,7 +191,7 @@ function ManageDevices({
           type="button"
           onClick={() => void enroll()}
           disabled={busy}
-          className="press min-h-[52px] w-full rounded-2xl bg-[#151515] text-[15px] font-extrabold text-white disabled:opacity-50 dark:bg-[#C7FF4D] dark:text-[#151515]"
+          className="press min-h-[52px] w-full rounded-2xl bg-(--primary) text-[15px] font-extrabold text-white disabled:opacity-50 dark:bg-(--primary) dark:text-[#151515]"
         >
           {busy ? 'Checking…' : 'Enroll this device'}
         </button>
@@ -206,7 +206,7 @@ function ManageDevices({
       <button
         type="button"
         onClick={onLinkDevice}
-        className="press flex min-h-[56px] w-full items-center justify-center gap-2 rounded-2xl bg-[#151515] text-[15px] font-extrabold text-white dark:bg-[#C7FF4D] dark:text-[#151515]"
+        className="press flex min-h-[56px] w-full items-center justify-center gap-2 rounded-2xl bg-(--primary) text-[15px] font-extrabold text-white dark:bg-(--primary) dark:text-[#151515]"
       >
         <Link2 size={17} /> Link a Device
       </button>
@@ -406,7 +406,7 @@ function LinkADevice({ notify, onDone }: { notify: (t: string, k?: 'success' | '
           type="button"
           onClick={() => void create(method)}
           disabled={busy}
-          className="press flex min-h-[52px] w-full items-center justify-center gap-1.5 rounded-2xl bg-[#151515] text-[15px] font-extrabold text-white disabled:opacity-50 dark:bg-[#C7FF4D] dark:text-[#151515]"
+          className="press flex min-h-[52px] w-full items-center justify-center gap-1.5 rounded-2xl bg-(--primary) text-[15px] font-extrabold text-white disabled:opacity-50 dark:bg-(--primary) dark:text-[#151515]"
         >
           <QrCode size={16} /> {busy ? 'Generating…' : method === 'qr' ? 'Show QR code' : 'Generate code'}
         </button>
@@ -816,7 +816,7 @@ function LinkExistingAccount({
             type="button"
             onClick={submitCode}
             disabled={busy}
-            className="press mt-3 min-h-[52px] w-full rounded-2xl bg-[#151515] text-[15px] font-extrabold text-white disabled:opacity-50 dark:bg-[#C7FF4D] dark:text-[#151515]"
+            className="press mt-3 min-h-[52px] w-full rounded-2xl bg-(--primary) text-[15px] font-extrabold text-white disabled:opacity-50 dark:bg-(--primary) dark:text-[#151515]"
           >
             {busy ? 'Verifying…' : 'Verify code'}
           </button>
@@ -866,14 +866,14 @@ export default function LinkedDevicesScreen({
           <button
             type="button"
             onClick={() => setMode('manage')}
-            className={`press min-h-[44px] rounded-xl text-[13px] font-extrabold ${mode === 'manage' ? 'bg-[#151515] text-white dark:bg-[#C7FF4D] dark:text-[#151515]' : 'bg-(--glass-soft) text-(--ink-2)'}`}
+            className={`press min-h-[44px] rounded-xl text-[13px] font-extrabold ${mode === 'manage' ? 'bg-(--primary) text-white dark:bg-(--primary) dark:text-[#151515]' : 'bg-(--glass-soft) text-(--ink-2)'}`}
           >
             My devices
           </button>
           <button
             type="button"
             onClick={() => setMode('link')}
-            className={`press min-h-[44px] rounded-xl text-[13px] font-extrabold ${mode === 'link' ? 'bg-[#151515] text-white dark:bg-[#C7FF4D] dark:text-[#151515]' : 'bg-(--glass-soft) text-(--ink-2)'}`}
+            className={`press min-h-[44px] rounded-xl text-[13px] font-extrabold ${mode === 'link' ? 'bg-(--primary) text-white dark:bg-(--primary) dark:text-[#151515]' : 'bg-(--glass-soft) text-(--ink-2)'}`}
           >
             Link Existing Account
           </button>
@@ -888,7 +888,7 @@ export default function LinkedDevicesScreen({
           !hasAccount && !getDeviceSession() ? (
             <div className="glass rounded-[24px] p-4">
               <p className="text-[13.5px] text-(--ink-2)">Register or sign in on this device first — it becomes the primary linked device.</p>
-              <button type="button" onClick={() => setMode('link')} className="press mt-3 min-h-[52px] w-full rounded-2xl bg-[#151515] text-[15px] font-extrabold text-white dark:bg-[#C7FF4D] dark:text-[#151515]">
+              <button type="button" onClick={() => setMode('link')} className="press mt-3 min-h-[52px] w-full rounded-2xl bg-(--primary) text-[15px] font-extrabold text-white dark:bg-(--primary) dark:text-[#151515]">
                 Link Existing Account instead
               </button>
             </div>

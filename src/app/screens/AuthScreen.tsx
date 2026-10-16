@@ -51,10 +51,10 @@ export default function AuthScreen({ onAuthed }: { onAuthed: () => void }) {
   return (
     <div className="app-page-viewport mx-auto max-w-md pb-10">
       <div className="mx-auto max-w-md space-y-5 px-4 pt-8">
-        <div className="relative overflow-hidden rounded-[28px] bg-[#111210] p-5 text-white">
+        <div className="relative overflow-hidden rounded-[28px] bg-[#111114] p-5 text-white">
           <div aria-hidden="true" className="pointer-events-none absolute -right-20 -top-24 h-64 w-64 rounded-full bg-white/[0.07] blur-3xl" />
           <div className="relative flex items-center gap-3.5">
-            <span className="flex h-14 w-14 shrink-0 items-center justify-center rounded-[20px] bg-[#C7FF4D] text-[#151515]">
+            <span className="flex h-14 w-14 shrink-0 items-center justify-center rounded-[20px] bg-[#007AFF] text-[#151515]">
               <BrandMark size={32} />
             </span>
             <div className="min-w-0 flex-1">
@@ -137,7 +137,7 @@ export default function AuthScreen({ onAuthed }: { onAuthed: () => void }) {
           <button
             type="submit"
             disabled={busy || !valid}
-            className="press min-h-[52px] w-full rounded-2xl bg-[#151515] text-[15px] font-extrabold text-white disabled:opacity-50 dark:bg-[#C7FF4D] dark:text-[#151515]"
+            className="press min-h-[52px] w-full rounded-2xl bg-(--primary) text-[15px] font-extrabold text-white disabled:opacity-50 dark:bg-(--primary) dark:text-[#151515]"
           >
             {busy ? (mode === 'register' ? 'Creating account…' : 'Signing in…') : mode === 'register' ? 'Create account' : 'Sign in'}
           </button>

@@ -101,10 +101,10 @@ function Gate({ onAuthed }: { onAuthed: () => void }) {
     <div className="mx-auto grid w-full max-w-4xl gap-0 overflow-hidden rounded-[28px] border border-(--stroke-dim) bg-(--glass) shadow-[var(--card-shadow)] md:grid-cols-2">
       {/* Brand panel */}
       <div className="relative overflow-hidden bg-[#111210] p-7 text-white md:p-9">
-        <div aria-hidden="true" className="pointer-events-none absolute -right-24 -top-28 h-72 w-72 rounded-full bg-[#C7FF4D]/10 blur-3xl" />
+        <div aria-hidden="true" className="pointer-events-none absolute -right-24 -top-28 h-72 w-72 rounded-full bg-[#007AFF]/10 blur-3xl" />
         <div aria-hidden="true" className="pointer-events-none absolute -bottom-28 -left-20 h-64 w-64 rounded-full bg-white/10 blur-3xl" />
         <div className="relative">
-          <span className="flex h-13 w-13 items-center justify-center rounded-[20px] bg-[#C7FF4D] p-3 text-[#151515]">
+          <span className="flex h-13 w-13 items-center justify-center rounded-[20px] bg-[#007AFF] p-3 text-[#151515]">
             <BrandMark size={30} />
           </span>
           <h1 className="mt-5 text-[26px] font-extrabold leading-tight tracking-tight">Stockly Admin</h1>
@@ -116,7 +116,7 @@ function Gate({ onAuthed }: { onAuthed: () => void }) {
               { icon: <ScrollText size={15} />, text: 'Every change lands in the audit log' },
             ].map((r) => (
               <li key={r.text} className="flex items-center gap-2.5">
-                <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-xl bg-white/10 text-[#C7FF4D]">{r.icon}</span>
+                <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-xl bg-white/10 text-white">{r.icon}</span>
                 {r.text}
               </li>
             ))}
@@ -185,7 +185,7 @@ function Gate({ onAuthed }: { onAuthed: () => void }) {
             </div>
           </Field>
           {error ? <p role="alert" className="text-[12.5px] font-semibold text-rose-600 dark:text-rose-300">{error}</p> : null}
-          <button type="submit" disabled={busy} className="press flex min-h-[52px] w-full items-center justify-center gap-2 rounded-2xl bg-[#151515] text-[15px] font-extrabold text-white disabled:opacity-50 dark:bg-[#C7FF4D] dark:text-[#151515]">
+          <button type="submit" disabled={busy} className="press flex min-h-[52px] w-full items-center justify-center gap-2 rounded-2xl bg-(--primary) text-[15px] font-extrabold text-white disabled:opacity-50 dark:bg-(--primary) dark:text-[#151515]">
             {busy ? <Loader2 size={17} className="animate-spin" /> : <ShieldCheck size={17} />}
             {busy ? 'Checking…' : mode === 'bootstrap' ? 'Create owner' : 'Sign in'}
           </button>
@@ -207,7 +207,7 @@ function NavButton({ active, onClick, icon, label }: { active: boolean; onClick:
       onClick={onClick}
       aria-current={active ? 'page' : undefined}
       className={`press flex w-full items-center gap-3 rounded-2xl px-3.5 py-3 text-[13.5px] font-extrabold transition ${
-        active ? 'bg-[#151515] text-white dark:bg-[#C7FF4D] dark:text-[#151515]' : 'text-(--ink-2) hover:bg-(--glass-soft) hover:text-(--ink)'
+        active ? 'bg-(--primary) text-white dark:bg-(--primary) dark:text-[#151515]' : 'text-(--ink-2) hover:bg-(--glass-soft) hover:text-(--ink)'
       }`}
     >
       <span className="shrink-0">{icon}</span>
@@ -233,7 +233,7 @@ export default function AdminScreen({ onBack, notify }: { onBack?: () => void; n
       {/* Desktop sidebar */}
       <aside className="relative z-[1] hidden border-r border-(--stroke-dim) bg-(--glass) lg:sticky lg:top-0 lg:flex lg:h-dvh lg:flex-col lg:px-4 lg:py-6">
         <div className="flex items-center gap-2.5 px-2">
-          <span className="flex h-10 w-10 items-center justify-center rounded-2xl bg-[#151515] text-[#C7FF4D] dark:bg-[#C7FF4D] dark:text-[#151515]">
+          <span className="flex h-10 w-10 items-center justify-center rounded-2xl bg-(--primary) text-white dark:bg-(--primary) dark:text-[#151515]">
             <BrandMark size={22} />
           </span>
           <span className="min-w-0">
@@ -284,7 +284,7 @@ export default function AdminScreen({ onBack, notify }: { onBack?: () => void; n
                 <ArrowLeft size={18} />
               </button>
             ) : null}
-            <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-2xl bg-[#151515] text-[#C7FF4D] dark:bg-[#C7FF4D] dark:text-[#151515]">
+            <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-2xl bg-(--primary) text-white dark:bg-(--primary) dark:text-[#151515]">
               <BrandMark size={20} />
             </span>
             <div className="min-w-0 flex-1">
@@ -305,7 +305,7 @@ export default function AdminScreen({ onBack, notify }: { onBack?: () => void; n
                   type="button"
                   onClick={() => setSection(s.key)}
                   aria-current={section === s.key ? 'page' : undefined}
-                  className={`press flex shrink-0 items-center gap-1.5 rounded-xl px-3 py-2 text-[12.5px] font-extrabold ${section === s.key ? 'bg-[#151515] text-white dark:bg-[#C7FF4D] dark:text-[#151515]' : 'bg-(--glass-soft) text-(--ink-2)'}`}
+                  className={`press flex shrink-0 items-center gap-1.5 rounded-xl px-3 py-2 text-[12.5px] font-extrabold ${section === s.key ? 'bg-(--primary) text-white dark:bg-(--primary) dark:text-[#151515]' : 'bg-(--glass-soft) text-(--ink-2)'}`}
                 >
                   <s.icon size={14} />
                   {s.label}

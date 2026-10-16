@@ -76,16 +76,16 @@ export default function HomeScreen({
         label: 'Stock In',
         sub: 'Receive goods',
         icon: <ArrowDownToLine size={20} />,
-        grad: 'bg-[#151515] dark:bg-[#C7FF4D]',
-        iconCls: 'text-[#C7FF4D] dark:text-[#151515]',
+        grad: 'bg-(--primary) dark:bg-(--primary)',
+        iconCls: 'text-white dark:text-[#101114]',
         onClick: onStockIn,
       },
       {
         label: 'Stock Out',
         sub: 'Sell / issue goods',
         icon: <ArrowUpFromLine size={20} />,
-        grad: 'bg-[#151515] dark:bg-[#C7FF4D]',
-        iconCls: 'text-[#C7FF4D] dark:text-[#151515]',
+        grad: 'bg-(--accent-soft)',
+        iconCls: 'text-(--accent)',
         onClick: onStockOut,
       },
     ],
@@ -168,7 +168,7 @@ export default function HomeScreen({
       <div className="dashboard-content mx-auto max-w-md space-y-5 px-4 pt-4">
         {/* Greeting — compact header with Add button */}
         <div className="dashboard-greeting px-1 pt-1">
-          <span className="inline-flex items-center gap-1.5 rounded-full bg-[#151515] px-3 py-1 text-[11px] font-bold uppercase tracking-wider text-[#F7F7F2] dark:bg-[#C7FF4D] dark:text-[#151515]">
+          <span className="inline-flex items-center gap-1.5 rounded-full bg-(--primary) px-3 py-1 text-[11px] font-bold uppercase tracking-wider text-white dark:bg-(--primary) dark:text-[#151515]">
             <span className={`h-1.5 w-1.5 rounded-full ${online ? 'bg-emerald-500' : 'bg-amber-500'}`} />
             {today}
           </span>
@@ -181,7 +181,7 @@ export default function HomeScreen({
               onClick={onAddProduct}
               aria-label="Add product"
               title="Add product"
-              className="press flex min-h-11 shrink-0 items-center justify-center gap-2 rounded-xl bg-[#151515] px-3 text-[13px] font-bold text-white dark:bg-[#C7FF4D] dark:text-[#151515] sm:px-4"
+              className="press flex min-h-11 shrink-0 items-center justify-center gap-2 rounded-xl bg-(--primary) px-3 text-[13px] font-bold text-white dark:bg-(--primary) dark:text-[#151515] sm:px-4"
             >
               <PackagePlus size={19} /><span>Add Product</span>
             </button>
@@ -242,10 +242,10 @@ export default function HomeScreen({
         ) : (
           <>
             {/* Primary inventory metric */}
-            <div className="dashboard-hero relative overflow-hidden rounded-[24px] bg-[#151515] p-5 text-white dark:bg-[#C7FF4D] dark:text-[#151515]">
+            <div className="dashboard-hero relative overflow-hidden rounded-[24px] border border-(--stroke-dim) bg-(--bg-elev) p-5 text-(--ink)">
               <div className="relative flex items-end justify-between gap-3">
                 <div className="min-w-0">
-                  <p className="text-[11px] font-extrabold uppercase tracking-[0.18em] text-white/60 dark:text-[#151515]/65">
+                  <p className="text-[11px] font-extrabold uppercase tracking-[0.18em] text-(--ink-2)">
                     Total stock units
                   </p>
                   <p className="tnum mt-2 truncate text-[clamp(2.25rem,7vw,4.5rem)] font-extrabold leading-[0.95] tracking-[-0.06em]">
@@ -253,7 +253,7 @@ export default function HomeScreen({
                   </p>
                 </div>
               </div>
-              <p className="relative mt-3 border-t border-white/15 pt-3 text-[12px] font-semibold text-white/65 dark:border-[#151515]/15 dark:text-[#151515]/65">Across your catalogue</p>
+              <p className="relative mt-3 border-t border-(--stroke-dim) pt-3 text-[12px] font-semibold text-(--ink-2)">Across your catalogue</p>
             </div>
 
             {/* Uneven metrics give urgent stock levels a faster visual read. */}
@@ -276,7 +276,7 @@ export default function HomeScreen({
             <div className="dashboard-attention">
               <div className="mb-2.5 flex items-center justify-between px-1">
                 <p className="flex items-center gap-2 text-[13px] font-extrabold uppercase tracking-wider text-(--ink-2)">
-                  <span aria-hidden="true" className="h-3 w-1 rounded-full bg-[#C7FF4D]" />
+                  <span aria-hidden="true" className="h-3 w-1 rounded-full bg-[#007AFF]" />
                   Needs attention
                   {stats.lowStockItems.length > 0 ? (
                     <span className="tnum rounded-full bg-rose-500/12 px-2 py-0.5 text-[11px] font-extrabold text-rose-600 dark:text-rose-300">
@@ -329,7 +329,7 @@ export default function HomeScreen({
             <div className="dashboard-activity">
               <div className="mb-2.5 flex items-center justify-between px-1">
                 <p className="flex items-center gap-2 text-[13px] font-extrabold uppercase tracking-wider text-(--ink-2)">
-                  <span aria-hidden="true" className="h-3 w-1 rounded-full bg-[#C7FF4D]" />
+                  <span aria-hidden="true" className="h-3 w-1 rounded-full bg-[#007AFF]" />
                   Recent activity
                 </p>
                 <button type="button" onClick={goHistory} className="press flex items-center gap-0.5 text-xs font-extrabold text-(--accent)">

@@ -325,7 +325,7 @@ function TxDetailPage({ t, onClose, onSelect }: { t: StockTransaction; onClose: 
           {product ? (
             <div className="mt-3 lg:col-span-2 lg:mt-0">
               <p className="mb-2 flex items-center gap-2 px-1 text-[13px] font-extrabold uppercase tracking-wider text-(--ink-2)">
-                <span aria-hidden="true" className="h-3 w-1 rounded-full bg-[#C7FF4D]" />
+                <span aria-hidden="true" className="h-3 w-1 rounded-full bg-[#007AFF]" />
                 Product info
               </p>
               <div className="glass divide-y divide-(--stroke-dim) rounded-[26px] px-4 py-1">
@@ -343,7 +343,7 @@ function TxDetailPage({ t, onClose, onSelect }: { t: StockTransaction; onClose: 
           {related.length > 0 ? (
             <div className="mt-3 lg:col-span-2 lg:mt-0">
               <p className="mb-2 flex items-center gap-2 px-1 text-[13px] font-extrabold uppercase tracking-wider text-(--ink-2)">
-                <span aria-hidden="true" className="h-3 w-1 rounded-full bg-[#C7FF4D]" />
+                <span aria-hidden="true" className="h-3 w-1 rounded-full bg-[#007AFF]" />
                 More for this product
               </p>
               <div className="glass divide-y divide-(--stroke-dim) rounded-[26px] px-1.5 py-1">

@@ -163,7 +163,7 @@ export default function AuthScreen({ onAuthed }: { onAuthed: () => void }) {
       <div className="relative z-[1] mx-auto flex min-h-dvh w-full max-w-md flex-col px-4 pb-8 pt-10 sm:justify-center sm:py-12">
         {/* Brand hero */}
         <div className="animate-page-in flex flex-col items-center text-center">
-          <span className="flex h-16 w-16 items-center justify-center rounded-[22px] bg-[#151515] text-[#C7FF4D] shadow-[var(--card-shadow)] dark:bg-[#C7FF4D] dark:text-[#151515]">
+          <span className="flex h-16 w-16 items-center justify-center rounded-[22px] bg-(--primary) text-white shadow-[var(--card-shadow)] dark:bg-(--primary) dark:text-[#151515]">
             <BrandMark size={34} />
           </span>
           <p className="mt-4 text-[11px] font-extrabold uppercase tracking-[0.22em] text-(--ink-3)">Stockly</p>
@@ -298,7 +298,7 @@ export default function AuthScreen({ onAuthed }: { onAuthed: () => void }) {
           <button
             type="submit"
             disabled={busy || !valid}
-            className="press group flex min-h-[54px] w-full items-center justify-center gap-2 rounded-2xl bg-[#151515] text-[15px] font-extrabold text-white disabled:opacity-50 dark:bg-[#C7FF4D] dark:text-[#151515]"
+            className="press group flex min-h-[54px] w-full items-center justify-center gap-2 rounded-2xl bg-(--primary) text-[15px] font-extrabold text-white disabled:opacity-50 dark:bg-(--primary) dark:text-[#151515]"
           >
             {busy ? (
               <Loader2 size={17} className="animate-spin" />

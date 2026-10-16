@@ -64,7 +64,7 @@ export default function RolesSection({ notify }: { notify: (t: string, k?: 'succ
         <div className="admin-card divide-y divide-(--stroke-dim)">
           {admins.map((a) => (
             <div key={a.adminId} className="flex flex-wrap items-center gap-3 px-4 py-3.5 sm:px-5">
-              <span className={`flex h-10 w-10 shrink-0 items-center justify-center rounded-2xl ${a.role === 'owner' ? 'bg-[#151515] text-[#C7FF4D] dark:bg-[#C7FF4D] dark:text-[#151515]' : 'bg-(--accent-soft) text-(--ink)'}`}>
+              <span className={`flex h-10 w-10 shrink-0 items-center justify-center rounded-2xl ${a.role === 'owner' ? 'bg-(--primary) text-white dark:bg-(--primary) dark:text-[#151515]' : 'bg-(--accent-soft) text-(--ink)'}`}>
                 {a.role === 'owner' ? <Crown size={17} /> : <KeyRound size={17} />}
               </span>
               <span className="min-w-0 flex-1 basis-40">
