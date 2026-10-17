@@ -203,17 +203,16 @@ function Shell() {
   }, []);
 
   return (
-    <div className="min-h-dvh bg-(--bg) text-(--ink)">
-      <div className="ambient" aria-hidden="true" />
-      <div className="app-shell relative z-[1] mx-auto min-h-dvh w-full max-w-[560px]">
+    <div className="min-h-dvh bg-(--surface) text-(--on-surface)">
+      <div className="relative z-[1] mx-auto min-h-dvh w-full max-w-[34rem]">
         {!configured ? (
-          <div className="backend-banner safe-top sticky top-0 z-20 px-3 pt-3">
+          <div className="safe-top sticky top-0 z-20 px-4 pt-3">
             <button
               onClick={() => setTab('settings')}
-              className="glass mx-auto flex w-full max-w-md items-center gap-2.5 rounded-[var(--radius-control)] border-(--warning)/25 px-4 py-3 text-left"
+              className="card-outlined state-tint flex w-full items-center gap-2.5 rounded-[var(--shape-md)] px-4 py-3 text-left"
             >
-              <CloudOff size={18} className="shrink-0 text-(--warning)" />
-              <span className="flex-1 text-[length:var(--fs-footnote)] font-medium text-(--ink)">
+              <CloudOff size={18} className="shrink-0 text-(--warning-strong)" />
+              <span className="flex-1 text-[length:var(--fs-body-md)] font-medium text-(--on-surface)">
                 Backend not connected — tap to paste your Apps Script URL.
               </span>
             </button>
@@ -229,10 +228,9 @@ function Shell() {
           onTouchStart={onSwipeStart}
           onTouchEnd={onSwipeEnd}
           onTouchCancel={onSwipeCancel}
-          className="swipe-zone"
         >
         {tab === 'home' ? (
-          <div className="animate-page-in">
+          <div className="animate-screen-in">
             <HomeScreen
               onAddProduct={openAdd}
               onStockIn={stockInHome}
@@ -246,7 +244,7 @@ function Shell() {
         ) : null}
         <Suspense fallback={null}>
           {tab === 'products' ? (
-            <div key={productFilter} className="animate-page-in">
+            <div key={productFilter} className="animate-screen-in">
               <ProductsScreen
                 initialFilter={productFilter}
                 onAdd={openAdd}
@@ -257,12 +255,12 @@ function Shell() {
             </div>
           ) : null}
           {tab === 'history' ? (
-            <div className="animate-page-in">
+            <div className="animate-screen-in">
               <HistoryScreen />
             </div>
           ) : null}
           {tab === 'settings' ? (
-            <div className="animate-page-in">
+            <div className="animate-screen-in">
               <SettingsScreen />
             </div>
           ) : null}
@@ -406,9 +404,7 @@ function Gate() {
 
   if (phase.name === 'loading') {
     return (
-      <div className="min-h-dvh bg-(--bg) text-(--ink)">
-        <div className="ambient" aria-hidden="true" />
-      </div>
+      <div className="min-h-dvh bg-(--surface) text-(--on-surface)" />
     );
   }
   if (phase.name === 'login') {

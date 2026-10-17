@@ -1,5 +1,5 @@
-import { ensureSchemaCached } from './schema.ts';
-import { applyApiCors } from './cors.ts';
+import { ensureSchemaCached } from './schema.js';
+import { applyApiCors } from './cors.js';
 /* Stockly account-auth API (Vercel serverless, server-side only).
  *
  * Email/password sign-in, verified HERE. Passwords are hashed with scrypt
@@ -11,7 +11,7 @@ import { applyApiCors } from './cors.ts';
  *   AUTH_SESSION_SECRET   HMAC secret for auth session tokens.
  */
 
-import { adminScriptConfigured, scriptAppendRow, scriptReadTab, scriptUpdateRowById } from './apps-script-client.ts';
+import { adminScriptConfigured, scriptAppendRow, scriptReadTab, scriptUpdateRowById } from './apps-script-client.js';
 import {
   AUTH_SESSION_TTL_MS,
   AUTH_TABS,
@@ -29,9 +29,9 @@ import {
   verifyPassword,
   type AuthStore,
   type AuthUser,
-} from './auth-logic.ts';
-import { hashEqual, sha256hex } from './device-logic.ts';
-import { mergeRegistryUser } from './admin-logic.ts';
+} from './auth-logic.js';
+import { hashEqual, sha256hex } from './device-logic.js';
+import { mergeRegistryUser } from './admin-logic.js';
 
 type QueryValue = string | string[] | undefined;
 

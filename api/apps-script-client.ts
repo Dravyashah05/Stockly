@@ -7,7 +7,7 @@
  * or the token — it only talks to the /api/* routes.
  */
 
-import { isUpstreamTimeout, upstreamSignal } from './upstream.ts';
+import { isUpstreamTimeout, upstreamSignal } from './upstream.js';
 
 function scriptUrl(): string {
   return (process.env.ADMIN_SCRIPT_URL || '').trim();

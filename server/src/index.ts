@@ -42,12 +42,12 @@ dotenv.config({ path: path.resolve(here, '../.env') });
 dotenv.config({ path: path.resolve(here, '../../.env') });
 
 // Canonical handlers — the single implementation (also used by Vercel).
-import adminHandler from '../../api/admin.ts';
-import authHandler from '../../api/auth.ts';
-import devicesHandler from '../../api/devices.ts';
-import sheetsHandler from '../../api/sheets.ts';
-import stocklyHandler from '../../api/stockly.ts';
-import { applyApiCors } from '../../api/cors.ts';
+import adminHandler from '../../api/admin.js';
+import authHandler from '../../api/auth.js';
+import devicesHandler from '../../api/devices.js';
+import sheetsHandler from '../../api/sheets.js';
+import stocklyHandler from '../../api/stockly.js';
+import { applyApiCors } from '../../api/cors.js';
 
 type VercelQuery = Record<string, string | string[] | undefined>;
 type VercelHeaders = Record<string, string | string[] | undefined>;
@@ -152,9 +152,8 @@ export function createApp(): express.Express {
   app.all('/api/users', auth);
   app.all('/api/inventory', sheets);
 
-  // eslint-disable-next-line @typescript-eslint/no-unused-vars
   app.use((err: unknown, _req: Request, res: Response, _next: NextFunction) => {
-    console.error('[stockly-server] unhandled error');
+    console.error('[stockly-server] unhandled error:', err);
     if (!res.headersSent) res.status(500).json({ success: false, error: 'Internal server error.' });
   });
 

@@ -11,6 +11,7 @@ const DEFAULT_ORIGINS = [
   'http://localhost',
   'https://localhost',
   'capacitor://localhost',
+  'https://stocklybydns.vercel.app',
 ];
 
 /** Apply the same exact-origin CORS policy to Vercel and Express handlers. */

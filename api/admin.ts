@@ -1,5 +1,5 @@
-import { ensureSchemaCached } from './schema.ts';
-import { applyApiCors } from './cors.ts';
+import { ensureSchemaCached } from './schema.js';
+import { applyApiCors } from './cors.js';
 /* Stockly private-admin API (Vercel serverless, server-side only).
  *
  * Storage goes through the bound Apps Script project
@@ -25,8 +25,8 @@ import { applyApiCors } from './cors.ts';
  *   AppSettings key,value,updatedAt
  */
 
-import { adminScriptConfigured, scriptAppendRow, scriptReadTab, scriptUpdateRowById } from './apps-script-client.ts';
-import { RateLimiter } from './device-logic.ts';
+import { adminScriptConfigured, scriptAppendRow, scriptReadTab, scriptUpdateRowById } from './apps-script-client.js';
+import { RateLimiter } from './device-logic.js';
 import {
   ADMIN_TABS,
   buildLogEntry,
@@ -52,7 +52,7 @@ import {
   type AdminStore,
   type AdminUser,
   type RegistryUser,
-} from './admin-logic.ts';
+} from './admin-logic.js';
 
 type QueryValue = string | string[] | undefined;
 

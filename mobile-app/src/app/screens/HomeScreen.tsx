@@ -76,16 +76,16 @@ export default function HomeScreen({
         label: 'Stock In',
         sub: 'Receive goods',
         icon: <ArrowDownToLine size={20} />,
-        // Primary intent = filled accent; the inverse action is a tinted
-        // surface so the two never compete for attention.
-        tileCls: 'bg-(--primary) text-(--primary-foreground)',
+        // Primary intent = filled primary; the inverse action is tonal so
+        // the two never compete for attention.
+        btnCls: 'btn btn-filled flex-1',
         onClick: onStockIn,
       },
       {
         label: 'Stock Out',
         sub: 'Sell / issue goods',
         icon: <ArrowUpFromLine size={20} />,
-        tileCls: 'bg-(--accent-soft) text-(--accent)',
+        btnCls: 'btn btn-tonal flex-1',
         onClick: onStockOut,
       },
     ],
@@ -98,21 +98,18 @@ export default function HomeScreen({
         label: 'Products',
         value: String(stats.totalProducts),
         foot: `${stats.totalUnits.toLocaleString('en-IN')} units`,
-        ringCls: 'hover:border-(--accent)/40',
         onClick: () => goProducts(),
       },
       {
         label: 'Low stock',
         value: String(stats.lowStockCount),
         foot: 'needs restock',
-        ringCls: 'hover:border-(--warning)/40',
         onClick: () => goProducts('low'),
       },
       {
         label: 'Out of stock',
         value: String(stats.outOfStockCount),
         foot: 'urgent',
-        ringCls: 'hover:border-(--destructive)/40',
         onClick: () => goProducts('out'),
       },
     ],
@@ -157,241 +154,247 @@ export default function HomeScreen({
   );
 
   return (
-    <div className="app-page-viewport mx-auto max-w-md">
-      <Header title="Overview" />
+    <div className="screen">
+      <Header
+        title={greet}
+        subtitle={today}
+        right={
+          <button
+            type="button"
+            onClick={onAddProduct}
+            aria-label="Add product"
+            className="btn btn-filled btn-sm shrink-0"
+          >
+            <PackagePlus size={17} />
+            <span className="hidden sm:inline">Add</span>
+          </button>
+        }
+      />
 
-      <div className="dashboard-content mx-auto max-w-md space-y-5 px-4 pt-4">
-        {/* Greeting — the date is a passive chip, so it stays neutral. Accent
-            colour is reserved for things the user can actually act on. */}
-        <div className="dashboard-greeting px-1 pt-1">
-          <span className="inline-flex items-center gap-1.5 rounded-[var(--radius-chip)] bg-(--glass-soft) px-2.5 py-1 text-[length:var(--fs-caption)] font-semibold text-(--ink-2)">
-            <span className={`h-1.5 w-1.5 rounded-full ${online ? 'bg-(--success)' : 'bg-(--warning)'}`} />
-            {today}
-          </span>
-          <div className="mt-2 flex items-center justify-between gap-3">
-            <h2 className="min-w-0 flex-1 text-[length:var(--fs-title2)] font-bold leading-[1.15] tracking-[-0.025em] text-(--ink)">
-              {greet}
-            </h2>
-            <button
-              type="button"
-              onClick={onAddProduct}
-              aria-label="Add product"
-              title="Add product"
-              className="press flex min-h-11 shrink-0 items-center justify-center gap-2 rounded-[var(--radius-control)] bg-(--primary) px-3 text-[length:var(--fs-footnote)] font-semibold text-(--primary-foreground) shadow-[0_1px_2px_rgba(0,0,0,0.08)] sm:px-4"
-            >
-              <PackagePlus size={18} /><span>Add Product</span>
-            </button>
-          </div>
-        </div>
-
-        {/* Stock In / Out — the two daily actions, side by side */}
-        <div className="dashboard-actions grid grid-cols-2 gap-2.5">
-          {quickActions.map((a) => (
-            <button
-              key={a.label}
-              type="button"
-              onClick={a.onClick}
-              className="glass press group flex min-h-[84px] flex-col items-start justify-between gap-2 rounded-[calc(var(--radius-card) - 4px)] p-3.5 text-left transition-colors"
-            >
-              <span
-                className={`flex h-10 w-10 items-center justify-center rounded-[var(--radius-icon)] transition-transform group-active:scale-95 ${a.tileCls}`}
-              >
-                {a.icon}
-              </span>
-              <span className="min-w-0">
-                <span className="block truncate text-[length:var(--fs-callout)] font-semibold leading-tight text-(--ink)">
-                  {a.label}
-                </span>
-                <span className="block truncate text-[length:var(--fs-caption)] font-normal text-(--ink-2)">
-                  {a.sub}
-                </span>
-              </span>
-            </button>
-          ))}
-        </div>
-
-        {!online ? (
-          <div className="dashboard-banner glass flex items-center gap-2 rounded-[var(--radius-row)] border-(--warning)/25 px-4 py-3 text-[length:var(--fs-footnote)] font-medium text-(--warning-ink)">
-            <WifiOff size={16} /> Offline — showing last synced data.
-          </div>
-        ) : null}
-        {error && products.length === 0 && !loading ? (
-          <div className="dashboard-banner">
-            <ErrorState message={error} onRetry={() => void refresh()} retrying={refreshing} />
-          </div>
-        ) : null}
-        {error && products.length > 0 ? (
-          <div className="dashboard-banner glass flex items-center gap-2 rounded-[var(--radius-row)] border-(--warning)/25 px-4 py-3 text-[length:var(--fs-footnote)] font-medium text-(--warning-ink)">
-            <WifiOff size={16} /> Sync failed — showing cached data.
-          </div>
-        ) : null}
-
-        {loading && products.length === 0 ? (
-          <div className="dashboard-banner dashboard-loading space-y-3">
-            <SkeletonRow h={190} />
-            <div className="grid grid-cols-2 gap-3">
-              <SkeletonRow h={110} />
-              <SkeletonRow h={110} />
+      <div className="screen-body">
+        <div className="app-column page-pad animate-screen-in space-y-5 pb-4 pt-3">
+          {/* Offline / sync banners sit above everything: they change how
+              the numbers below should be read. */}
+          {!online ? (
+            <div className="badge badge-warning w-full justify-center gap-1.5 py-2 text-[length:var(--fs-body-md)]">
+              <WifiOff size={15} /> Offline — showing last synced data.
             </div>
-            <SkeletonRow h={120} />
-          </div>
-        ) : (
-          <>
-            {/* Primary inventory metric — the one number that answers
-                "how much stock do I have?" */}
-            <div className="dashboard-hero relative overflow-hidden rounded-[calc(var(--radius-card) - 4px)] border border-(--stroke-dim) bg-(--bg-elev) p-5 text-(--ink)">
-              <div className="relative flex items-end justify-between gap-3">
-                <div className="min-w-0">
-                  <p className="text-[length:var(--fs-caption)] font-semibold uppercase tracking-[0.08em] text-(--ink-3)">
-                    Total stock units
-                  </p>
-                  <p className="tnum mt-2 truncate text-[clamp(2.25rem,7vw,4.5rem)] font-bold leading-[0.95] tracking-[-0.06em]">
-                    {stats.totalUnits.toLocaleString('en-IN')}
-                  </p>
+          ) : null}
+          {error && products.length === 0 && !loading ? (
+            <ErrorState message={error} onRetry={() => void refresh()} retrying={refreshing} />
+          ) : null}
+          {error && products.length > 0 ? (
+            <div className="badge badge-warning w-full justify-center gap-1.5 py-2 text-[length:var(--fs-body-md)]">
+              <WifiOff size={15} /> Sync failed — showing cached data.
+            </div>
+          ) : null}
+
+          {loading && products.length === 0 ? (
+            <div className="space-y-3">
+              <SkeletonRow h={140} />
+              <div className="grid grid-cols-2 gap-3">
+                <SkeletonRow h={92} />
+                <SkeletonRow h={92} />
+              </div>
+              <SkeletonRow h={220} />
+            </div>
+          ) : (
+            <>
+              {/* Primary inventory metric — the one number that answers
+                  "how much stock do I have?" */}
+              <div className="card-hero px-5 py-6">
+                <p className="text-[length:var(--fs-title-sm)] font-semibold tracking-[0.04em] text-(--on-primary-container)/80 uppercase">
+                  Total stock units
+                </p>
+                <p className="tnum mt-2 truncate text-[length:var(--fs-display)] leading-none font-bold">
+                  {stats.totalUnits.toLocaleString('en-IN')}
+                </p>
+                <div className="mt-4 flex items-center justify-between border-t border-(--on-primary-container)/15 pt-3 text-[length:var(--fs-body-sm)] font-medium">
+                  <span>Across your catalogue</span>
+                  <span className="tnum">{stats.totalProducts} products</span>
                 </div>
               </div>
-              <p className="relative mt-3 border-t border-(--stroke-dim) pt-3 text-[length:var(--fs-caption)] font-medium text-(--ink-2)">
-                Across your catalogue
-              </p>
-            </div>
 
-            {/* Uneven metrics give urgent stock levels a faster visual read. */}
-            <div className="dashboard-stats-grid grid grid-cols-2 gap-2.5">
-              {bentoStats.map((c, index) => (
-                <button
-                  key={c.label}
-                  onClick={c.onClick}
-                  disabled={!c.onClick}
-                  className={`dashboard-metric dashboard-metric-${index} press text-left transition-colors ${c.ringCls} ${!c.onClick ? 'cursor-default' : ''}`}
-                >
-                  <span className="dashboard-metric-label">{c.label}{c.onClick ? <ChevronRight size={14} /> : null}</span>
-                  <span className="dashboard-metric-value tnum">{c.value}</span>
-                  <span className="dashboard-metric-foot">{c.foot}</span>
-                </button>
-              ))}
-            </div>
+              {/* The two daily actions, large and reachable with one thumb. */}
+              <div className="grid grid-cols-2 gap-3">
+                {quickActions.map((a) => (
+                  <button key={a.label} type="button" onClick={a.onClick} className={`${a.btnCls} flex-col !gap-1 py-4`}>
+                    {a.icon}
+                    <span className="text-[length:var(--fs-label-lg)] font-semibold">{a.label}</span>
+                    <span className="text-[length:var(--fs-label-sm)] font-normal opacity-80">{a.sub}</span>
+                  </button>
+                ))}
+              </div>
 
-            {/* Needs attention — the actionable list, so it comes before the
-                passive activity feed. */}
-            <div className="dashboard-attention">
-              <div className="mb-2.5 flex items-center justify-between gap-2 px-1">
-                <p className="flex items-center gap-2 text-[length:var(--fs-caption)] font-semibold uppercase tracking-[0.06em] text-(--ink-3)">
-                  Needs attention
-                  {stats.lowStockItems.length > 0 ? (
-                    <span className="tnum rounded-[var(--radius-chip)] bg-(--destructive)/12 px-2 py-0.5 text-[length:var(--fs-caption)] font-semibold normal-case text-(--destructive-ink)">
-                      {stats.lowStockItems.length}
+              {/* Tappable metric tiles: filters into Products. */}
+              <div className="grid grid-cols-3 gap-2.5">
+                {bentoStats.map((c) => (
+                  <button
+                    key={c.label}
+                    onClick={c.onClick}
+                    className="card state-tint flex flex-col items-start gap-0.5 p-3 text-left"
+                  >
+                    <span className="flex items-center gap-0.5 text-[length:var(--fs-body-sm)] font-medium text-(--on-surface-variant)">
+                      {c.label}
+                      <ChevronRight size={13} />
                     </span>
-                  ) : null}
-                </p>
-                {stats.lowStockItems.length > 0 ? (
+                    <span className="tnum text-[length:var(--fs-headline-sm)] leading-tight font-bold text-(--on-surface)">
+                      {c.value}
+                    </span>
+                    <span className="truncate text-[length:var(--fs-label-sm)] text-(--outline)">{c.foot}</span>
+                  </button>
+                ))}
+              </div>
+
+              {/* Needs attention — the actionable list, so it comes before the
+                  passive activity feed. */}
+              <section>
+                <div className="mb-2 flex items-center justify-between gap-2 px-1">
+                  <p className="section-label flex items-center gap-2">
+                    Needs attention
+                    {stats.lowStockItems.length > 0 ? (
+                      <span className="badge badge-danger tnum">{stats.lowStockItems.length}</span>
+                    ) : null}
+                  </p>
+                  {stats.lowStockItems.length > 0 ? (
+                    <button
+                      type="button"
+                      onClick={() => goProducts('low')}
+                      className="btn btn-text btn-sm !min-h-8 !px-2"
+                    >
+                      View all <ArrowRight size={13} />
+                    </button>
+                  ) : undefined}
+                </div>
+                {stats.lowStockItems.length === 0 ? (
+                  <div className="card-flat flex flex-col items-center px-4 py-7 text-center">
+                    <span className="mb-2.5 flex h-12 w-12 items-center justify-center rounded-[var(--shape-md)] bg-(--success-container) text-(--on-success-container)">
+                      <CircleCheck size={24} />
+                    </span>
+                    <p className="text-[length:var(--fs-title-md)] font-semibold text-(--on-surface)">All stocked up</p>
+                    <p className="mt-0.5 text-[length:var(--fs-body-sm)] text-(--on-surface-variant)">No low-stock items right now.</p>
+                  </div>
+                ) : (
+                  <div className="group-list">
+                    {attentionRows.map(({ p, isOut, fillPct, meta }) => (
+                      <div key={p.id} className="group-row !items-stretch !py-2.5">
+                        <button
+                          type="button"
+                          onClick={() => goProducts(isOut ? 'out' : 'low')}
+                          className="flex min-w-0 flex-1 items-center gap-3 text-left"
+                        >
+                          <span
+                            className={`flex h-9 w-9 shrink-0 items-center justify-center rounded-[var(--shape-sm)] ${
+                              isOut
+                                ? 'bg-(--danger-container) text-(--on-danger-container)'
+                                : 'bg-(--warning-container) text-(--on-warning-container)'
+                            }`}
+                            aria-hidden="true"
+                          >
+                            {isOut ? <OctagonX size={16} /> : <AlertTriangle size={16} />}
+                          </span>
+                          <span className="min-w-0 flex-1">
+                            <span className="block truncate text-[length:var(--fs-body-md)] font-semibold text-(--on-surface)">{p.name}</span>
+                            <span className="block text-[length:var(--fs-body-sm)] text-(--on-surface-variant)">
+                              <b className={isOut ? 'font-semibold text-(--error)' : 'font-semibold text-(--warning)'}>
+                                {isOut ? 'Out of stock' : 'Low stock'}
+                              </b>
+                              {' · '}{p.currentStock} on hand · {meta}
+                            </span>
+                            <span className="mt-1.5 block h-1 overflow-hidden rounded-[var(--shape-full)] bg-(--surface-container-high)">
+                              <span
+                                className={`block h-full ${isOut ? 'bg-(--error)' : 'bg-(--warning-strong)'}`}
+                                style={{ width: `${fillPct}%` }}
+                              />
+                            </span>
+                          </span>
+                        </button>
+                        <div className="flex shrink-0 items-center gap-1">
+                          <button
+                            type="button"
+                            onClick={() => onStockInProduct(p)}
+                            aria-label={`Stock in ${p.name}`}
+                            title="Stock in"
+                            className="icon-btn icon-btn-tonal !h-10 !w-10 text-(--success)"
+                          >
+                            <Plus size={17} />
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => onStockOutProduct(p)}
+                            aria-label={`Stock out ${p.name}`}
+                            title="Stock out"
+                            disabled={p.currentStock <= 0}
+                            className="icon-btn icon-btn-tonal !h-10 !w-10 text-(--on-surface-variant) disabled:opacity-40"
+                          >
+                            <Minus size={17} />
+                          </button>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </section>
+
+              {/* Recent activity — the passive feed, after the actionable list */}
+              <section>
+                <div className="mb-2 flex items-center justify-between gap-2 px-1">
+                  <p className="section-label">Recent activity</p>
                   <button
                     type="button"
-                    onClick={() => goProducts('low')}
-                    className="press flex items-center gap-0.5 text-[length:var(--fs-footnote)] font-semibold text-(--accent)"
+                    onClick={goHistory}
+                    className="btn btn-text btn-sm !min-h-8 !px-2"
                   >
                     View all <ArrowRight size={13} />
                   </button>
-                ) : undefined}
-              </div>
-              {stats.lowStockItems.length === 0 ? (
-                <div className="glass flex flex-col items-center rounded-[calc(var(--radius-card) - 4px)] px-4 py-7 text-center">
-                  <span className="mb-2.5 flex h-12 w-12 items-center justify-center rounded-[var(--radius-icon)] bg-(--success)/14 text-(--success-ink)">
-                    <CircleCheck size={24} />
-                  </span>
-                  <p className="text-[length:var(--fs-subhead)] font-semibold text-(--ink)">All stocked up</p>
-                  <p className="mt-0.5 text-[length:var(--fs-caption)] text-(--ink-2)">No low-stock items right now.</p>
                 </div>
-              ) : (
-                <div className="dashboard-attention-list">
-                  {attentionRows.map(({ p, isOut, fillPct, meta }) => (
-                    <div key={p.id} className="dashboard-attention-row">
-                      <button type="button" onClick={() => goProducts(isOut ? 'out' : 'low')} className="dashboard-attention-item press">
-                        <span className={`dashboard-attention-mark ${isOut ? 'is-out' : 'is-low'}`} aria-hidden="true">{isOut ? <OctagonX size={15} /> : <AlertTriangle size={15} />}</span>
+                {stats.recentMovements.length === 0 ? (
+                  <div className="card-flat px-4 py-7 text-center text-[length:var(--fs-body-md)] text-(--on-surface-variant)">
+                    No stock movements yet.
+                  </div>
+                ) : (
+                  <div className="group-list">
+                    {recentRows.map(({ t, isIn, when, pending }) => (
+                      <div key={t.id} className="group-row">
+                        <span
+                          className={`flex h-10 w-10 shrink-0 items-center justify-center rounded-[var(--shape-sm)] ${
+                            isIn
+                              ? 'bg-(--success-container) text-(--on-success-container)'
+                              : 'bg-(--danger-container) text-(--on-danger-container)'
+                          }`}
+                        >
+                          {isIn ? <ArrowDownToLine size={17} /> : <ArrowUpFromLine size={17} />}
+                        </span>
                         <span className="min-w-0 flex-1">
-                          <span className="block truncate text-[length:var(--fs-subhead)] font-semibold text-(--ink)">{p.name}</span>
-                          <span className="block text-[length:var(--fs-caption)] text-(--ink-2)">
-                            <b className={isOut ? 'font-semibold text-(--destructive-ink)' : 'font-semibold text-(--warning-ink)'}>{isOut ? 'Out of stock' : 'Low stock'}</b>
-                            {' · '}{p.currentStock} on hand · {meta}
-                          </span>
-                          <span className="mt-1.5 block h-1 overflow-hidden rounded-[calc(var(--radius-chip))] bg-(--stroke-dim)">
-                            <span className={`block h-full ${isOut ? 'bg-(--destructive)' : 'bg-(--warning)'}`} style={{ width: `${fillPct}%` }} />
-                          </span>
-                        </span>
-                      </button>
-                      <div className="dashboard-attention-actions">
-                        <button type="button" onClick={() => onStockInProduct(p)} aria-label={`Stock in ${p.name}`} title="Stock in" className="press"><Plus size={16} /></button>
-                        <button type="button" onClick={() => onStockOutProduct(p)} aria-label={`Stock out ${p.name}`} title="Stock out" disabled={p.currentStock <= 0} className="press"><Minus size={16} /></button>
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              )}
-            </div>
-
-            {/* Recent activity — the passive feed, after the actionable list */}
-            <div className="dashboard-activity">
-              <div className="mb-2.5 flex items-center justify-between gap-2 px-1">
-                <p className="text-[length:var(--fs-caption)] font-semibold uppercase tracking-[0.06em] text-(--ink-3)">
-                  Recent activity
-                </p>
-                <button
-                  type="button"
-                  onClick={goHistory}
-                  className="press flex items-center gap-0.5 text-[length:var(--fs-footnote)] font-semibold text-(--accent)"
-                >
-                  View all <ArrowRight size={13} />
-                </button>
-              </div>
-              {stats.recentMovements.length === 0 ? (
-                <div className="glass rounded-[var(--radius-card)] px-4 py-7 text-center text-[length:var(--fs-footnote)] text-(--ink-2)">
-                  No stock movements yet.
-                </div>
-              ) : (
-                <div className="glass divide-y divide-(--stroke-dim) rounded-[var(--radius-card)] px-1.5">
-                  {recentRows.map(({ t, isIn, when, pending }) => (
-                    <div key={t.id} className="flex items-center gap-3 px-2 py-3">
-                      <span
-                        className={`flex h-10 w-10 shrink-0 items-center justify-center rounded-[var(--radius-icon)] ${
-                          isIn
-                            ? 'bg-(--success)/14 text-(--success-ink)'
-                            : 'bg-(--destructive)/12 text-(--destructive-ink)'
-                        }`}
-                      >
-                        {isIn ? <ArrowDownToLine size={17} /> : <ArrowUpFromLine size={17} />}
-                      </span>
-                      <span className="min-w-0 flex-1">
-                        <span className="flex items-center gap-1.5">
-                          <span className="block truncate text-[length:var(--fs-subhead)] font-semibold text-(--ink)">
-                            {t.productName}
-                          </span>
-                          {pending ? (
-                            <span className="shrink-0 rounded-[var(--radius-chip)] bg-(--accent-soft) px-1.5 py-px text-[length:var(--fs-caption)] font-semibold text-(--accent)">
-                              Saving…
+                          <span className="flex items-center gap-1.5">
+                            <span className="block truncate text-[length:var(--fs-body-md)] font-semibold text-(--on-surface)">
+                              {t.productName}
                             </span>
-                          ) : null}
+                            {pending ? (
+                              <span className="badge badge-accent shrink-0">Saving…</span>
+                            ) : null}
+                          </span>
+                          <span className="block truncate text-[length:var(--fs-body-sm)] font-normal text-(--on-surface-variant)">
+                            {when}
+                            {t.reason ? ` · ${t.reason}` : ''}
+                          </span>
                         </span>
-                        <span className="block truncate text-[length:var(--fs-caption)] font-normal text-(--ink-2)">
-                          {when}
-                          {t.reason ? ` · ${t.reason}` : ''}
+                        <span
+                          className={`tnum badge shrink-0 ${
+                            isIn ? 'badge-success' : 'badge-danger'
+                          }`}
+                        >
+                          {isIn ? '+' : '−'}
+                          {t.quantity}
                         </span>
-                      </span>
-                      <span
-                        className={`tnum shrink-0 rounded-[var(--radius-chip)] px-2.5 py-1 text-[length:var(--fs-footnote)] font-semibold ${
-                          isIn
-                            ? 'bg-(--success)/12 text-(--success-ink)'
-                            : 'bg-(--destructive)/12 text-(--destructive-ink)'
-                        }`}
-                      >
-                        {isIn ? '+' : '−'}
-                        {t.quantity}
-                      </span>
-                    </div>
-                  ))}
-                </div>
-              )}
-            </div>
-          </>
-        )}
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </section>
+            </>
+          )}
+        </div>
       </div>
     </div>
   );

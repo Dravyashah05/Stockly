@@ -10,7 +10,6 @@ lerna-debug.log*
 node_modules
 dist
 mobile-app/dist
-admin/dist
 server/dist
 dist-ssr
 *.local
@@ -18,10 +17,8 @@ dist-ssr
 .env.*
 !.env.example
 !mobile-app/.env.example
-!admin/.env.example
 !server/.env.example
 mobile-app/.env
-admin/.env
 server/.env
 mobile-app/android/local.properties
 mobile-app/android/.gradle
@@ -38,3 +35,4 @@ mobile-app/android/build
 *.njsproj
 *.sln
 *.sw?
+.vercel

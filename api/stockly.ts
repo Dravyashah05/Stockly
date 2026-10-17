@@ -1,6 +1,6 @@
-import { applyApiCors } from './cors.ts';
-import { isUpstreamTimeout, upstreamSignal } from './upstream.ts';
-import { RateLimiter } from './device-logic.ts';
+import { applyApiCors } from './cors.js';
+import { isUpstreamTimeout, upstreamSignal } from './upstream.js';
+import { RateLimiter } from './device-logic.js';
 
 /* Vercel serverless proxy for the Stockly Apps Script backend.
  *
