@@ -1,100 +1,73 @@
-# Stockly
+# Stockly for Android
 
-Stockly provides a dedicated mobile inventory app, responsive inventory
-website, and owner console. They share one authenticated backend and the
-existing Google Sheets data integration. Architecture details are in
-[`docs/STRUCTURE.md`](docs/STRUCTURE.md); setup for auth, devices, and admin is
-in [`docs/`](docs/).
+Stockly is an Android inventory app built with React, TypeScript, Vite, and Capacitor 8. The Android interface uses a Google Pixel inspired Material 3 system. Inventory data, authentication, Google Sheets access, synchronization, and device linking use the existing shared backend and Apps Script integration.
 
 ## Requirements
 
-- Node.js 22 or newer (Vite 8)
-- Android Studio/SDK and Java 21 for native Android builds
-- Existing Google Apps Script deployment and its Google Sheet for live data
+- Node.js 22 or newer
+- Java 21
+- Android Studio and Android SDK platform/build tools 36
+- A deployed Stockly API using the handlers in `api/`, plus its existing Apps Script and Google Sheet configuration
 
-## Install and develop
+## Develop
 
-Install repository dependencies once, then run each service in its own shell:
+Install the root and backend dependencies once:
 
 ```sh
-npm install
-npm --prefix server ci   # server has its own lockfile and private runtime deps
-npm run dev:server       # shared backend, http://localhost:5000
-npm run dev:user         # mobile app browser frontend, http://localhost:3001
-npm run dev:website      # website frontend, http://localhost:3003
-npm run dev:admin        # owner console, http://localhost:3002
-npm run dev:all          # start the backend and all three frontends together
+npm ci
+npm --prefix server ci
+npm run dev:server
 ```
 
-On Windows, double-click [`run-all.bat`](run-all.bat) to start the same four
-services in one command window. Press Ctrl+C to stop them.
-
-The app, website, and admin Vite servers proxy `/api/*` to the one backend.
-Set `STOCKLY_API_URL` if the backend is not at `http://localhost:5000`.
-For separate deployments, set public `VITE_API_BASE_URL` to the shared backend
-origin in each frontend's build environment. Do not place credentials or
-private tokens in any `VITE_*` variable.
-
-## Build and validate
+In another terminal, run the Android React UI in the browser for quick iteration:
 
 ```sh
-npm run build:user       # mobile-app/dist
-npm run build:mobile     # independently build the mobile app browser frontend
-npm run build:website    # website/dist
-npm run build:admin      # admin/dist
-npm run build:app        # alias for mobile-app/dist
-npm run cap:sync         # sync Android project from mobile-app/dist
-npm run android:build    # build the app bundle and sync Android
-npm test                 # backend and compatibility tests
-npm run lint             # repository lint
+npm run dev:mobile
+```
+
+For local API development, the mobile Vite server proxies `/api/*` to `http://localhost:5000`. This proxy is only for browser development. A physical Android build must use the public HTTPS backend origin in `mobile-app/.env`:
+
+```dotenv
+VITE_API_BASE_URL=https://your-stockly-api.example
+```
+
+Do not use `localhost` or put private credentials in `VITE_*` variables. Android release builds use HTTPS and do not allow cleartext traffic.
+
+## Build and install a debug APK
+
+From the repository root:
+
+```sh
+npm run android:build
+```
+
+This type-checks and builds the Android UI, syncs Capacitor plugins/assets, and runs Gradle `assembleDebug`. The APK is written to:
+
+```text
+mobile-app/android/app/build/outputs/apk/debug/app-debug.apk
+```
+
+Install it on a connected device with Android Debug Bridge:
+
+```sh
+adb install -r mobile-app/android/app/build/outputs/apk/debug/app-debug.apk
+```
+
+To open the native project in Android Studio, run `npm run cap:open`.
+
+## Validate
+
+```sh
+npm run build             # Android React production bundle + TypeScript check
+npm run lint
+npm test                  # shared API/auth/device/server compatibility tests
 npm --prefix server run typecheck
 ```
 
-Each frontend has its own package manifest and lockfile. Install and build one
-in isolation with `npm --prefix mobile-app ci && npm --prefix mobile-app run build`, or the
-same `ci`/`build` commands for `website` and `admin`.
+## Backend and Google Sheets
 
-For a native APK, open `mobile/android` in Android Studio or run from the
-repository root:
+`api/` contains the canonical API handlers, `server/` is the Express adapter, and `apps-script/` contains the existing Google Sheets integration. Keep API credentials and setup secrets on the backend. Setup and recovery instructions are in [`docs/auth-setup.md`](docs/auth-setup.md), [`docs/device-linking.md`](docs/device-linking.md), and [`docs/admin-setup.md`](docs/admin-setup.md). The owner administration tools are part of Android Settings and continue to use the server-authorized `/api/admin` and `/api/devices` endpoints.
 
-```powershell
-Set-Location mobile/android
-.\gradlew.bat assembleDebug
-```
+The Vercel configuration keeps the `/__stockly_api` rewrite for the canonical `api/*.ts` handlers. No customer website deployment is required to build or run Android. Owner tools are available inside Android Settings; the duplicate standalone owner frontend and legacy root HTML/Vite entries remain pending explicit approval for destructive removal and are not part of the Android APK build.
 
-The generated debug APK is under
-`mobile/android/app/build/outputs/apk/debug/app-debug.apk`. A release APK
-requires release signing configuration.
-
-## Google Sheets and authentication
-
-The backend and Google Apps Script sources remain in `api/`, `server/`, and
-`apps-script/`. Copy `server/.env.example` to `server/.env` for local private
-backend settings, then configure the existing Apps Script deployment and
-linked sheet as described in [`docs/auth-setup.md`](docs/auth-setup.md),
-[`docs/device-linking.md`](docs/device-linking.md), and
-[`docs/admin-setup.md`](docs/admin-setup.md). Existing data and schema are
-preserved; setup does not reset user sheets.
-
-## Deployment
-
-- Build and deploy `mobile-app/dist`, `website/dist`, and `admin/dist` as separate
-  static frontends.
-- Deploy `server/` to a long-running Node host using its private environment
-  settings, or deploy the canonical `api/*.ts` handlers to Vercel as serverless
-  functions. Do not run a second API implementation.
-- Configure each frontend with the same public backend origin, or configure
-  its host to proxy `/api/*` to the shared backend.
-- Build and publish Android independently with Capacitor/Gradle.
-
-Root `src/`, root HTML entries, and root Vite configurations are retained for
-legacy landing/store compatibility during migration. See
-[`docs/STRUCTURE.md`](docs/STRUCTURE.md) before changing or removing them.
-
-## Releases
-
-The GitHub Actions release workflow builds the website and, when a new app
-version is tagged, the Android APK. Keep `package.json` and
-`mobile/android/app/build.gradle` version values aligned. Signing secrets and
-release steps are documented in `.github/workflows/release.yml` and the
-repository Actions settings.
+See [`docs/STRUCTURE.md`](docs/STRUCTURE.md) and [`docs/ANDROID_ONLY_AUDIT.md`](docs/ANDROID_ONLY_AUDIT.md) for the dependency map and cleanup decisions.

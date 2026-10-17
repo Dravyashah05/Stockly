@@ -280,7 +280,7 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
     document.documentElement.classList.toggle('dark', dark);
     document.documentElement.style.colorScheme = dark ? 'dark' : 'light';
     document.querySelectorAll('meta[name="theme-color"]').forEach((meta) => {
-      meta.setAttribute('content', dark ? '#111114' : '#F5F5F7');
+      meta.setAttribute('content', dark ? '#111318' : '#F7F7FB');
     });
     try {
       localStorage.setItem(LS_KEYS.theme, theme);
@@ -290,7 +290,7 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
       try {
         const { StatusBar, Style } = await import('@capacitor/status-bar');
         await StatusBar.setStyle({ style: dark ? Style.Dark : Style.Light });
-        await StatusBar.setBackgroundColor({ color: dark ? '#111114' : '#f5f5f7' });
+      await StatusBar.setBackgroundColor({ color: dark ? '#111318' : '#F7F7FB' });
       } catch { /* web — ignore */ }
     })();
   }, [dark, theme]);
@@ -303,7 +303,7 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
       document.documentElement.classList.toggle('dark', mq.matches);
       document.documentElement.style.colorScheme = mq.matches ? 'dark' : 'light';
       document.querySelectorAll('meta[name="theme-color"]').forEach((meta) => {
-        meta.setAttribute('content', mq.matches ? '#111114' : '#F5F5F7');
+        meta.setAttribute('content', mq.matches ? '#111318' : '#F7F7FB');
       });
     };
     mq.addEventListener?.('change', apply);

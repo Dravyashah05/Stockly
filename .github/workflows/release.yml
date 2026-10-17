@@ -1,8 +1,8 @@
 # Stockly automated release pipeline.
 #
 # WHEN IT RUNS
-# - Every push to `main` runs validation + web build (always green unless
-#   something is actually broken).
+# - Every push to `main` validates the Android UI, shared API behavior, and
+#   backend types.
 # - A GitHub Release is published ONLY when package.json `version` has no
 #   matching `v<version>` tag yet — i.e. releasing = bumping the version.
 #
@@ -28,12 +28,11 @@
 # METADATA (no loops, no committed APKs)
 # - GitHub Releases are the source of truth. The workflow attaches
 #   `release.json` (machine-readable, see Phase 3 schema) + SHA256SUMS.txt.
-# - After publishing, the same file is committed to `public/release.json`
-#   so the website + updater read it same-origin (no API rate limits).
+# - After publishing, the same file is committed to
+#   `mobile-app/public/release.json` for the in-app updater.
 #   That commit re-triggers this workflow once, but the tag then exists, so
 #   the re-run is validation-only and publishes nothing further.
-# - The website, store page, and in-app updater read the live Releases API.
-# - Vercel deploys automatically via its existing Git integration.
+# - The in-app updater reads the live Releases API with bundled metadata fallback.
 #
 # PERMISSIONS: contents:write is the minimum that can create releases.
 
@@ -57,6 +56,7 @@ jobs:
     timeout-minutes: 45
     env:
       GH_TOKEN: ${{ github.token }}
+      VITE_API_BASE_URL: https://stocklybydns.vercel.app
 
     steps:
       - name: Check out (full history for release notes)
@@ -91,26 +91,14 @@ jobs:
       - name: Lint
         run: npm run lint
 
-      - name: Type-check
-        run: npx tsc -b
+      - name: Type-check and build Android UI
+        run: npm run build
 
       - name: Tests
         run: npm test
 
-      - name: Build website
-        run: npm run build
-
-      - name: Build independent customer frontends
-        run: |
-          npm run build:mobile
-          npm run build:website
-          npm run build:admin
-
-      - name: Build mobile app bundle
-        run: npm run build:app
-
       - name: Sync Capacitor assets
-        run: npx cap sync android
+        run: npm run cap:sync
 
       - name: Set up Java 21
         if: steps.versions.outputs.publish == 'true'
@@ -243,18 +231,16 @@ jobs:
             SHA256SUMS.txt
             release.json
 
-      - name: Publish static website metadata (ends the loop safely)
+      - name: Publish in-app update metadata (ends the loop safely)
         if: steps.versions.outputs.publish == 'true'
         run: |
-          # The website + in-app updater read same-origin release.json first
-          # (no API rate limits); the Releases API stays as fallback. This
-          # commit triggers one more validation-only run (the tag now exists),
-          # which publishes nothing further — so the loop terminates here.
-          cp "$GITHUB_WORKSPACE/release.json" public/release.json
+          # The app bundles release metadata for its updater. This commit
+          # triggers one validation-only run (the release tag now exists).
+          cp "$GITHUB_WORKSPACE/release.json" mobile-app/public/release.json
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
           git pull --rebase origin main
-          git add public/release.json
+          git add mobile-app/public/release.json
           git commit -m "Release metadata for ${{ steps.versions.outputs.tag }}"
           git push origin HEAD:main
 
@@ -268,10 +254,10 @@ jobs:
             echo "- Release page: https://github.com/${{ github.repository }}/releases/tag/${{ steps.versions.outputs.tag }}"
             echo "- APK: https://github.com/${{ github.repository }}/releases/download/${{ steps.versions.outputs.tag }}/stockly-${{ steps.versions.outputs.version }}.apk"
             echo "- Commit: ${{ github.sha }}"
-            echo "- Website + store page deploy automatically through the existing Vercel Git integration."
+            echo "- API deployment remains available through the existing Vercel configuration."
           } >> "$GITHUB_STEP_SUMMARY"
 
       - name: Validation-only summary
         if: steps.versions.outputs.publish != 'true'
         run: |
-          echo "No new version to publish (${{ steps.versions.outputs.tag }} already released, or version check ran standalone). Lint, type-check, tests, and the website build above all passed." >> "$GITHUB_STEP_SUMMARY"
+          echo "No new version to publish (${{ steps.versions.outputs.tag }} already released, or version check ran standalone). Lint, Android UI type-check/build, and compatibility tests above all passed." >> "$GITHUB_STEP_SUMMARY"

@@ -120,25 +120,25 @@ export default function AuthScreen({ onAuthed }: { onAuthed: () => void }) {
         <div className="ambient" aria-hidden="true" />
         <div className="relative z-[1] pb-8">
           <div className="mx-auto max-w-md space-y-3 px-4 pt-6">
-            <p role="status" className="flex items-start gap-2 rounded-2xl border border-amber-500/25 bg-amber-500/10 px-3.5 py-3 text-[12.5px] font-semibold leading-relaxed text-(--ink)">
+            <p role="status" className="flex items-start gap-2 rounded-[var(--radius-control)] border border-(--warning)/25 bg-(--warning)/10 px-3.5 py-3 text-[length:var(--fs-footnote)] font-semibold leading-relaxed text-(--ink)">
               <Link2 size={15} className="mt-0.5 shrink-0" />
               Signed in — one more step: this device isn’t linked yet, so inventory stays locked until you link it below.
             </p>
             {error ? (
-              <p role="alert" className="flex items-start gap-2 rounded-2xl border border-rose-500/25 bg-rose-500/10 px-3.5 py-3 text-[12.5px] font-semibold leading-relaxed text-rose-600 dark:text-rose-300">
+              <p role="alert" className="flex items-start gap-2 rounded-[var(--radius-row)] border border-(--destructive)/25 bg-(--destructive)/10 px-3.5 py-3 text-[length:var(--fs-footnote)] font-medium leading-relaxed text-(--destructive-ink)">
                 <CircleAlert size={15} className="mt-0.5 shrink-0" />
                 {error}
               </p>
             ) : null}
             {info ? (
-              <p className="text-[12.5px] font-semibold text-emerald-600 dark:text-emerald-300">{info}</p>
+              <p className="text-[length:var(--fs-footnote)] font-medium text-(--success-ink)">{info}</p>
             ) : null}
           </div>
           <Suspense
             fallback={
               <div className="mx-auto max-w-md space-y-3 p-4" aria-label="Loading device linking">
-                <div className="h-14 animate-pulse rounded-2xl bg-(--accent-soft)" />
-                <div className="h-40 animate-pulse rounded-[26px] bg-(--accent-soft)" />
+                <div className="h-14 animate-pulse rounded-[var(--radius-control)] bg-(--accent-soft)" />
+                <div className="h-40 animate-pulse rounded-[calc(var(--radius-card) - 4px)] bg-(--accent-soft)" />
               </div>
             }
           >
@@ -160,17 +160,17 @@ export default function AuthScreen({ onAuthed }: { onAuthed: () => void }) {
   return (
     <div className="relative min-h-dvh bg-(--bg) text-(--ink)">
       <div className="ambient" aria-hidden="true" />
-      <div className="relative z-[1] mx-auto flex min-h-dvh w-full max-w-md flex-col px-4 pb-8 pt-10 sm:justify-center sm:py-12">
-        {/* Brand hero */}
+      <div className="relative z-[1] mx-auto flex min-h-dvh w-full max-w-md flex-col px-5 pb-10 pt-12 sm:justify-center sm:py-12">
+        {/* Brand hero — the only place a large Stockly mark appears, so the
+            sign-in screen reads as one confident identity rather than a form. */}
         <div className="animate-page-in flex flex-col items-center text-center">
-          <span className="flex h-16 w-16 items-center justify-center rounded-[22px] bg-(--primary) text-white shadow-[var(--card-shadow)] dark:bg-(--primary) dark:text-[#151515]">
+          <span className="flex h-16 w-16 items-center justify-center rounded-[var(--radius-control)] bg-(--primary) text-(--primary-foreground) shadow-[0_10px_30px_-12px_rgba(0,122,255,0.55)]">
             <BrandMark size={34} />
           </span>
-          <p className="mt-4 text-[11px] font-extrabold uppercase tracking-[0.22em] text-(--ink-3)">Stockly</p>
-          <h1 className="mt-1.5 text-[28px] font-extrabold leading-tight tracking-tight">
+          <h1 className="mt-5 text-[length:var(--fs-title1)] font-bold leading-tight tracking-[-0.03em]">
             {registering ? 'Create your account' : 'Welcome back'}
           </h1>
-          <p className="mt-1.5 max-w-[32ch] text-[13.5px] font-medium leading-relaxed text-(--ink-2)">
+          <p className="mt-1.5 max-w-[32ch] text-[length:var(--fs-subhead)] font-normal leading-relaxed text-(--ink-2)">
             {registering
               ? 'One account for your shop — your inventory syncs everywhere.'
               : 'Sign in to pick up where you left off.'}
@@ -178,7 +178,7 @@ export default function AuthScreen({ onAuthed }: { onAuthed: () => void }) {
         </div>
 
         {/* Mode switch */}
-        <div className="animate-page-in mt-6">
+        <div className="animate-page-in mt-7">
           <Segmented<'login' | 'register'>
             value={mode}
             onChange={(m) => {
@@ -194,10 +194,11 @@ export default function AuthScreen({ onAuthed }: { onAuthed: () => void }) {
           />
         </div>
 
-        {/* Form card */}
+        {/* Form card — opaque content surface; only the floating chrome around
+            it carries glass, per the material rules. */}
         <form
           key={mode}
-          className="glass animate-page-in mt-3 space-y-4 rounded-[28px] p-5"
+          className="glass animate-page-in mt-3 space-y-4 rounded-[var(--radius-hero)] p-5"
           onSubmit={(e) => {
             e.preventDefault();
             if (valid && !busy) void submit();
@@ -206,7 +207,7 @@ export default function AuthScreen({ onAuthed }: { onAuthed: () => void }) {
           {registering ? (
             <Field label="Your name">
               <div className="relative">
-                <UserIcon size={16} className="pointer-events-none absolute left-4 top-1/2 -translate-y-1/2 text-(--ink-3)" />
+                <UserIcon size={17} className="pointer-events-none absolute left-3.5 top-1/2 -translate-y-1/2 text-(--ink-3)" />
                 <input
                   value={name}
                   onChange={(e) => setName(e.target.value)}
@@ -219,7 +220,7 @@ export default function AuthScreen({ onAuthed }: { onAuthed: () => void }) {
           ) : null}
           <Field label="Email">
             <div className="relative">
-              <Mail size={16} className="pointer-events-none absolute left-4 top-1/2 -translate-y-1/2 text-(--ink-3)" />
+              <Mail size={17} className="pointer-events-none absolute left-3.5 top-1/2 -translate-y-1/2 text-(--ink-3)" />
               <input
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
@@ -232,7 +233,7 @@ export default function AuthScreen({ onAuthed }: { onAuthed: () => void }) {
           </Field>
           <Field label="Password">
             <div className="relative">
-              <LockIcon size={16} className="pointer-events-none absolute left-4 top-1/2 -translate-y-1/2 text-(--ink-3)" />
+              <LockIcon size={17} className="pointer-events-none absolute left-3.5 top-1/2 -translate-y-1/2 text-(--ink-3)" />
               <input
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
@@ -246,7 +247,7 @@ export default function AuthScreen({ onAuthed }: { onAuthed: () => void }) {
                 type="button"
                 onClick={() => setShowPassword((v) => !v)}
                 aria-label={showPassword ? 'Hide password' : 'Show password'}
-                className="press absolute right-2 top-1/2 flex h-9 w-9 -translate-y-1/2 items-center justify-center rounded-xl text-(--ink-3) hover:text-(--ink)"
+                className="press absolute right-1.5 top-1/2 flex h-10 w-10 -translate-y-1/2 items-center justify-center rounded-[var(--radius-icon)] text-(--ink-3) hover:text-(--ink)"
               >
                 {showPassword ? <EyeOff size={17} /> : <Eye size={17} />}
               </button>
@@ -259,24 +260,24 @@ export default function AuthScreen({ onAuthed }: { onAuthed: () => void }) {
                 {[0, 1, 2, 3].map((i) => (
                   <span
                     key={i}
-                    className={`h-1.5 flex-1 rounded-full transition-colors ${
-                      i < score
-                        ? score <= 1
-                          ? 'bg-rose-500'
-                          : score === 2
-                            ? 'bg-amber-500'
-                            : 'bg-emerald-500'
-                        : 'bg-(--stroke-dim)'
-                    }`}
+                    className={`h-1.5 flex-1 rounded-[var(--radius-chip)] transition-colors ${
+ i < score
+ ? score <= 1
+ ? 'bg-(--destructive)'
+ : score === 2
+ ? 'bg-(--warning)'
+ : 'bg-(--success)'
+ : 'bg-(--stroke-dim)'
+ }`}
                   />
                 ))}
               </div>
               <div className="mt-2 flex flex-wrap gap-x-4 gap-y-1">
-                <span className={`text-[11.5px] font-bold ${score <= 1 ? 'text-rose-600 dark:text-rose-300' : score === 2 ? 'text-amber-600 dark:text-amber-300' : 'text-emerald-600 dark:text-emerald-300'}`}>
+                <span className={`text-[length:var(--fs-caption)] font-semibold ${score <= 1 ? 'text-(--destructive-ink)' : score === 2 ? 'text-(--warning-ink)' : 'text-(--success-ink)'}`}>
                   {STRENGTH_LABELS[score]}
                 </span>
                 {checks.map((c) => (
-                  <span key={c.label} className={`flex items-center gap-1 text-[11.5px] font-semibold ${c.ok ? 'text-emerald-600 dark:text-emerald-300' : 'text-(--ink-3)'}`}>
+                  <span key={c.label} className={`flex items-center gap-1 text-[length:var(--fs-caption)] font-medium ${c.ok ? 'text-(--success-ink)' : 'text-(--ink-3)'}`}>
                     <Check size={12} strokeWidth={3} />
                     {c.label}
                   </span>
@@ -286,19 +287,19 @@ export default function AuthScreen({ onAuthed }: { onAuthed: () => void }) {
           ) : null}
 
           {error ? (
-            <p role="alert" className="flex items-start gap-2 rounded-2xl border border-rose-500/25 bg-rose-500/10 px-3.5 py-3 text-[12.5px] font-semibold leading-relaxed text-rose-600 dark:text-rose-300">
+            <p role="alert" className="flex items-start gap-2 rounded-[var(--radius-row)] border border-(--destructive)/25 bg-(--destructive)/10 px-3.5 py-3 text-[length:var(--fs-footnote)] font-medium leading-relaxed text-(--destructive-ink)">
               <CircleAlert size={15} className="mt-0.5 shrink-0" />
               {error}
             </p>
           ) : null}
           {info ? (
-            <p className="text-[12.5px] font-semibold text-emerald-600 dark:text-emerald-300">{info}</p>
+            <p className="text-[length:var(--fs-footnote)] font-medium text-(--success-ink)">{info}</p>
           ) : null}
 
           <button
             type="submit"
             disabled={busy || !valid}
-            className="press group flex min-h-[54px] w-full items-center justify-center gap-2 rounded-2xl bg-(--primary) text-[15px] font-extrabold text-white disabled:opacity-50 dark:bg-(--primary) dark:text-[#151515]"
+            className="press group flex min-h-[52px] w-full items-center justify-center gap-2 rounded-[var(--radius-control)] bg-(--primary) text-[length:var(--fs-headline)] font-semibold text-(--primary-foreground) shadow-[0_1px_2px_rgba(0,0,0,0.08)] disabled:opacity-50"
           >
             {busy ? (
               <Loader2 size={17} className="animate-spin" />
@@ -307,14 +308,14 @@ export default function AuthScreen({ onAuthed }: { onAuthed: () => void }) {
             )}
             {busy ? (registering ? (progress || 'Creating account…') : progress || 'Signing in…') : registering ? 'Create account' : 'Sign in'}
           </button>
-          <p className="flex items-start justify-center gap-1.5 text-center text-[11.5px] leading-relaxed text-(--ink-3)">
+          <p className="flex items-start justify-center gap-1.5 text-center text-[length:var(--fs-caption)] leading-relaxed text-(--ink-3)">
             <ShieldCheck size={13} className="mt-0.5 shrink-0" />
             Passwords are hashed on the server and never stored as plain text.
           </p>
         </form>
 
         {isNativeApp() && !API_BASE_URL ? (
-          <p role="alert" className="mt-3 rounded-2xl border border-amber-500/25 bg-amber-500/10 px-3.5 py-3 text-[12.5px] leading-relaxed text-(--ink-2)">
+          <p role="alert" className="mt-3 rounded-[var(--radius-row)] border border-(--warning)/25 bg-(--warning)/10 px-3.5 py-3 text-[length:var(--fs-footnote)] leading-relaxed text-(--ink-2)">
             This build has no backend configured. Set <span className="tnum font-bold">VITE_API_BASE_URL</span> to your
             deployed backend (e.g. https://your-app.vercel.app) and rebuild the app — sign-in needs the server.
           </p>

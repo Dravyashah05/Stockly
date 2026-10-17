@@ -1,14 +1,13 @@
 import React, { Suspense, lazy, useCallback, useEffect, useRef, useState, useTransition } from 'react';
 import { CloudOff } from 'lucide-react';
 import { StoreProvider, useStore } from '../shared/store';
-import { LS_KEYS } from '../shared/config';
 import { authApi, getAuthSession } from '../shared/auth';
 import { sheetsApi, SheetsApiError } from '../shared/connection';
 import { consumeFreshAuth, getCachedProfile, signOutAccount } from '../shared/users';
 import AuthScreen from './screens/AuthScreen';
 import { RestrictedScreen, SheetSetupScreen } from './screens/AccessScreens';
 import type { Product } from '../shared/types';
-import { BottomNav, DesktopSidebar, DesktopToolbar, SyncStatus, Toasts, AppLoader, hasOpenOverlay, useOverlayOpen, type TabKey } from './components/ui';
+import { BottomNav, SyncStatus, Toasts, AppLoader, hasOpenOverlay, useOverlayOpen, type TabKey } from './components/ui';
 import HomeScreen from './screens/HomeScreen';
 import type { ProductFilter } from './screens/ProductsScreen';
 
@@ -38,26 +37,10 @@ function Shell() {
     startSwitch(() => setTab(t));
   }, []);
   const [stockReq, setStockReq] = useState<StockRequest>(null);
-  // Desktop sidebar hide/show (persisted; desktop layout only).
-  const [sideCollapsed, setSideCollapsed] = useState(() => {
-    try {
-      return localStorage.getItem(LS_KEYS.sidebar) === '1';
-    } catch {
-      return false;
-    }
-  });
-  const toggleSidebar = useCallback(() => {
-    setSideCollapsed((v) => {
-      try {
-        localStorage.setItem(LS_KEYS.sidebar, v ? '0' : '1');
-      } catch { /* ignore */ }
-      return !v;
-    });
-  }, []);
   const [productFilter, setProductFilter] = useState<ProductFilter>('all');
   const [formOpen, setFormOpen] = useState(false);
   const [editing, setEditing] = useState<Product | null>(null);
-  const { toasts, dismissToast, configured, ready, loading, lastSync, online, pendingIds, failedOps, retryFailedOp, dismissFailedOp } = useStore();
+  const { toasts, dismissToast, configured, ready, loading, lastSync, pendingIds, failedOps, retryFailedOp, dismissFailedOp } = useStore();
   // Hide the bottom nav under any popup so sheet buttons are never covered.
   const overlayOpen = useOverlayOpen();
   const showSync = !overlayOpen && (pendingIds.length > 0 || failedOps.length > 0);
@@ -126,7 +109,6 @@ function Shell() {
   const closeForm = useCallback(() => setFormOpen(false), []);
   const closeStock = useCallback(() => setStockReq(null), []);
   const retryOp = useCallback((k: string) => void retryFailedOp(k), [retryFailedOp]);
-  const pageTitle = tab === 'home' ? 'Dashboard' : tab === 'products' ? 'Products' : tab === 'history' ? 'Transaction History' : 'Settings';
 
   /* Horizontal swipe switches tabs. Guards keep it out of the way:
    * - single touch only, inputs never start a swipe;
@@ -223,17 +205,15 @@ function Shell() {
   return (
     <div className="min-h-dvh bg-(--bg) text-(--ink)">
       <div className="ambient" aria-hidden="true" />
-      <div className={`app-shell relative z-[1] mx-auto min-h-dvh max-w-md sm:border-x sm:border-(--stroke-dim) ${sideCollapsed ? 'side-collapsed' : ''}`}>
-        <DesktopSidebar tab={tab} onNavigate={switchTab} onStock={openStock} collapsed={sideCollapsed} />
-        <DesktopToolbar title={pageTitle} online={online} pending={pendingIds.length} failed={failedOps.length} lastSync={lastSync} sideCollapsed={sideCollapsed} onToggleSidebar={toggleSidebar} />
+      <div className="app-shell relative z-[1] mx-auto min-h-dvh w-full max-w-[560px]">
         {!configured ? (
           <div className="backend-banner safe-top sticky top-0 z-20 px-3 pt-3">
             <button
               onClick={() => setTab('settings')}
-              className="glass mx-auto flex w-full max-w-md items-center gap-2.5 rounded-2xl border-amber-500/25 px-4 py-3 text-left"
+              className="glass mx-auto flex w-full max-w-md items-center gap-2.5 rounded-[var(--radius-control)] border-(--warning)/25 px-4 py-3 text-left"
             >
-              <CloudOff size={18} className="shrink-0 text-amber-500" />
-              <span className="flex-1 text-[13px] font-medium text-(--ink)">
+              <CloudOff size={18} className="shrink-0 text-(--warning)" />
+              <span className="flex-1 text-[length:var(--fs-footnote)] font-medium text-(--ink)">
                 Backend not connected — tap to paste your Apps Script URL.
               </span>
             </button>

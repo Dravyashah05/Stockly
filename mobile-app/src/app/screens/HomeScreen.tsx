@@ -76,16 +76,16 @@ export default function HomeScreen({
         label: 'Stock In',
         sub: 'Receive goods',
         icon: <ArrowDownToLine size={20} />,
-        grad: 'bg-(--primary) dark:bg-(--primary)',
-        iconCls: 'text-white dark:text-[#101114]',
+        // Primary intent = filled accent; the inverse action is a tinted
+        // surface so the two never compete for attention.
+        tileCls: 'bg-(--primary) text-(--primary-foreground)',
         onClick: onStockIn,
       },
       {
         label: 'Stock Out',
         sub: 'Sell / issue goods',
         icon: <ArrowUpFromLine size={20} />,
-        grad: 'bg-(--accent-soft)',
-        iconCls: 'text-(--accent)',
+        tileCls: 'bg-(--accent-soft) text-(--accent)',
         onClick: onStockOut,
       },
     ],
@@ -105,14 +105,14 @@ export default function HomeScreen({
         label: 'Low stock',
         value: String(stats.lowStockCount),
         foot: 'needs restock',
-        ringCls: 'hover:border-amber-500/40',
+        ringCls: 'hover:border-(--warning)/40',
         onClick: () => goProducts('low'),
       },
       {
         label: 'Out of stock',
         value: String(stats.outOfStockCount),
         foot: 'urgent',
-        ringCls: 'hover:border-rose-500/40',
+        ringCls: 'hover:border-(--destructive)/40',
         onClick: () => goProducts('out'),
       },
     ],
@@ -161,14 +161,15 @@ export default function HomeScreen({
       <Header title="Overview" />
 
       <div className="dashboard-content mx-auto max-w-md space-y-5 px-4 pt-4">
-        {/* Greeting — compact header with Add button */}
+        {/* Greeting — the date is a passive chip, so it stays neutral. Accent
+            colour is reserved for things the user can actually act on. */}
         <div className="dashboard-greeting px-1 pt-1">
-          <span className="inline-flex items-center gap-1.5 rounded-full bg-(--primary) px-3 py-1 text-[11px] font-bold uppercase tracking-wider text-white dark:bg-(--primary) dark:text-[#151515]">
-            <span className={`h-1.5 w-1.5 rounded-full ${online ? 'bg-emerald-500' : 'bg-amber-500'}`} />
+          <span className="inline-flex items-center gap-1.5 rounded-[var(--radius-chip)] bg-(--glass-soft) px-2.5 py-1 text-[length:var(--fs-caption)] font-semibold text-(--ink-2)">
+            <span className={`h-1.5 w-1.5 rounded-full ${online ? 'bg-(--success)' : 'bg-(--warning)'}`} />
             {today}
           </span>
           <div className="mt-2 flex items-center justify-between gap-3">
-            <h2 className="min-w-0 flex-1 text-[24px] font-extrabold leading-[1.1] tracking-tight text-(--ink)">
+            <h2 className="min-w-0 flex-1 text-[length:var(--fs-title2)] font-bold leading-[1.15] tracking-[-0.025em] text-(--ink)">
               {greet}
             </h2>
             <button
@@ -176,40 +177,41 @@ export default function HomeScreen({
               onClick={onAddProduct}
               aria-label="Add product"
               title="Add product"
-              className="press flex min-h-11 shrink-0 items-center justify-center gap-2 rounded-xl bg-(--primary) px-3 text-[13px] font-bold text-white dark:bg-(--primary) dark:text-[#151515] sm:px-4"
+              className="press flex min-h-11 shrink-0 items-center justify-center gap-2 rounded-[var(--radius-control)] bg-(--primary) px-3 text-[length:var(--fs-footnote)] font-semibold text-(--primary-foreground) shadow-[0_1px_2px_rgba(0,0,0,0.08)] sm:px-4"
             >
-              <PackagePlus size={19} /><span>Add Product</span>
+              <PackagePlus size={18} /><span>Add Product</span>
             </button>
           </div>
         </div>
 
-        {/* Stock In / Out — compact action buttons */}
+        {/* Stock In / Out — the two daily actions, side by side */}
         <div className="dashboard-actions grid grid-cols-2 gap-2.5">
           {quickActions.map((a) => (
             <button
               key={a.label}
               type="button"
               onClick={a.onClick}
-              className="glass press group flex min-h-[88px] flex-col items-start justify-between gap-2 rounded-[20px] border border-transparent p-4 text-left transition-colors hover:border-(--accent)/30"
+              className="glass press group flex min-h-[84px] flex-col items-start justify-between gap-2 rounded-[calc(var(--radius-card) - 4px)] p-3.5 text-left transition-colors"
             >
               <span
-                className={`flex h-10 w-10 items-center justify-center rounded-2xl ${a.grad} ${a.iconCls} transition-transform group-active:scale-95`}
+                className={`flex h-10 w-10 items-center justify-center rounded-[var(--radius-icon)] transition-transform group-active:scale-95 ${a.tileCls}`}
               >
                 {a.icon}
               </span>
-              <span>
-                <span className="block text-[16px] font-extrabold leading-tight text-(--ink)">{a.label}</span>
-                <span className="block text-[12px] font-medium text-(--ink-2)">{a.sub}</span>
+              <span className="min-w-0">
+                <span className="block truncate text-[length:var(--fs-callout)] font-semibold leading-tight text-(--ink)">
+                  {a.label}
+                </span>
+                <span className="block truncate text-[length:var(--fs-caption)] font-normal text-(--ink-2)">
+                  {a.sub}
+                </span>
               </span>
             </button>
           ))}
         </div>
 
-        {/* Separation line below Stock In / Out */}
-        <div aria-hidden="true" className="dashboard-divider mx-1 h-px bg-(--stroke-dim)" />
-
         {!online ? (
-          <div className="dashboard-banner glass flex items-center gap-2 rounded-2xl border-amber-500/25 px-4 py-3 text-[13px] font-medium text-amber-600 dark:text-amber-300">
+          <div className="dashboard-banner glass flex items-center gap-2 rounded-[var(--radius-row)] border-(--warning)/25 px-4 py-3 text-[length:var(--fs-footnote)] font-medium text-(--warning-ink)">
             <WifiOff size={16} /> Offline — showing last synced data.
           </div>
         ) : null}
@@ -219,7 +221,7 @@ export default function HomeScreen({
           </div>
         ) : null}
         {error && products.length > 0 ? (
-          <div className="dashboard-banner glass flex items-center gap-2 rounded-2xl border-amber-500/25 px-4 py-3 text-[13px] font-medium text-amber-600 dark:text-amber-300">
+          <div className="dashboard-banner glass flex items-center gap-2 rounded-[var(--radius-row)] border-(--warning)/25 px-4 py-3 text-[length:var(--fs-footnote)] font-medium text-(--warning-ink)">
             <WifiOff size={16} /> Sync failed — showing cached data.
           </div>
         ) : null}
@@ -235,19 +237,22 @@ export default function HomeScreen({
           </div>
         ) : (
           <>
-            {/* Primary inventory metric */}
-            <div className="dashboard-hero relative overflow-hidden rounded-[24px] border border-(--stroke-dim) bg-(--bg-elev) p-5 text-(--ink)">
+            {/* Primary inventory metric — the one number that answers
+                "how much stock do I have?" */}
+            <div className="dashboard-hero relative overflow-hidden rounded-[calc(var(--radius-card) - 4px)] border border-(--stroke-dim) bg-(--bg-elev) p-5 text-(--ink)">
               <div className="relative flex items-end justify-between gap-3">
                 <div className="min-w-0">
-                  <p className="text-[11px] font-extrabold uppercase tracking-[0.18em] text-(--ink-2)">
+                  <p className="text-[length:var(--fs-caption)] font-semibold uppercase tracking-[0.08em] text-(--ink-3)">
                     Total stock units
                   </p>
-                  <p className="tnum mt-2 truncate text-[clamp(2.25rem,7vw,4.5rem)] font-extrabold leading-[0.95] tracking-[-0.06em]">
+                  <p className="tnum mt-2 truncate text-[clamp(2.25rem,7vw,4.5rem)] font-bold leading-[0.95] tracking-[-0.06em]">
                     {stats.totalUnits.toLocaleString('en-IN')}
                   </p>
                 </div>
               </div>
-              <p className="relative mt-3 border-t border-(--stroke-dim) pt-3 text-[12px] font-semibold text-(--ink-2)">Across your catalogue</p>
+              <p className="relative mt-3 border-t border-(--stroke-dim) pt-3 text-[length:var(--fs-caption)] font-medium text-(--ink-2)">
+                Across your catalogue
+              </p>
             </div>
 
             {/* Uneven metrics give urgent stock levels a faster visual read. */}
@@ -266,31 +271,35 @@ export default function HomeScreen({
               ))}
             </div>
 
-            {/* Needs attention — modern rows with stock bars */}
+            {/* Needs attention — the actionable list, so it comes before the
+                passive activity feed. */}
             <div className="dashboard-attention">
-              <div className="mb-2.5 flex items-center justify-between px-1">
-                <p className="flex items-center gap-2 text-[13px] font-extrabold uppercase tracking-wider text-(--ink-2)">
-                  <span aria-hidden="true" className="h-3 w-1 rounded-full bg-[#007AFF]" />
+              <div className="mb-2.5 flex items-center justify-between gap-2 px-1">
+                <p className="flex items-center gap-2 text-[length:var(--fs-caption)] font-semibold uppercase tracking-[0.06em] text-(--ink-3)">
                   Needs attention
                   {stats.lowStockItems.length > 0 ? (
-                    <span className="tnum rounded-full bg-rose-500/12 px-2 py-0.5 text-[11px] font-extrabold text-rose-600 dark:text-rose-300">
+                    <span className="tnum rounded-[var(--radius-chip)] bg-(--destructive)/12 px-2 py-0.5 text-[length:var(--fs-caption)] font-semibold normal-case text-(--destructive-ink)">
                       {stats.lowStockItems.length}
                     </span>
                   ) : null}
                 </p>
                 {stats.lowStockItems.length > 0 ? (
-                  <button type="button" onClick={() => goProducts('low')} className="press flex items-center gap-0.5 text-xs font-extrabold text-(--accent)">
+                  <button
+                    type="button"
+                    onClick={() => goProducts('low')}
+                    className="press flex items-center gap-0.5 text-[length:var(--fs-footnote)] font-semibold text-(--accent)"
+                  >
                     View all <ArrowRight size={13} />
                   </button>
                 ) : undefined}
               </div>
               {stats.lowStockItems.length === 0 ? (
-                <div className="glass rounded-[20px] px-4 py-7 text-center">
-                  <span className="mx-auto mb-2.5 flex h-12 w-12 items-center justify-center rounded-2xl bg-[#1E7B3C] text-white">
+                <div className="glass flex flex-col items-center rounded-[calc(var(--radius-card) - 4px)] px-4 py-7 text-center">
+                  <span className="mb-2.5 flex h-12 w-12 items-center justify-center rounded-[var(--radius-icon)] bg-(--success)/14 text-(--success-ink)">
                     <CircleCheck size={24} />
                   </span>
-                  <p className="text-[15px] font-extrabold text-(--ink)">All stocked up</p>
-                  <p className="mt-0.5 text-[12.5px] text-(--ink-2)">No low-stock items right now.</p>
+                  <p className="text-[length:var(--fs-subhead)] font-semibold text-(--ink)">All stocked up</p>
+                  <p className="mt-0.5 text-[length:var(--fs-caption)] text-(--ink-2)">No low-stock items right now.</p>
                 </div>
               ) : (
                 <div className="dashboard-attention-list">
@@ -299,12 +308,12 @@ export default function HomeScreen({
                       <button type="button" onClick={() => goProducts(isOut ? 'out' : 'low')} className="dashboard-attention-item press">
                         <span className={`dashboard-attention-mark ${isOut ? 'is-out' : 'is-low'}`} aria-hidden="true">{isOut ? <OctagonX size={15} /> : <AlertTriangle size={15} />}</span>
                         <span className="min-w-0 flex-1">
-                          <span className="block truncate text-[14px] font-bold text-(--ink)">{p.name}</span>
-                          <span className="block text-[11.5px] text-(--ink-2)">
-                            <b className={isOut ? 'font-bold text-(--destructive)' : 'font-bold text-(--warning)'}>{isOut ? 'Out of stock' : 'Low stock'}</b>
+                          <span className="block truncate text-[length:var(--fs-subhead)] font-semibold text-(--ink)">{p.name}</span>
+                          <span className="block text-[length:var(--fs-caption)] text-(--ink-2)">
+                            <b className={isOut ? 'font-semibold text-(--destructive-ink)' : 'font-semibold text-(--warning-ink)'}>{isOut ? 'Out of stock' : 'Low stock'}</b>
                             {' · '}{p.currentStock} on hand · {meta}
                           </span>
-                          <span className="mt-1.5 block h-1 overflow-hidden rounded-full bg-(--stroke-dim)">
+                          <span className="mt-1.5 block h-1 overflow-hidden rounded-[calc(var(--radius-chip))] bg-(--stroke-dim)">
                             <span className={`block h-full ${isOut ? 'bg-(--destructive)' : 'bg-(--warning)'}`} style={{ width: `${fillPct}%` }} />
                           </span>
                         </span>
@@ -319,49 +328,58 @@ export default function HomeScreen({
               )}
             </div>
 
-            {/* Recent activity — timeline cards */}
+            {/* Recent activity — the passive feed, after the actionable list */}
             <div className="dashboard-activity">
-              <div className="mb-2.5 flex items-center justify-between px-1">
-                <p className="flex items-center gap-2 text-[13px] font-extrabold uppercase tracking-wider text-(--ink-2)">
-                  <span aria-hidden="true" className="h-3 w-1 rounded-full bg-[#007AFF]" />
+              <div className="mb-2.5 flex items-center justify-between gap-2 px-1">
+                <p className="text-[length:var(--fs-caption)] font-semibold uppercase tracking-[0.06em] text-(--ink-3)">
                   Recent activity
                 </p>
-                <button type="button" onClick={goHistory} className="press flex items-center gap-0.5 text-xs font-extrabold text-(--accent)">
+                <button
+                  type="button"
+                  onClick={goHistory}
+                  className="press flex items-center gap-0.5 text-[length:var(--fs-footnote)] font-semibold text-(--accent)"
+                >
                   View all <ArrowRight size={13} />
                 </button>
               </div>
               {stats.recentMovements.length === 0 ? (
-                <div className="glass rounded-[24px] px-4 py-7 text-center text-[13.5px] text-(--ink-2)">
+                <div className="glass rounded-[var(--radius-card)] px-4 py-7 text-center text-[length:var(--fs-footnote)] text-(--ink-2)">
                   No stock movements yet.
                 </div>
               ) : (
-                <div className="glass space-y-1 rounded-[20px] p-2">
+                <div className="glass divide-y divide-(--stroke-dim) rounded-[var(--radius-card)] px-1.5">
                   {recentRows.map(({ t, isIn, when, pending }) => (
-                    <div key={t.id} className="flex items-center gap-3 rounded-[18px] px-2.5 py-2.5 transition-colors hover:bg-(--accent-soft)/40">
+                    <div key={t.id} className="flex items-center gap-3 px-2 py-3">
                       <span
-                        className={`flex h-10 w-10 shrink-0 items-center justify-center rounded-2xl text-white shadow-sm ${
-                          isIn ? 'bg-[#1E7B3C]' : 'bg-[#C2332D]'
+                        className={`flex h-10 w-10 shrink-0 items-center justify-center rounded-[var(--radius-icon)] ${
+                          isIn
+                            ? 'bg-(--success)/14 text-(--success-ink)'
+                            : 'bg-(--destructive)/12 text-(--destructive-ink)'
                         }`}
                       >
-                        {isIn ? <ArrowDownToLine size={16} /> : <ArrowUpFromLine size={16} />}
+                        {isIn ? <ArrowDownToLine size={17} /> : <ArrowUpFromLine size={17} />}
                       </span>
                       <span className="min-w-0 flex-1">
                         <span className="flex items-center gap-1.5">
-                          <span className="block truncate text-[14px] font-bold text-(--ink)">{t.productName}</span>
+                          <span className="block truncate text-[length:var(--fs-subhead)] font-semibold text-(--ink)">
+                            {t.productName}
+                          </span>
                           {pending ? (
-                            <span className="shrink-0 rounded-full bg-(--accent-soft) px-1.5 py-px text-[10px] font-extrabold text-(--accent)">
+                            <span className="shrink-0 rounded-[var(--radius-chip)] bg-(--accent-soft) px-1.5 py-px text-[length:var(--fs-caption)] font-semibold text-(--accent)">
                               Saving…
                             </span>
                           ) : null}
                         </span>
-                        <span className="block truncate text-[11.5px] font-medium text-(--ink-2)">
+                        <span className="block truncate text-[length:var(--fs-caption)] font-normal text-(--ink-2)">
                           {when}
                           {t.reason ? ` · ${t.reason}` : ''}
                         </span>
                       </span>
                       <span
-                        className={`tnum shrink-0 rounded-full px-2.5 py-1 text-[13px] font-extrabold ${
-                          isIn ? 'bg-emerald-500/12 text-emerald-600 dark:text-emerald-300' : 'bg-rose-500/12 text-rose-600 dark:text-rose-300'
+                        className={`tnum shrink-0 rounded-[var(--radius-chip)] px-2.5 py-1 text-[length:var(--fs-footnote)] font-semibold ${
+                          isIn
+                            ? 'bg-(--success)/12 text-(--success-ink)'
+                            : 'bg-(--destructive)/12 text-(--destructive-ink)'
                         }`}
                       >
                         {isIn ? '+' : '−'}

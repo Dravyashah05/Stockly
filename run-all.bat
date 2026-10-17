@@ -16,7 +16,7 @@ if errorlevel 1 (
   exit /b 1
 )
 
-echo Starting Stockly backend, mobile app, website, and admin console...
+echo Starting Stockly backend, Android app preview, and owner tools...
 echo Press Ctrl+C to stop all services.
 npm run dev:all
 

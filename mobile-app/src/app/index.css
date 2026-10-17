@@ -4,23 +4,50 @@
 @custom-variant dark (&:where(.dark, .dark *));
 
 @theme {
-  --font-sans: "Inter", ui-sans-serif, system-ui, -apple-system, "Segoe UI",
-    Roboto, sans-serif;
+  /* Native Android WebView resolves Roboto from the platform font stack. */
+  --font-sans: Roboto, "Google Sans", "Noto Sans", ui-sans-serif, system-ui, sans-serif;
 }
 
-/* ---------------- Editorial design tokens (Stockly store theme) ---------------- */
+/* ==========================================================================
+   Stockly Material 3 design tokens
+   --------------------------------------------------------------------------
+   One disciplined layer. Every screen tunes through these names, never through
+   page-local colour guesses.
+
+   Rules that keep this system coherent:
+   1. THREE text levels, always distinct. --ink-2/--ink-3 previously both
+      resolved to #6e6e73 in light mode, which flattened every hierarchy.
+   2. Labels and secondary text use semantic color and weight tokens.
+   3. Rounded surfaces and touch targets use a consistent scale.
+   4. Materials are named by elevation role (card / chrome / soft), never by
+      colour, so light and dark stay symmetric.
+   ========================================================================== */
+
 :root {
-  /* Shared product system: keep brand values centralized and tune all
-     screens through these tokens instead of page-specific color guesses. */
-  --font-size-xs: 0.75rem;
-  --font-size-sm: 0.875rem;
-  --font-size-base: 1rem;
-  --font-size-lg: 1.125rem;
-  --font-size-title: 1.375rem;
-  --font-size-display: 2rem;
-  --font-weight-body: 450;
-  --font-weight-label: 650;
-  --font-weight-heading: 800;
+  /* --- Typography --- */
+  --font-ui: Roboto, "Google Sans", "Noto Sans", ui-sans-serif, system-ui, sans-serif;
+  --font-sans: var(--font-ui);
+  --font-numeric: ui-rounded, "SF Pro Rounded", var(--font-ui);
+
+  /* Material-inspired type scale, in rem (16px base). */
+  --fs-large-title: 2.125rem; /* 34pt — page titles */
+  --fs-title1: 1.75rem;       /* 28pt */
+  --fs-title2: 1.375rem;      /* 22pt */
+  --fs-title3: 1.25rem;       /* 20pt */
+  --fs-headline: 1.0625rem;   /* 17pt semibold */
+  --fs-body: 1.0625rem;       /* 17pt regular */
+  --fs-callout: 1rem;         /* 16pt */
+  --fs-subhead: 0.9375rem;    /* 15pt — secondary */
+  --fs-footnote: 0.8125rem;   /* 13pt — captions */
+  --fs-caption: 0.75rem;      /* 12pt */
+  --fs-tab: 0.6875rem;        /* 11pt — tab labels */
+
+  --fw-regular: 400;
+  --fw-medium: 500;
+  --fw-semibold: 600;
+  --fw-bold: 700;
+
+  /* --- Layout rhythm (4pt grid) --- */
   --space-1: 0.25rem;
   --space-2: 0.5rem;
   --space-3: 0.75rem;
@@ -29,93 +56,168 @@
   --space-6: 1.5rem;
   --space-8: 2rem;
   --space-10: 2.5rem;
-  --bg: var(--st-bg);
-  --bg-elev: #ffffff;
-  --ink: var(--st-ink);
-  --ink-2: #6e6e73;
-  --ink-3: #6e6e73;
-  --glass: #ffffff;
-  --glass-strong: #ffffff;
-  --glass-soft: var(--st-grey);
-  --stroke: var(--st-line);
-  --stroke-dim: rgba(29, 29, 31, 0.09);
-  --accent: #005ecb;
-  --accent-soft: #e8f2ff;
-  --accent-ink: #ffffff;
-  --brand-lime: var(--st-lime);
-  --primary: #0066cc;
-  --primary-foreground: #ffffff;
-  --success: #248a3d;
-  --warning: #a85d00;
-  --destructive: #d70015;
-  --input: #ffffff;
-  --ring: #007aff;
-  --card-shadow: 0 1px 2px rgba(21, 21, 21, 0.04);
-  --nav-shadow: 0 8px 24px -16px rgba(21, 21, 21, 0.24);
-  --glow-a: rgba(0, 122, 255, 0.08);
-  --glow-b: rgba(29, 29, 31, 0.035);
-  --field: #ffffff;
+  --gutter: 1rem;
+
+  /* --- Concentric radii --- */
+  --radius-hero: 28px;
+  --radius-card: 20px;
+  --radius-sheet: 28px;
+  --radius-row: 14px;
+  --radius-control: 14px;
+  --radius-chip: 999px;
+  --radius-icon: 12px;
+
+  /* --- Android touch target metrics --- */
+  --touch-min: 44px;
+  --input-height: 50px;
+  --button-height: 50px;
   --icon-sm: 16px;
   --icon-md: 20px;
   --icon-lg: 24px;
-  --control-border: var(--stroke);
-  --focus-ring: 0 0 0 3px var(--accent-soft);
-  --shadow-popover: 0 18px 48px -24px rgba(21, 21, 21, .28);
-  /* Consistent corner radii used across the app */
-  --radius-card: 18px;
-  --radius-row: 12px;
-  --radius-control: 10px;
-  --input-height: 48px;
-  --button-height: 44px;
   --dialog-mobile-max: 86dvh;
   --breakpoint-tablet: 768px;
   --breakpoint-desktop: 1024px;
-  /* Minimum touch target (WCAG / iOS HIG) */
-  --touch-min: 44px;
+
+  /* Bottom navigation. Declared once so content clearance can never drift
+     away from the real bar. */
+  --nav-bar-height: 3.875rem;
+  --nav-bar-offset: 0.75rem;
+
+  /* --- Colour: text --- */
+  --ink: #1d1d1f;
+  --ink-2: #6e6e73;
+  --ink-3: #8e8e93;
+  /* Additional secondary text level for supporting labels. */
+  --ink-4: #a7a7aa;
+
+  /* --- Colour: surfaces --- */
+  --bg: #f5f5f7;
+  --bg-elev: #ffffff;
+  --surface-sunken: #efeff4;
+  --field: #ffffff;
+  --input: #ffffff;
+  /* Quiet tonal surface for nested controls. */
+  --chip-bg: rgba(255, 255, 255, 0.65);
+
+  /* --- Colour: lines --- */
+  --separator: #e5e5ea;
+  --separator-solid: #e5e5ea;
+  --separator-opaque: #e5e5ea;
+  --stroke: var(--separator);
+  --stroke-dim: #ededf0;
+  --control-border: var(--separator);
+
+  /* --- Colour: accent + semantics ---
+     Semantic status text uses contrast-safe foreground tokens. */
+  --accent: #007aff;
+  --accent-soft: #e8f2ff;
+  --accent-ink: #ffffff;
+  --primary: var(--accent);
+  --primary-foreground: #ffffff;
+  --ring: var(--accent);
+  --success: #34c759;
+  --success-ink: #248a3d;
+  --warning: #ff9f0a;
+  --warning-ink: #a85d00;
+  --destructive: #ff3b30;
+  --destructive-ink: #d70015;
+  --brand-lime: var(--st-lime);
+  /* Muted semantic fills for chips and subtle highlights. */
+  --muted-success: #d6e9d8;
+  --muted-warning: #fff8e1;
+  --muted-destructive: #ffe4e2;
+
+  /* --- Elevation --- */
+  --card-shadow: 0 1px 2px rgba(21, 21, 21, 0.04), 0 1px 3px rgba(21, 21, 21, 0.03);
+  --nav-shadow: 0 1px 2px rgba(21, 21, 21, 0.05), 0 14px 36px -20px rgba(21, 21, 21, 0.30);
+  --shadow-popover: 0 1px 2px rgba(21, 21, 21, 0.05), 0 18px 48px -24px rgba(21, 21, 21, 0.28);
+  --focus-ring: 0 0 0 3px var(--accent-soft);
+  /* Navigation elevation — slightly stronger than cards and softer than popovers. */
+  --chrome-shadow: 0 1px 2px rgba(21, 21, 21, 0.08), 0 4px 12px -4px rgba(21, 21, 21, 0.30);
+
+  /* --- Ambient wash behind content (restrained) --- */
+  --glow-a: rgba(0, 122, 255, 0.06);
+  --glow-b: rgba(29, 29, 31, 0.025);
+
+  /* --- Floating chrome and content surfaces --- */
+  --glass: #ffffff;
+  --glass-strong: #ffffff;
+  --glass-soft: var(--surface-sunken);
+  --glass-strong-bg: rgba(255, 255, 255, 0.88);
+  /* Sheets need to be firmer than the nav: content scrolls directly behind
+     them, while the nav only ever sits over page background. */
+  --glass-sheet-bg: rgba(255, 255, 255, 0.96);
+  --glass-strong-border: rgba(255, 255, 255, 0.70);
+  --glass-specular: inset 0 1px 0 rgba(255, 255, 255, 0.85);
+  --glass-shadow: var(--nav-shadow);
+  --glass-blur: blur(20px) saturate(1.9);
+
   color-scheme: light;
 }
 
 .dark {
-  --bg: var(--st-dark);
-  --bg-elev: #1c1c20;
+  color-scheme: dark;
+
+  /* --- Colour: text --- */
   --ink: #f5f5f7;
   --ink-2: #a1a1a6;
   --ink-3: #8e8e93;
-  --glass: #1c1c20;
-  --glass-strong: #232327;
-  --glass-soft: rgba(255, 255, 255, 0.06);
-  --stroke: rgba(255, 255, 255, 0.13);
-  --stroke-dim: rgba(255, 255, 255, 0.09);
-  --accent: #5e9fff;
-  --accent-soft: rgba(94, 159, 255, 0.16);
-  --accent-ink: var(--st-ink);
-  --primary: #5e9fff;
-  --primary-foreground: #101114;
-  --success: #58d477;
-  --warning: #ffbd4a;
-  --destructive: #ff6961;
-  --input: rgba(255, 255, 255, 0.06);
-  --ring: #5e9fff;
-  --card-shadow: 0 1px 2px rgba(0, 0, 0, 0.14);
-  --nav-shadow: 0 8px 24px -16px rgba(0, 0, 0, 0.65);
-  --glow-a: rgba(94, 159, 255, 0.07);
+
+  /* --- Colour: surfaces --- */
+  --bg: #0d0d0f;
+  --bg-elev: #1c1c1e;
+  --surface-sunken: #151517;
+  --field: #2c2c2e;
+  --input: var(--field);
+
+  /* --- Colour: lines --- */
+  --separator: #38383a;
+  --separator-solid: #38383a;
+  --separator-opaque: #38383a;
+  --stroke: var(--separator);
+  --stroke-dim: #2c2c2e;
+  --control-border: var(--separator);
+
+  /* --- Colour: accent + semantics --- */
+  --accent: #0a84ff;
+  --accent-soft: #12304f;
+  --accent-ink: #ffffff;
+  --primary: var(--accent);
+  --primary-foreground: #ffffff;
+  --ring: var(--accent);
+  --success: #30d158;
+  --success-ink: #30d158;
+  --warning: #ffd60a;
+  --warning-ink: #ffd60a;
+  --destructive: #ff453a;
+  --destructive-ink: #ff453a;
+
+  /* --- Elevation: darker surfaces need deeper, softer shadows --- */
+  --card-shadow: 0 1px 2px rgba(0, 0, 0, 0.30);
+  --nav-shadow: 0 1px 2px rgba(0, 0, 0, 0.34), 0 18px 44px -22px rgba(0, 0, 0, 0.74);
+  --shadow-popover: 0 1px 2px rgba(0, 0, 0, 0.34), 0 18px 44px -22px rgba(0, 0, 0, 0.74);
+
+  --glow-a: rgba(10, 132, 255, 0.09);
   --glow-b: rgba(0, 0, 0, 0);
-  --field: rgba(255, 255, 255, 0.06);
-  --control-border: var(--stroke);
-  --focus-ring: 0 0 0 3px var(--accent-soft);
-  --shadow-popover: 0 18px 48px -24px rgba(0, 0, 0, .72);
-  color-scheme: dark;
+
+  --glass: #1c1c1e;
+  --glass-strong: #1c1c1e;
+  --glass-soft: #2c2c2e;
+  --glass-strong-bg: rgba(30, 30, 32, 0.74);
+  --glass-sheet-bg: rgba(28, 28, 30, 0.96);
+  --glass-strong-border: rgba(255, 255, 255, 0.16);
+  --glass-specular: inset 0 1px 0 rgba(255, 255, 255, 0.14);
 }
 
 /* Native select popups render with OS styling: pin option colors per theme
    so options never turn white-on-white (Windows) or black-on-black. */
 select option {
-  color: #151515;
-  background-color: #ffffff;
+  color: var(--ink);
+  background-color: var(--bg-elev);
 }
 .dark select option {
-  color: #f5f5f7;
-  background-color: #1c1c20;
+  color: var(--ink);
+  background-color: var(--bg-elev);
 }
 
 html,
@@ -134,8 +236,8 @@ body {
 }
 
 ::selection {
-  background: #e8f2ff;
-  color: #1d1d1f;
+  background: var(--accent-soft);
+  color: var(--ink);
 }
 
 /* Kill the 300ms tap delay / double-tap-zoom wait on mobile buttons:
@@ -159,15 +261,23 @@ button, a {
   padding-bottom: env(safe-area-inset-bottom, 0px);
 }
 .nav-bottom-offset {
-  bottom: calc(0.9rem + env(safe-area-inset-bottom, 0px));
+  bottom: calc(var(--nav-bar-offset) + env(safe-area-inset-bottom, 0px));
 }
 .app-page-viewport {
+  /* Fall back to vh first, then dvh where it is accurate. Android WebView can
+     over-report dvh (it may include system bars), which let the final row sit
+     under the floating nav. */
+  height: calc(100vh - 5.15rem - env(safe-area-inset-bottom, 0px));
   height: calc(100dvh - 5.15rem - env(safe-area-inset-bottom, 0px));
   overflow-y: auto;
   overscroll-behavior-y: contain;
   -webkit-overflow-scrolling: touch;
   scrollbar-width: none;
-  padding-bottom: 1rem;
+  /* The floating nav OVERLAYS content, so reserve room for it or the last
+     rows hide behind the bar. Height and offset come from the tokens above. */
+  padding-bottom: calc(
+    var(--nav-bar-height) + var(--nav-bar-offset) + env(safe-area-inset-bottom, 0px)
+  );
 }
 .app-page-viewport::-webkit-scrollbar { display: none; }
 
@@ -206,6 +316,75 @@ button:disabled, [aria-disabled="true"] { cursor: not-allowed; }
   .desktop-product-table > .divide-y > :not([hidden]) { border-top-width: 0; }
 }
 
+/* ==========================================================================
+   Products / History list controls
+   --------------------------------------------------------------------------
+   Search, category filter and status/sort are three rows of the SAME control
+   panel, so on the phone they share one surface divided by hairlines instead
+   of stacking as three separate cards. The list below stays a clean card, so
+   the header never competes with the content it filters.
+   Scoped below the desktop breakpoint, where the controls become a wide
+   grid and the grouping no longer helps.
+   ========================================================================== */
+@media (max-width: 1023px) {
+  .products-controls,
+  .history-controls {
+    gap: 0 !important;
+    border: 1px solid var(--stroke-dim);
+    border-radius: var(--radius-card);
+    background: var(--bg-elev);
+    overflow: hidden;
+  }
+
+  .products-controls > *,
+  .history-controls > * {
+    margin-top: 0 !important;
+  }
+
+  /* Search leads the panel, so it carries the inner top corners. In History
+     the SearchBar renders its .search-field one level down, so the first
+     child is the reliable hook there. */
+  .products-search,
+  .history-controls > :first-child {
+    padding: 0.7rem 0.75rem;
+    border-radius: calc(var(--radius-card) - 1px) calc(var(--radius-card) - 1px) 0 0;
+  }
+
+  /* Each following row is separated by a hairline, not a gap. */
+  .products-search + *,
+  .history-controls > * + * {
+    border-top: 1px solid var(--stroke-dim);
+  }
+
+  /* Chip strip and the status/sort row supply their own inner padding. */
+  .products-controls > .no-scrollbar,
+  .products-controls > .products-filter-row,
+  .history-controls > .history-filter-row {
+    padding: 0.7rem 0.75rem;
+  }
+
+  /* The status/sort row is the last, so it closes the panel. */
+  .products-filter-row {
+    border-radius: 0 0 calc(var(--radius-card) - 1px) calc(var(--radius-card) - 1px);
+  }
+
+  /* The list card continues the panel below it. Its horizontal inset is
+     matched to the panel's CONTENT edge (px-4 + the panel's 1px border) so the
+     two cards share the same left/right edges instead of differing by 0.8px a
+     side. The top hairline is the panel's bottom edge, so no second line. */
+  .products-results,
+  .history-results {
+    padding-inline: calc(1rem + 1px);
+    padding-top: 0;
+  }
+
+  .products-results > .glass,
+  .history-results > .glass {
+    border-top-left-radius: 0;
+    border-top-right-radius: 0;
+    border-top: 0;
+  }
+}
 /* Narrow screens: let the status filter + sort + clear wrap instead of
  * squeezing or overflowing. */
 .products-filter-row { flex-wrap: wrap; }
@@ -459,42 +638,84 @@ button:disabled, [aria-disabled="true"] { cursor: not-allowed; }
   .product-detail-stats > div:first-child > p:first-child { font-size: 24px; }
 }
 
-/* ---------------- Solid surfaces ----------------
- * Perf: no backdrop-filter anywhere (the #1 mobile GPU killer). Cards and
- * fixed chrome use plain opaque backgrounds, each on its own layer. */
+/* ==========================================================================
+   Surface materials
+   --------------------------------------------------------------------------
+   Keep translucent effects limited to floating navigation and controls;
+   content surfaces stay opaque for legibility:
+
+     .glass-strong  floating chrome: bottom nav capsule, sheets/dialogs,
+                    toasts, desktop toolbar. Gets real lensing (blur +
+                    saturation), a specular top highlight and an adaptive
+                    shadow.
+     .glass         content surface: cards, rows, lists. Deliberately opaque —
+                    glass on content muddles hierarchy and costs GPU.
+     .glass-soft    a quiet nested fill for chips/controls inside content.
+
+   Glass is GPU-heavy, so lensing is limited to a few chrome surfaces rather
+   than hundreds of list rows, and shaved down on touch devices.
+   ========================================================================== */
+
+/* --- Content surface: intentionally opaque --- */
 .glass {
-  background: var(--glass);
-  border: 1px solid var(--stroke);
+  background: var(--bg-elev);
+  border: 1px solid var(--stroke-dim);
+  border-radius: var(--radius-card);
   box-shadow: var(--card-shadow);
   /* Promote to its own layer so scroll stays on the compositor. */
   contain: layout style;
 }
-/* Solid editorial surfaces — no backdrop blur. */
+
+/* --- Floating navigation and controls --- */
 .glass-strong {
   background: var(--glass-strong);
-  border: 1px solid var(--stroke);
-  box-shadow: var(--nav-shadow);
+  border: 1px solid var(--separator-solid);
+  border-radius: 22px;
+  box-shadow: var(--glass-specular), var(--glass-shadow);
   contain: layout style;
 }
-.dark .glass-strong {
-  box-shadow: var(--nav-shadow);
+
+/* Progressive enhancement: take on real lensing only where backdrop-filter
+   works. The declarations above remain a complete solid fallback. */
+@supports ((-webkit-backdrop-filter: blur(1px)) or (backdrop-filter: blur(1px))) {
+  .glass-strong {
+    background: var(--glass-strong-bg);
+    border-color: var(--separator-solid);
+    -webkit-backdrop-filter: var(--glass-blur);
+    backdrop-filter: var(--glass-blur);
+  }
 }
+
+/* --- Quiet nested fill inside content --- */
 .glass-soft {
   background: var(--glass-soft);
   border: 1px solid var(--stroke-dim);
 }
 
-/* Graceful fallback where backdrop-filter is unsupported */
-@supports not ((backdrop-filter: blur(1px)) or (-webkit-backdrop-filter: blur(1px))) {
-  .glass {
-    background: var(--bg-elev);
-  }
+/* Accessibility: firm the surface when users request reduced transparency. */
+@media (prefers-reduced-transparency: reduce) {
   .glass-strong {
     background: var(--bg-elev);
+    border-color: var(--stroke);
+    -webkit-backdrop-filter: none;
+    backdrop-filter: none;
   }
-  .glass-soft {
+}
+
+/* Higher contrast: firm the rim and drop lensing so the control layer stays
+   unambiguously distinct from content. */
+@media (prefers-contrast: more) {
+  .glass-strong {
     background: var(--bg-elev);
+    border-color: var(--stroke);
+    -webkit-backdrop-filter: none;
+    backdrop-filter: none;
   }
+}
+
+/* Touch devices: a shallower blur is far cheaper and still reads as glass. */
+@media (pointer: coarse) {
+  :root { --glass-blur: blur(16px) saturate(1.6); }
 }
 
 /* Ambient gradient wash behind the app (very restrained) */
@@ -751,15 +972,6 @@ textarea {
 
 /* Shared surface and control finish. The original Stockly colors, typeface,
    and navigation remain intact while nested panels become quieter. */
-.glass {
-  border-radius: var(--radius-card);
-  box-shadow: var(--card-shadow);
-}
-
-.glass-strong {
-  box-shadow: var(--nav-shadow);
-}
-
 input:not([type="checkbox"]):not([type="radio"]),
 select,
 textarea {
@@ -818,11 +1030,14 @@ button:disabled,
 
 /* Stockly editorial workspace -------------------------------------------- */
 :root {
-  --icon-sm: 16px;
-  --icon-md: 20px;
   --motion-fast: 140ms;
   --motion-standard: 220ms;
 }
+
+/* --- Dashboard ------------------------------------------------------------
+   The JSX owns the layout for these blocks; this section only supplies the
+   finishing the utilities cannot express (metric type ramp, tabular figures).
+   Legacy per-breakpoint overrides were removed so the tokens stay in charge. */
 
 .dashboard-content {
   gap: 18px;
@@ -832,55 +1047,150 @@ button:disabled,
   margin-top: 0 !important;
 }
 
-.dashboard-greeting {
-  padding-top: 6px;
-}
-
-.dashboard-greeting h2 {
-  font-size: clamp(1.75rem, 6vw, 2.5rem);
-  letter-spacing: -0.055em;
-}
-
-.dashboard-actions > button {
-  min-height: 66px;
-  flex-direction: row;
-  align-items: center;
-  justify-content: flex-start;
-  gap: 12px;
-  padding: 11px 13px;
-  border-radius: 14px;
-}
-
-.dashboard-actions > button > span:first-child {
-  width: 40px;
-  height: 40px;
-  border-radius: 11px;
-}
-
-.dashboard-hero {
-  min-height: 190px;
-  border-radius: 18px !important;
-  box-shadow: none;
-}
-
 .dashboard-stats-grid {
-  gap: 0 18px;
+  gap: 0.625rem;
   align-content: start;
 }
 
+/* ==========================================================================
+   Access gate screens
+   --------------------------------------------------------------------------
+   Connect/repair and the restricted states are the first thing a new user or
+   a suspended user sees, so they get the same centred, calm treatment: one
+   column, vertically balanced, with no floating fragments.
+   ========================================================================== */
+.gate-screen {
+  display: flex;
+  /* The screen already lives inside the fixed-height page viewport, so fill
+     THAT box rather than the full viewport height — 100dvh here would
+     overflow the scroll frame by the height of the nav reserve. */
+  min-height: 100%;
+  flex-direction: column;
+  justify-content: center;
+  padding-bottom: calc(var(--space-10) + env(safe-area-inset-bottom, 0px));
+}
+
+/* The connect panel: status, URL field and actions are one unit, so they
+   share a surface split by hairlines rather than stacking as three cards. */
+.gate-panel {
+  border: 1px solid var(--stroke-dim);
+  border-radius: var(--radius-card);
+  background: var(--bg-elev);
+  overflow: hidden;
+}
+
+.gate-panel > * {
+  padding: 0.85rem 0.9rem;
+  margin: 0 !important;
+}
+
+.gate-panel > * + * {
+  border-top: 1px solid var(--stroke-dim);
+}
+
+/* Action stack inside the panel needs no extra gap of its own. */
+.gate-panel .gate-actions {
+  display: grid;
+  gap: 0.5rem;
+}
+
+/* The status row keeps its tinted pill, but the panel already supplies the
+   outer padding — so drop the row's own so the fills do not double up. */
+.gate-panel > [role="status"] {
+  background: transparent;
+  padding: 0;
+}
+/* --- Dashboard summary band (mobile) ---------------------------------------
+   The hero figure and the three metric tiles answer one question together —
+   "how is my stock?" — so on the phone they are presented as a single module
+   split by hairlines, rather than a hero card floating above a row of tiles.
+
+   Radii stay concentric: the tiles are inset by the band's 0.6rem padding, so
+   their outer corners derive from the band radius (28px - 9.6px -> 18px).
+   Scoped below the desktop breakpoint, where the two become separate cards in
+   the 12-column grid. */
+@media (max-width: 1023px) {
+  .dashboard-stats-grid {
+    --band-radius: 28px;
+    --band-pad: 0.6rem;
+    --tile-radius: 18px;
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    margin-top: 0 !important;
+    border-radius: var(--band-radius);
+    border: 1px solid var(--stroke-dim);
+    background: var(--bg-elev);
+    box-shadow: var(--card-shadow);
+    overflow: hidden;
+  }
+
+  /* The hero becomes the plain header of the band: no card chrome of its own,
+     and it takes the band's top corners (radius minus padding). */
+  .dashboard-hero {
+    border: 0 !important;
+    border-radius: var(--tile-radius) var(--tile-radius) 0 0 !important;
+    background: transparent !important;
+    box-shadow: none !important;
+    margin: 0 !important;
+    padding: 0.4rem 0.6rem 0.5rem !important;
+  }
+
+  /* Tiles live INSIDE the band, separated by hairlines rather than gaps. The
+     top hairline is the single separator between the figure and the tiles, so
+     the hero must not draw one of its own. */
+  .dashboard-metric {
+    display: flex;
+    width: auto;
+    min-width: 0;
+    border: 0;
+    border-top: 1px solid var(--stroke-dim);
+    border-radius: 0;
+    background: transparent;
+    box-shadow: none;
+    padding: 0.7rem 0.55rem;
+    margin: 0;
+  }
+
+  .dashboard-metric + .dashboard-metric {
+    border-left: 1px solid var(--stroke-dim);
+  }
+
+  /* First and last tiles carry the band's bottom corners (radius - padding). */
+  .dashboard-metric:first-of-type {
+    border-bottom-left-radius: var(--tile-radius);
+  }
+
+  .dashboard-metric:last-of-type {
+    border-bottom-right-radius: var(--tile-radius);
+  }
+
+  /* Hover/press tint reads as a row, so it must not round its corners. */
+  .dashboard-metric:not(:disabled):hover {
+    border-color: transparent;
+    border-left-color: var(--stroke-dim);
+    background: color-mix(in srgb, var(--accent-soft) 45%, transparent);
+  }
+}
+
+/* --- Metric tile ---------------------------------------------------------- */
 .dashboard-metric {
   display: flex;
   min-width: 0;
-  min-height: 92px;
+  min-height: 96px;
   flex-direction: column;
   align-items: flex-start;
-  justify-content: center;
-  border: 0;
-  border-top: 1px solid var(--stroke);
-  border-radius: 0;
-  background: transparent;
-  box-shadow: none;
-  padding: 12px 0;
+  justify-content: flex-start;
+  gap: 0;
+  border: 1px solid var(--stroke-dim);
+  border-radius: var(--radius-row);
+  background: var(--bg-elev);
+  box-shadow: var(--card-shadow);
+  padding: 0.75rem 0.7rem;
+  transition: border-color 0.18s ease, background 0.18s ease;
+}
+
+.dashboard-metric:not(:disabled):hover {
+  border-color: color-mix(in srgb, var(--accent) 40%, transparent);
 }
 
 .dashboard-metric-label {
@@ -888,35 +1198,37 @@ button:disabled,
   width: 100%;
   align-items: center;
   justify-content: space-between;
-  gap: 5px;
-  color: var(--ink-2);
-  font-size: 11px;
-  font-weight: 750;
-  letter-spacing: 0.045em;
+  gap: 4px;
+  color: var(--ink-3);
+  font-size: var(--fs-caption);
+  font-weight: var(--fw-semibold);
+  letter-spacing: 0.04em;
   text-transform: uppercase;
 }
 
 .dashboard-metric-value {
-  margin-top: 4px;
+  margin-top: auto;
   color: var(--ink);
-  font-size: clamp(1.65rem, 5vw, 2.25rem);
-  font-weight: 850;
-  letter-spacing: -0.06em;
+  font-size: clamp(1.6rem, 5vw, 2rem);
+  font-weight: var(--fw-bold);
+  letter-spacing: -0.04em;
   line-height: 1;
 }
 
 .dashboard-metric-foot {
-  margin-top: 4px;
-  color: var(--ink-3);
-  font-size: 11px;
-  line-height: 1.3;
+  margin-top: 3px;
+  color: var(--ink-2);
+  font-size: var(--fs-caption);
+  line-height: 1.25;
 }
 
-.dashboard-metric-2 .dashboard-metric-value { color: var(--warning); }
-.dashboard-metric-3 .dashboard-metric-value { color: var(--destructive); }
+/* Semantic accents: amber for needs-restock, red for urgent. */
+.dashboard-metric-2 .dashboard-metric-value { color: var(--warning-ink); }
+.dashboard-metric-3 .dashboard-metric-value { color: var(--destructive-ink); }
 .dashboard-metric:disabled { cursor: default; }
-.dashboard-metric:not(:disabled):hover .dashboard-metric-label { color: var(--ink); }
+.dashboard-metric:not(:disabled):hover .dashboard-metric-label { color: var(--ink-2); }
 
+/* --- Attention list ------------------------------------------------------- */
 .dashboard-attention-list {
   border-top: 1px solid var(--stroke);
 }
@@ -992,13 +1304,8 @@ button:disabled,
   border-radius: 0;
 }
 
-.stock-quantity-panel {
-  border-block: 1px solid var(--stroke);
-  background: transparent;
-  padding: 14px 4px 10px;
-}
 
-.stock-quantity-panel input {
+.stock-field-quantity input {
   min-height: 72px;
   color: var(--accent);
   font-size: clamp(3rem, 14vw, 4.5rem) !important;
@@ -1006,7 +1313,7 @@ button:disabled,
   letter-spacing: -0.07em;
 }
 
-.stock-quantity-panel button[aria-label="Increase quantity"] {
+.stock-field-quantity button[aria-label="Increase quantity"] {
   box-shadow: 0 0 0 5px var(--accent-soft);
 }
 
@@ -1035,18 +1342,48 @@ button:disabled,
   width: 100%;
 }
 
-.settings-content > section.glass {
-  border: 0;
-  border-top: 1px solid var(--stroke);
-  border-radius: 0;
-  background: transparent;
-  box-shadow: none;
-  padding: 16px 0 4px;
+/* Settings — grouped Android preferences.
+   On the phone the settings column is a `glass` grouping card and each
+   <section> inside is a ROW: the individual card chrome is stripped so the
+   rows read as one continuous list separated by hairlines. Only the outer container is rounded, so the corners stay
+   concentric instead of every card rounding independently.
+   Scoped below the desktop breakpoint, where the page switches to a multi
+   column grid and the rows become independent cards again. */
+.settings-content {
+  /* Only the row gap is shared; the grouping surface itself is mobile-only so
+     the desktop grid keeps its own width and does not clip its cards. */
+  gap: 0;
+}
+
+@media (max-width: 1023px) {
+  .settings-content {
+    max-width: 448px;
+    overflow: hidden;
+    padding: 0.5rem 0.75rem;
+  }
+}
+
+@media (max-width: 1023px) {
+  .settings-content > section.glass {
+    border: 0;
+    border-radius: 0;
+    background: transparent;
+    box-shadow: none;
+    padding: 0.6rem 0;
+  }
+
+  .settings-content > section.glass + section.glass {
+    border-top: 1px solid var(--stroke-dim);
+  }
+
+  /* Hairline between the identity card and the first listed row. */
+  .settings-content > :first-child + section.glass {
+    border-top: 1px solid var(--stroke-dim);
+  }
 }
 
 .settings-content > :first-child {
-  border-radius: 18px !important;
-  box-shadow: none;
+  border-radius: var(--radius-hero);
 }
 
 .settings-content > :first-child > [aria-hidden="true"] {
@@ -1054,7 +1391,7 @@ button:disabled,
 }
 
 .settings-content section .glass-soft {
-  border-radius: 10px;
+  border-radius: var(--radius-control);
 }
 
 .history-row:hover,
@@ -1067,7 +1404,7 @@ button:disabled,
     grid-template-columns: repeat(12, minmax(0, 1fr));
     gap: 20px 24px;
   }
-  .dashboard-hero { grid-column: 1 / span 7; min-height: 220px; padding: 24px; }
+  .dashboard-hero { grid-column: 1 / span 7; min-height: 176px; padding: 22px 24px; }
   .dashboard-stats-grid { grid-column: 8 / -1; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 0 18px; }
   .dashboard-attention,
   .dashboard-activity { grid-column: span 6; }
@@ -1160,164 +1497,35 @@ button:disabled,
 }
 
 
-/* ==========================================================================
-   iOS 26 Liquid Glass material
-   --------------------------------------------------------------------------
-   Apple's HIG is explicit that Liquid Glass belongs to the *floating
-   navigation/control layer only* — never to content, and never stacked on
-   other glass. These three roles encode exactly that split:
-
-     .glass-strong  floating chrome: bottom nav capsule, sheets/dialogs,
-                    toasts, desktop toolbar. Gets real lensing (blur +
-                    saturation), a specular top highlight and an adaptive
-                    shadow. The nav matches iOS 26's inset floating capsule.
-     .glass         content surface: cards, rows, lists. Deliberately opaque —
-                    glass on content muddles hierarchy and costs GPU.
-     .glass-soft    a quiet nested fill for chips/controls inside content.
-
-   Glass is GPU-heavy, so lensing is limited to a few chrome surfaces rather
-   than hundreds of list rows, and shaved down on touch devices.
-   ========================================================================== */
-
-:root {
-  --radius-card: 20px;
-  --radius-control: 12px;
-  --button-height: 46px;
-  --input-height: 48px;
-
-  /* Regular-variant glass, light appearance. */
-  --glass-strong-bg: rgba(255, 255, 255, 0.70);
-  --glass-strong-border: rgba(255, 255, 255, 0.70);
-  --glass-strong-rim: rgba(29, 29, 31, 0.10);
-  --glass-specular: inset 0 1px 0 rgba(255, 255, 255, 0.78);
-  --glass-shadow: 0 1px 2px rgba(21, 21, 21, 0.04), 0 14px 36px -20px rgba(21, 21, 21, 0.30);
-  --glass-blur: blur(24px) saturate(1.8);
-}
-
-.dark {
-  --bg: #111114;
-  --bg-elev: #1c1c20;
-  --ink: #f5f5f7;
-  --ink-2: #a1a1a6;
-  --ink-3: #8e8e93;
-  --glass: #1c1c20;
-  --glass-strong: #232327;
-  --glass-soft: rgba(255, 255, 255, 0.07);
-  --stroke: rgba(255, 255, 255, 0.15);
-  --stroke-dim: rgba(255, 255, 255, 0.10);
-
-  --glass-strong-bg: rgba(38, 38, 43, 0.68);
-  --glass-strong-border: rgba(255, 255, 255, 0.16);
-  --glass-strong-rim: rgba(255, 255, 255, 0.11);
-  --glass-specular: inset 0 1px 0 rgba(255, 255, 255, 0.13);
-  --glass-shadow: 0 1px 2px rgba(0, 0, 0, 0.30), 0 18px 44px -22px rgba(0, 0, 0, 0.72);
-}
-
-/* --- Content surface: intentionally opaque ------------------------------- */
-.glass {
-  background: var(--bg-elev);
-  border: 1px solid var(--stroke-dim);
-  border-radius: var(--radius-card);
-  box-shadow: 0 2px 10px rgba(29, 29, 31, 0.035);
-  contain: layout style;
-}
-
-.dark .glass {
-  box-shadow: 0 2px 10px rgba(0, 0, 0, 0.22);
-}
-
-/* --- Floating chrome: the Liquid Glass layer ----------------------------- */
-.glass-strong {
-  background: var(--glass-strong);
-  border: 1px solid var(--glass-strong-rim);
-  border-radius: 22px;
-  box-shadow: var(--glass-specular), var(--glass-shadow);
-  contain: layout style;
-}
-
-/* Progressive enhancement: take on real lensing only where backdrop-filter
-   works. The declarations above stay a complete solid fallback. */
-@supports ((-webkit-backdrop-filter: blur(1px)) or (backdrop-filter: blur(1px))) {
-  .glass-strong {
-    background: var(--glass-strong-bg);
-    border-color: var(--glass-strong-border);
-    -webkit-backdrop-filter: var(--glass-blur);
-    backdrop-filter: var(--glass-blur);
-  }
-}
-
-/* --- Quiet nested fill inside content ------------------------------------ */
-.glass-soft {
-  background: var(--glass-soft);
-  border: 1px solid var(--stroke-dim);
-}
-
-/* Accessibility: iOS adapts glass to Reduce Transparency by frosting it much
-   harder. Mirror that so text never fights the content behind it. */
-@media (prefers-reduced-transparency: reduce) {
-  .glass-strong {
-    background: var(--bg-elev);
-    border-color: var(--stroke);
-    -webkit-backdrop-filter: none;
-    backdrop-filter: none;
-  }
-}
-
-/* Higher contrast: firm the rim and drop lensing so the control layer
-   stays unambiguously distinct from content. */
-@media (prefers-contrast: more) {
-  .glass-strong {
-    background: var(--bg-elev);
-    border-color: var(--stroke);
-    -webkit-backdrop-filter: none;
-    backdrop-filter: none;
-  }
-}
-
 /* --- Chrome layer placement ---------------------------------------------- */
 .desktop-sidebar { background: var(--bg-elev) !important; }
 .desktop-toolbar { background: var(--bg) !important; }
 .desktop-side-link.is-active { background: var(--accent-soft); color: var(--accent); }
 
-/* --- Bottom navigation: iOS 26 inset floating capsule -------------------- */
-/* The <nav> is only the positioning wrapper; the visible glass is its inner
-   capsule, so the wrapper stays free of surface styling. */
+/* --- Material navigation bar -------------------------------------------- */
 .bottom-navigation { background: transparent; box-shadow: none; }
 .bottom-navigation.is-keyboard-open { display: none; }
-.bottom-navigation > div { min-height: 64px; }
-.nav-bottom-offset { bottom: calc(0.65rem + env(safe-area-inset-bottom, 0px)); }
 .nav-slide-pill { background: var(--accent-soft); }
 .nav-pill[aria-current="page"] { color: var(--accent); }
 
-/* --- Sheets and dialogs -------------------------------------------------- */
-/* Blur is sampled by the panel itself; the backdrop button behind it only
-   dims. The panel's own safe-area padding keeps content off the gesture bar. */
+/* --- Sheets and dialogs --------------------------------------------------
+   The panel stays opaque; the backdrop button behind it only dims. The panel's own safe-area
+   padding keeps content clear of the gesture bar. */
 .sheet-dialog-panel {
-  background: var(--glass-strong);
-  border-color: var(--glass-strong-rim);
+  background: var(--glass-sheet-bg);
   max-height: min(86dvh, 720px);
   box-shadow: var(--glass-specular), 0 18px 56px rgba(29, 29, 31, 0.16);
   padding-bottom: env(safe-area-inset-bottom, 0px);
 }
 
-@supports ((-webkit-backdrop-filter: blur(1px)) or (backdrop-filter: blur(1px))) {
-  .sheet-dialog-panel {
-    background: var(--glass-strong-bg);
-    border-color: var(--glass-strong-border);
-    -webkit-backdrop-filter: var(--glass-blur);
-    backdrop-filter: var(--glass-blur);
-  }
+/* On desktop the shell's toolbar already renders the screen title, so the
+   in-content header collapses to just its subtitle (e.g. the item count). */
+@media (min-width: 1024px) {
+  .desktop-header-title { display: none; }
+  .app-page-viewport > .safe-top { padding-top: 0; }
+  /* The bottom nav is hidden on desktop, so content needs no clearance. */
+  :root { --nav-bar-height: 0rem; --nav-bar-offset: 0rem; }
 }
-
-@media (prefers-reduced-transparency: reduce) {
-  .sheet-dialog-panel {
-    background: var(--bg-elev);
-    -webkit-backdrop-filter: none;
-    backdrop-filter: none;
-  }
-}
-
-.app-page-viewport { padding-bottom: 1rem; }
 
 /* --- Focus, motion and the dashboard focal card -------------------------- */
 :where(button, a, input, select, textarea, [tabindex]):focus-visible { outline-color: var(--accent); }
@@ -1370,8 +1578,7 @@ button:disabled,
   :root { --glass-blur: blur(16px) saturate(1.6); }
 }
 
-/* One authoritative reduced-motion rule. iOS gates every kinetic glass
-   effect (morphs, bounces) behind Reduce Motion. */
+/* One authoritative reduced-motion rule. */
 @media (prefers-reduced-motion: reduce) {
   *, *::before, *::after {
     animation-duration: .01ms !important;
@@ -1379,4 +1586,233 @@ button:disabled,
     transition-duration: .01ms !important;
     scroll-behavior: auto !important;
   }
+}/* ==========================================================================
+   Stock sheet form
+   --------------------------------------------------------------------------
+   The stock form is one progressive flow — product, then quantity, then the
+   mode-specific detail and an optional note. Grouping the fields into a single
+   hairline-divided surface (rather than loose stacked controls) makes that
+   order legible and keeps the quantity, the one value that matters, dominant.
+   ========================================================================== */
+.stock-sheet-form {
+  border: 1px solid var(--stroke-dim);
+  border-radius: var(--radius-control);
+  background: var(--bg-elev);
+  overflow: hidden;
 }
+
+/* A field row inside the group: full-width, hairline-separated. */
+.stock-field {
+  padding: 0.85rem 0.9rem;
+}
+
+/* The min / quantity / price trio answers one question — what this product
+   is worth and when to reorder — so on the phone it shares the focal tinted
+   treatment as the stock sheet's quantity row. */
+.product-field-numbers {
+  background: var(--surface-sunken);
+}
+.stock-field + .stock-field {
+  border-top: 1px solid var(--stroke-dim);
+}
+
+/* The quantity row is the form's focal point: it carries a soft tinted
+   surface and a divider, so the eye lands there before the optional fields. */
+.stock-field-quantity {
+  background: var(--surface-sunken);
+  border-top: 1px solid var(--stroke-dim);
+  border-bottom: 1px solid var(--stroke-dim);
+}
+
+/* Google Pixel / Material 3 Expressive system. Content remains crisp and
+   opaque; restrained tonal surfaces and the bottom navigation carry the
+   Android character without turning every card into glass. */
+:root {
+  color-scheme: light;
+  --ink: #191c20;
+  --ink-2: #44474f;
+  --ink-3: #5f636b;
+  --bg: #f7f7fb;
+  --bg-elev: #ffffff;
+  --surface-sunken: #f0f1f7;
+  --field: #f1f3f9;
+  --input: #f1f3f9;
+  --secondary: #565f71;
+  --secondary-container: #e0e5f2;
+  --on-primary-container: #172f62;
+  --separator: #c4c6d0;
+  --separator-solid: #e2e2e9;
+  --stroke: #747780;
+  --stroke-dim: #e2e2e9;
+  --control-border: #747780;
+  --outline: #747780;
+  --divider: #e2e2e9;
+  --accent: #3569d4;
+  --accent-soft: #dce7ff;
+  --accent-ink: #ffffff;
+  --primary: #3569d4;
+  --primary-foreground: #ffffff;
+  --ring: #3569d4;
+  --success: #146c2e;
+  --success-ink: #146c2e;
+  --warning: #8a5100;
+  --warning-ink: #8a5100;
+  --destructive: #ba1a1a;
+  --destructive-ink: #ba1a1a;
+  --muted-success: #d9f0dc;
+  --muted-warning: #ffddb2;
+  --muted-destructive: #ffdad6;
+  --card-shadow: 0 1px 2px rgba(25, 28, 32, .05);
+  --nav-shadow: 0 -2px 12px rgba(25, 28, 32, .07);
+  --shadow-popover: 0 8px 24px rgba(25, 28, 32, .14);
+  --glass: #ffffff;
+  --glass-strong: #f1f3f9;
+  --glass-soft: #f0f1f7;
+  --glass-strong-bg: #f1f3f9;
+  --glass-sheet-bg: #ffffff;
+  --glass-strong-border: #e2e2e9;
+  --glass-specular: none;
+  --glass-shadow: var(--nav-shadow);
+  --glass-blur: none;
+  --radius-card: 24px;
+  --radius-control: 16px;
+  --button-height: 48px;
+  --input-height: 52px;
+}
+.dark {
+  color-scheme: dark;
+  --ink: #e2e2e9;
+  --ink-2: #c4c6d0;
+  --ink-3: #a8abb4;
+  --bg: #111318;
+  --bg-elev: #1b1e24;
+  --surface-sunken: #23262d;
+  --field: #23262d;
+  --input: #23262d;
+  --secondary: #c0c8dc;
+  --secondary-container: #3f4759;
+  --on-primary-container: #dce7ff;
+  --separator: #44474f;
+  --separator-solid: #30343b;
+  --stroke: #8e9099;
+  --stroke-dim: #30343b;
+  --control-border: #8e9099;
+  --outline: #8e9099;
+  --divider: #30343b;
+  --accent: #b2c5ff;
+  --accent-soft: #263b64;
+  --accent-ink: #172f62;
+  --primary: #b2c5ff;
+  --primary-foreground: #172f62;
+  --ring: #b2c5ff;
+  --success: #8bd99a;
+  --success-ink: #8bd99a;
+  --warning: #ffb95f;
+  --warning-ink: #ffb95f;
+  --destructive: #ffb4ab;
+  --destructive-ink: #ffb4ab;
+  --muted-success: #173d24;
+  --muted-warning: #4a2f0b;
+  --muted-destructive: #5a1716;
+  --card-shadow: 0 1px 2px rgba(0, 0, 0, .24);
+  --nav-shadow: 0 -2px 12px rgba(0, 0, 0, .2);
+  --shadow-popover: 0 8px 24px rgba(0, 0, 0, .32);
+  --glass: #1b1e24;
+  --glass-strong: #20242b;
+  --glass-soft: #23262d;
+  --glass-strong-bg: #20242b;
+  --glass-sheet-bg: #1b1e24;
+  --glass-strong-border: #30343b;
+  --glass-specular: none;
+  --glass-shadow: var(--nav-shadow);
+}
+body { background: var(--bg); color: var(--ink); font-family: Roboto, "Google Sans", "Noto Sans", ui-sans-serif, system-ui, sans-serif; }
+.bottom-navigation {
+  inset-inline: 0;
+  bottom: 0;
+  padding: 6px 8px max(8px, env(safe-area-inset-bottom));
+  background: var(--bg-elev);
+  border-top: 1px solid var(--stroke-dim);
+  box-shadow: var(--nav-shadow);
+}
+.bottom-navigation > .glass-strong {
+  width: min(100%, 560px);
+  max-width: 560px;
+  min-height: 68px;
+  padding: 0 4px;
+  gap: 0;
+  border: 0;
+  border-radius: 0;
+  background: transparent;
+  box-shadow: none;
+  -webkit-backdrop-filter: none;
+  backdrop-filter: none;
+}
+.bottom-navigation .nav-pill {
+  min-height: 64px;
+  gap: 3px;
+  border-radius: 18px;
+  color: var(--ink-2);
+  font-size: 12px;
+  font-weight: 500;
+}
+.bottom-navigation .nav-pill > span:first-child {
+  display: grid;
+  width: 56px;
+  height: 32px;
+  place-items: center;
+  border-radius: 999px;
+  transition: background-color .18s ease, transform .18s ease;
+}
+.bottom-navigation .nav-pill[aria-current="page"] { color: var(--ink); font-weight: 700; }
+.bottom-navigation .nav-pill[aria-current="page"] > span:first-child { background: var(--accent-soft); color: var(--accent); }
+.bottom-navigation .nav-slide-pill { display: none; }
+.dashboard-content { gap: 18px; padding-bottom: calc(92px + env(safe-area-inset-bottom)); }
+.dashboard-hero {
+  border: 0;
+  border-radius: 28px;
+  background: var(--accent-soft) !important;
+  box-shadow: none;
+}
+.dashboard-metric { border-radius: 22px; box-shadow: none; }
+.dashboard-actions > button { border-radius: 22px; box-shadow: none; }
+.dashboard-actions > button:first-child { background: var(--primary); box-shadow: none; }
+.dashboard-actions > button:first-child :is(span, svg) { color: var(--primary-foreground); }
+.glass, .glass-strong { box-shadow: none; }
+.press:active { transform: scale(.98); }
+.animate-page-in { animation-duration: .16s; }
+@media (max-width: 640px) {
+  .bottom-navigation { padding-inline: 4px; }
+  .dashboard-content { padding-inline: 16px; }
+  .dashboard-greeting h2 { font-size: clamp(28px, 8vw, 36px); }
+}
+@media (prefers-reduced-motion: reduce) {
+  .bottom-navigation .nav-pill > span:first-child { transition: none; }
+}
+/* Keep the Android shell phone-first even on wide tablet windows. The
+   inherited desktop workspace rules are intentionally collapsed here. */
+@media (min-width: 1024px) {
+  .app-shell { display: block; width: min(100%, 560px); max-width: 560px; height: auto; min-height: 100dvh; margin-inline: auto; overflow-x: clip; overflow-y: visible; }
+  .swipe-zone { display: block; height: auto; overflow: visible; }
+  .bottom-navigation { display: block; }
+  .app-page-viewport { width: 100%; max-width: 560px; height: calc(100dvh - 5.15rem - env(safe-area-inset-bottom, 0px)); padding: 0 0 calc(var(--nav-bar-height) + var(--nav-bar-offset) + env(safe-area-inset-bottom, 0px)); }
+  .app-page-viewport > .safe-top { display: block; padding-top: env(safe-area-inset-top, 0px); }
+  .app-page-viewport .desktop-header-title { display: flex; }
+  .dashboard-content { display: flex; flex-direction: column; gap: 18px; }
+  .dashboard-content > * { margin-block: 0 !important; }
+  .desktop-products-heading, .desktop-product-table-head, .product-desktop-cell, .history-table-head { display: none !important; }
+  .product-list-row { display: flex !important; }
+  .product-mobile-details { display: block !important; }
+  .history-row { display: flex !important; }
+  .history-row-main { display: flex !important; }
+  .history-mobile-date { display: block !important; }
+  .history-desktop-date, .history-desktop-price { display: none !important; }
+  .sheet-dialog-position { inset: 0 !important; align-items: flex-end !important; justify-content: center !important; padding: 0 !important; }
+  .sheet-dialog-panel { width: min(100%, 560px) !important; max-height: 88dvh !important; border-radius: 28px 28px 0 0 !important; }
+  .product-detail-overlay, .history-detail-overlay { inset: 0 !important; }
+  .product-detail-overlay > .product-detail-layout, .history-detail-overlay > div.relative { max-width: 560px !important; margin-inline: auto !important; padding-inline: 16px !important; }
+  .animate-page-in { height: auto; }
+}
+
+/* Compact the panel inside the row: the row already supplies the padding. */
+

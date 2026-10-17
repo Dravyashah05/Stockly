@@ -12,7 +12,7 @@ const config: CapacitorConfig = {
   // Mobile frontend bundle built by this package's `build` script (outDir `dist`).
   // Keep the native Android project alongside this mobile app.
   webDir: 'dist',
-  backgroundColor: '#F5F5F7',
+  backgroundColor: '#F7F7FB',
   android: {
     path: 'android',
     allowMixedContent: false,
@@ -20,14 +20,14 @@ const config: CapacitorConfig = {
     webContentsDebuggingEnabled: false,
   },
   server: {
-    androidScheme: 'http',
-    cleartext: true,
+    androidScheme: 'https',
+    cleartext: false,
   },
   plugins: {
     SplashScreen: {
       launchShowDuration: 1200,
       launchAutoHide: false,
-      backgroundColor: '#F5F5F7',
+      backgroundColor: '#F7F7FB',
       showSpinner: false,
       androidScaleType: 'CENTER_CROP',
       splashFullScreen: true,
@@ -35,7 +35,7 @@ const config: CapacitorConfig = {
     },
     StatusBar: {
       style: 'LIGHT',
-      backgroundColor: '#F5F5F7',
+      backgroundColor: '#F7F7FB',
     },
     Keyboard: {
       // Keep this import-free for Capacitor's config loader while satisfying

@@ -282,9 +282,9 @@ export default function ProductForm({
         </PrimaryBtn>
       }
     >
-      <div className="product-form-grid space-y-5">
+      <div className="product-form-grid stock-sheet-form mt-1">
         {/* 1 — Product name */}
-        <div className="product-form-name">
+        <div className="product-form-name stock-field">
           <Field
             label="Product name *"
             hint={editing ? `SKU: ${editing.sku}` : `SKU auto-generated: ${autoSku}`}
@@ -299,7 +299,7 @@ export default function ProductForm({
         </div>
 
         {/* 2 — Image */}
-        <div className="product-form-image">
+        <div className="product-form-image stock-field">
           <Field label="Product image">
             <div className="flex items-center gap-3">
               {imageOk ? (
@@ -308,13 +308,13 @@ export default function ProductForm({
                   alt=""
                   loading="lazy"
                   decoding="async"
-                  className="h-14 w-14 shrink-0 rounded-2xl border border-(--stroke-dim) object-cover"
+                  className="h-14 w-14 shrink-0 rounded-[var(--radius-control)] border border-(--stroke-dim) object-cover"
                   onError={(e) => {
                     (e.target as HTMLImageElement).style.display = 'none';
                   }}
                 />
               ) : (
-                <span className="glass-soft flex h-14 w-14 shrink-0 items-center justify-center rounded-2xl text-(--ink-3)">
+                <span className="glass-soft flex h-14 w-14 shrink-0 items-center justify-center rounded-[var(--radius-control)] text-(--ink-3)">
                   <ImagePlus size={22} />
                 </span>
               )}
@@ -323,7 +323,7 @@ export default function ProductForm({
                   type="button"
                   onClick={() => fileRef.current?.click()}
                   disabled={uploading}
-                  className="press glass-soft flex flex-1 items-center justify-center gap-1.5 rounded-2xl px-3 py-3 text-[14px] font-bold text-(--ink) disabled:opacity-50"
+                  className="press glass-soft flex flex-1 items-center justify-center gap-1.5 rounded-[var(--radius-control)] px-3 py-3 text-[length:var(--fs-subhead)] font-semibold text-(--ink) disabled:opacity-50"
                 >
                   <Upload size={16} />
                   {uploading ? 'Shrinking…' : upload ? 'Replace photo' : 'Upload photo'}
@@ -333,7 +333,7 @@ export default function ProductForm({
                     type="button"
                     onClick={() => setUpload('')}
                     aria-label="Remove uploaded photo"
-                    className="press glass-soft flex h-[50px] w-[50px] shrink-0 items-center justify-center rounded-2xl text-rose-500 dark:text-rose-400"
+                    className="press glass-soft flex h-[50px] w-[50px] shrink-0 items-center justify-center rounded-[var(--radius-control)] text-(--destructive-ink) dark:text-(--destructive-ink)"
                   >
                     <Trash2 size={16} />
                   </button>
@@ -370,7 +370,7 @@ export default function ProductForm({
         </div>
 
         {/* Min / qty / price — one related group with equal-width fields */}
-        <div className="product-form-stock">
+        <div className="product-form-stock stock-field product-field-numbers">
           <div className="grid grid-cols-2 gap-3 sm:grid-cols-3">
             <Field label="Minimum stock *" hint="Low-stock alert level">
               <input
@@ -405,6 +405,7 @@ export default function ProductForm({
         </div>
 
         {/* 4 — Description */}
+        <div className="stock-field">
         <div className="product-form-description">
           <Field label="Description">
             <textarea
@@ -417,8 +418,10 @@ export default function ProductForm({
           </Field>
         </div>
 
+        </div>
+
         {/* 5 — Category */}
-        <div className="product-form-category">
+        <div className="product-form-category stock-field">
           <Field
             label="Category"
             hint={categories.length === 0 ? 'No categories yet — add them in Settings.' : undefined}
@@ -439,7 +442,7 @@ export default function ProductForm({
         </div>
 
         {err ? (
-          <div role="alert" className="animate-pop-in rounded-2xl border border-rose-500/25 bg-rose-500/10 px-4 py-3 text-[13.5px] font-medium text-rose-600 dark:text-rose-300">
+          <div role="alert" className="animate-pop-in rounded-[var(--radius-control)] border border-(--destructive)/25 bg-(--destructive)/10 px-4 py-3 text-[length:var(--fs-footnote)] font-medium text-(--destructive-ink)">
             {err}
           </div>
         ) : null}

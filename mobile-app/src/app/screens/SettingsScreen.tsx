@@ -29,6 +29,7 @@ import { sheetsApi } from '../../shared/connection';
 const LinkedDevicesScreen = lazy(() => import('./LinkedDevicesScreen'));
 import { SheetSetupScreen } from './AccessScreens';
 import { Confirm, Field, Header, Sheet, BrandMark, inputCls } from '../components/ui';
+const AdminScreen = lazy(() => import('./AdminScreen'));
 
 export default function SettingsScreen() {
   const {
@@ -38,6 +39,7 @@ export default function SettingsScreen() {
   } = useStore();
 
   const [cloudOpen, setCloudOpen] = useState(false);
+  const [adminOpen, setAdminOpen] = useState(false);
   const [logoutOpen, setLogoutOpen] = useState(false);
   // Account (server-verified identity)
   const [profile, setProfile] = useState<UserProfile | null>(() => getCachedProfile());
@@ -51,9 +53,6 @@ export default function SettingsScreen() {
   const [connError, setConnError] = useState('');
   const [connBusy, setConnBusy] = useState(false);
   const [sheetChangeOpen, setSheetChangeOpen] = useState(false);
-  // Owner console lives in the separate admin frontend (admin/, port 3002),
-  // served by the same shared backend. It is never embedded in this app.
-  const ADMIN_URL = (import.meta.env?.VITE_ADMIN_URL as string | undefined)?.trim().replace(/\/+$/, '') || 'http://localhost:3002';
   // Linked devices (WhatsApp-style Stockly-to-Stockly linking)
   const [devicesOpen, setDevicesOpen] = useState(false);
   const [devicesMode, setDevicesMode] = useState<'manage' | 'link'>('manage');
@@ -280,43 +279,49 @@ export default function SettingsScreen() {
     }
   };
 
+  if (adminOpen) {
+    return <AdminScreen onBack={() => setAdminOpen(false)} notify={notify} />;
+  }
+
   return (
     <div className="app-page-viewport mx-auto max-w-md">
       <Header title="Settings" subtitle={`Stockly v${APP_VERSION}`} />
 
-      <div className="settings-content mx-auto max-w-md space-y-5 px-4 pt-4">
+      {/* The settings column is a grouped preference surface; each section is
+          a row with a subtle divider rather than a stack of unrelated cards. */}
+      <div className="settings-content glass mx-auto max-w-md px-4 pt-4">
         {/* App identity */}
-        <div className="glass relative overflow-hidden rounded-[28px] p-5">
+        <div className="glass relative overflow-hidden rounded-[var(--radius-hero)] p-5">
           <div className="relative flex items-center gap-3.5">
-            <span className="flex h-14 w-14 shrink-0 items-center justify-center rounded-[20px] bg-(--accent-soft) text-(--accent)">
+            <span className="flex h-14 w-14 shrink-0 items-center justify-center rounded-[var(--radius-row)] bg-(--accent-soft) text-(--accent)">
               <BrandMark size={32} />
             </span>
             <div className="min-w-0 flex-1">
-              <p className="text-[18px] font-extrabold leading-tight tracking-tight">Stockly</p>
-              <p className="text-[12px] font-medium text-(--ink-2)">Inventory on Google Sheets · v{APP_VERSION}</p>
-              <span className="mt-1.5 inline-flex items-center gap-1.5 rounded-full bg-(--accent-soft) px-2.5 py-1 text-[11px] font-extrabold text-(--accent)">
-                <span className="h-1.5 w-1.5 rounded-full bg-[#007AFF]" />
+              <p className="text-[length:var(--fs-title3)] font-semibold leading-tight tracking-[-0.02em]">Stockly</p>
+              <p className="text-[length:var(--fs-footnote)] font-normal text-(--ink-2)">Inventory on Google Sheets · v{APP_VERSION}</p>
+              <span className="mt-1.5 inline-flex items-center gap-1.5 rounded-full bg-(--accent-soft) px-2.5 py-1 text-[length:var(--fs-caption)] font-semibold text-(--accent)">
+                <span className="h-1.5 w-1.5 rounded-full bg-(--accent)" />
                 Signed in
               </span>
             </div>
           </div>
           <div className="tnum relative mt-4 grid grid-cols-1 gap-2 border-t border-(--stroke-dim) pt-3">
-            <div className="rounded-2xl bg-(--glass-soft) px-3 py-2.5">
-              <p className="text-[17px] font-extrabold leading-none">{String(products.length)}</p>
-              <p className="mt-1 text-[11px] font-semibold text-(--ink-2)">Products</p>
+            <div className="rounded-[var(--radius-control)] bg-(--glass-soft) px-3 py-2.5">
+              <p className="text-[length:var(--fs-title3)] font-bold leading-none">{String(products.length)}</p>
+              <p className="mt-1 text-[length:var(--fs-caption)] font-medium text-(--ink-2)">Products</p>
             </div>
           </div>
         </div>
 
         {/* App update — version check against the hosted manifest */}
-        <section className="glass rounded-[24px] p-4">
+        <section className="glass rounded-[calc(var(--radius-card) - 4px)] p-4">
           <div className="flex items-center gap-3">
-            <span className="flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl bg-(--glass-soft) text-(--ink-2)">
+            <span className="flex h-11 w-11 shrink-0 items-center justify-center rounded-[var(--radius-control)] bg-(--glass-soft) text-(--ink-2)">
               <Download size={20} />
             </span>
             <span className="min-w-0 flex-1">
-              <span className="block text-[15px] font-extrabold tracking-tight text-(--ink)">App update</span>
-              <span className="tnum block text-[12px] font-medium text-(--ink-2)">
+              <span className="block text-[length:var(--fs-headline)] font-semibold tracking-[-0.01em] text-(--ink)">App update</span>
+              <span className="tnum block text-[length:var(--fs-footnote)] font-normal text-(--ink-2)">
                 v{APP_VERSION}
                 {updStatus === 'available' && updLatest ? ` → v${updLatest} available` : null}
                 {updStatus !== 'available' && updCheckedAt
@@ -326,7 +331,7 @@ export default function SettingsScreen() {
               </span>
             </span>
             {updStatus === 'available' ? (
-              <span className="shrink-0 rounded-full bg-(--primary) px-2.5 py-1 text-[11px] font-extrabold text-white dark:bg-(--primary) dark:text-[#151515]">
+              <span className="shrink-0 rounded-full bg-(--primary) px-2.5 py-1 text-[length:var(--fs-caption)] font-semibold text-(--primary-foreground)">
                 New
               </span>
             ) : null}
@@ -334,20 +339,20 @@ export default function SettingsScreen() {
           {updStatus === 'available' && updApk ? (
             <div className="mt-3">
               {updMeta ? (
-                <p className="tnum mb-2.5 px-1 text-[12px] font-semibold text-(--ink-2)">{updMeta}</p>
+                <p className="tnum mb-2.5 px-1 text-[length:var(--fs-footnote)] font-medium text-(--ink-2)">{updMeta}</p>
               ) : null}
               {updNotes ? (
-                <p className="mb-2.5 whitespace-pre-line px-1 text-[13px] leading-relaxed text-(--ink-2)">{updNotes}</p>
+                <p className="mb-2.5 whitespace-pre-line px-1 text-[length:var(--fs-footnote)] leading-relaxed text-(--ink-2)">{updNotes}</p>
               ) : null}
               <a
                 href={updApk}
                 target="_blank"
                 rel="noreferrer"
-                className="press flex min-h-[52px] items-center justify-center gap-1.5 rounded-2xl bg-(--primary) text-[15px] font-extrabold text-white dark:bg-(--primary) dark:text-[#151515]"
+                className="press flex min-h-[52px] items-center justify-center gap-1.5 rounded-[var(--radius-control)] bg-(--primary) text-[length:var(--fs-headline)] font-semibold text-(--primary-foreground)"
               >
                 <Download size={16} /> Download v{updLatest}
               </a>
-              <p className="mt-2.5 px-1 text-[12px] leading-relaxed text-(--ink-2)">
+              <p className="mt-2.5 px-1 text-[length:var(--fs-footnote)] leading-relaxed text-(--ink-2)">
                 On Android, opening the file asks you to confirm installation — updates must carry Stockly’s official
                 release signature to install over your current app.
               </p>
@@ -357,7 +362,7 @@ export default function SettingsScreen() {
               type="button"
               onClick={() => void checkUpdates()}
               disabled={updStatus === 'checking'}
-              className="glass-soft press mt-3 flex min-h-[48px] w-full items-center justify-center gap-1.5 rounded-2xl text-[14px] font-extrabold text-(--ink) disabled:opacity-50"
+              className="glass-soft press mt-3 flex min-h-[48px] w-full items-center justify-center gap-1.5 rounded-[var(--radius-control)] text-[length:var(--fs-headline)] font-semibold text-(--ink) disabled:opacity-50"
             >
               <Download size={16} />
               {updStatus === 'checking'
@@ -368,31 +373,31 @@ export default function SettingsScreen() {
             </button>
           )}
           {updStatus === 'uptodate' ? (
-            <p className="mt-2.5 px-1 text-[12.5px] font-semibold text-(--ink-2)">You’re on the latest version.</p>
+            <p className="mt-2.5 px-1 text-[length:var(--fs-footnote)] font-medium text-(--ink-2)">You’re on the latest version.</p>
           ) : null}
           {updStatus === 'error' && updError ? (
-            <p className="mt-2.5 px-1 text-[12.5px] font-semibold text-rose-600 dark:text-rose-300">{updError}</p>
+            <p className="mt-2.5 px-1 text-[length:var(--fs-footnote)] font-semibold text-(--destructive-ink)">{updError}</p>
           ) : null}
         </section>
 
         {/* Cloud connection — summary row only, URL form lives in a popup */}
-        <section className="glass rounded-[24px] p-4">
+        <section className="glass rounded-[calc(var(--radius-card) - 4px)] p-4">
           <button
             type="button"
             onClick={() => setCloudOpen(true)}
             className="press flex w-full items-center gap-3 text-left"
           >
-            <span className="flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl bg-(--glass-soft) text-(--ink-2)">
+            <span className="flex h-11 w-11 shrink-0 items-center justify-center rounded-[var(--radius-control)] bg-(--glass-soft) text-(--ink-2)">
               <Cloud size={20} />
             </span>
             <span className="min-w-0 flex-1">
-              <span className="block text-[15px] font-extrabold tracking-tight text-(--ink)">Cloud database</span>
-              <span className="block truncate text-[12px] font-medium text-(--ink-2)">
+              <span className="block text-[length:var(--fs-headline)] font-semibold tracking-[-0.01em] text-(--ink)">Cloud database</span>
+              <span className="block truncate text-[length:var(--fs-footnote)] font-normal text-(--ink-2)">
                 {connected ? 'Sheet verified — tap to manage' : 'Not configured — tap to connect'}
               </span>
             </span>
             {connected ? (
-              <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-emerald-500/12 text-emerald-600 dark:text-emerald-300">
+              <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-(--success)/12 text-(--success-ink)">
                 <CheckCircle2 size={16} />
               </span>
             ) : null}
@@ -401,18 +406,18 @@ export default function SettingsScreen() {
         </section>
 
         {/* Account — user database profile (no passwords, no secrets) */}
-        <section className="glass rounded-[24px] p-4">
+        <section className="glass rounded-[calc(var(--radius-card) - 4px)] p-4">
           <button
             type="button"
             onClick={() => setAccountOpen(true)}
             className="press flex w-full items-center gap-3 text-left"
           >
-            <span className="flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl bg-(--glass-soft) text-(--ink-2)">
+            <span className="flex h-11 w-11 shrink-0 items-center justify-center rounded-[var(--radius-control)] bg-(--glass-soft) text-(--ink-2)">
               <UserIcon size={20} />
             </span>
             <span className="min-w-0 flex-1">
-              <span className="block text-[15px] font-extrabold tracking-tight text-(--ink)">Account</span>
-              <span className="block truncate text-[12px] font-medium text-(--ink-2)">
+              <span className="block text-[length:var(--fs-headline)] font-semibold tracking-[-0.01em] text-(--ink)">Account</span>
+              <span className="block truncate text-[length:var(--fs-footnote)] font-normal text-(--ink-2)">
                 {profile ? `${profile.name} · ${profile.accountStatus}` : 'Register or sign in on this device'}
               </span>
             </span>
@@ -421,18 +426,18 @@ export default function SettingsScreen() {
         </section>
 
         {/* Linked Devices — one account, many devices */}
-        <section className="glass rounded-[24px] p-4">
+        <section className="glass rounded-[calc(var(--radius-card) - 4px)] p-4">
           <button
             type="button"
             onClick={() => { setDevicesMode('manage'); setDevicesOpen(true); }}
             className="press flex w-full items-center gap-3 text-left"
           >
-            <span className="flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl bg-(--glass-soft) text-(--ink-2)">
+            <span className="flex h-11 w-11 shrink-0 items-center justify-center rounded-[var(--radius-control)] bg-(--glass-soft) text-(--ink-2)">
               <Link2 size={20} />
             </span>
             <span className="min-w-0 flex-1">
-              <span className="block text-[15px] font-extrabold tracking-tight text-(--ink)">Linked Devices</span>
-              <span className="block text-[12px] font-medium text-(--ink-2)">
+              <span className="block text-[length:var(--fs-headline)] font-semibold tracking-[-0.01em] text-(--ink)">Linked Devices</span>
+              <span className="block text-[length:var(--fs-footnote)] font-normal text-(--ink-2)">
                 Link phones & tablets to this account
               </span>
             </span>
@@ -440,40 +445,39 @@ export default function SettingsScreen() {
           </button>
         </section>
 
-        {/* Administration — owner console is a separate frontend (same shared backend) */}
-        <section className="glass rounded-[24px] p-4">
-          <a
-            href={ADMIN_URL}
-            target="_blank"
-            rel="noreferrer"
+        {/* Owner-only administration uses the existing server-verified admin API. */}
+        <section className="glass rounded-[calc(var(--radius-card) - 4px)] p-4">
+          <button
+            type="button"
+            onClick={() => setAdminOpen(true)}
             className="press flex w-full items-center gap-3 text-left"
           >
-            <span className="flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl bg-(--glass-soft) text-(--ink-2)">
+            <span className="flex h-11 w-11 shrink-0 items-center justify-center rounded-[var(--radius-control)] bg-(--glass-soft) text-(--ink-2)">
               <ShieldCheck size={20} />
             </span>
             <span className="min-w-0 flex-1">
-              <span className="block text-[15px] font-extrabold tracking-tight text-(--ink)">Administration</span>
-              <span className="block text-[12px] font-medium text-(--ink-2)">
-                Owner-only users, roles, settings & audit logs — opens the separate admin site
+              <span className="block text-[length:var(--fs-headline)] font-semibold tracking-[-0.01em] text-(--ink)">Administration</span>
+              <span className="block text-[length:var(--fs-footnote)] font-normal text-(--ink-2)">
+                Owner tools for users, devices, roles, settings and audit logs
               </span>
             </span>
             <ChevronRight size={18} className="shrink-0 text-(--ink-3)" />
-          </a>
+          </button>
         </section>
 
         {/* Categories — full list lives in a popup sheet */}
-        <section className="glass rounded-[24px] p-4">
+        <section className="glass rounded-[calc(var(--radius-card) - 4px)] p-4">
           <button
             type="button"
             onClick={() => setCatListOpen(true)}
             className="press flex w-full items-center gap-3 text-left"
           >
-            <span className="flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl bg-(--glass-soft) text-(--ink-2)">
+            <span className="flex h-11 w-11 shrink-0 items-center justify-center rounded-[var(--radius-control)] bg-(--glass-soft) text-(--ink-2)">
               <Tag size={20} />
             </span>
             <span className="min-w-0 flex-1">
-              <span className="block text-[15px] font-extrabold tracking-tight text-(--ink)">Categories</span>
-              <span className="block text-[12px] font-medium text-(--ink-2)">
+              <span className="block text-[length:var(--fs-headline)] font-semibold tracking-[-0.01em] text-(--ink)">Categories</span>
+              <span className="block text-[length:var(--fs-footnote)] font-normal text-(--ink-2)">
                 {categories.length === 0 ? 'Group products for faster search' : `${categories.length} group${categories.length === 1 ? '' : 's'} — tap to manage`}
               </span>
             </span>
@@ -482,13 +486,13 @@ export default function SettingsScreen() {
           <div className="mt-3 grid grid-cols-2 gap-2">
             <button
               onClick={() => setCatListOpen(true)}
-              className="press glass-soft flex min-h-[48px] items-center justify-center gap-1.5 rounded-2xl text-[14px] font-extrabold text-(--ink)"
+              className="press glass-soft flex min-h-[48px] items-center justify-center gap-1.5 rounded-[var(--radius-control)] text-[length:var(--fs-headline)] font-semibold text-(--ink)"
             >
               <Tag size={16} /> Manage
             </button>
             <button
               onClick={() => { setEditingCat(null); setQuickCat(''); setCatError(''); setCatListOpen(true); }}
-              className="press flex min-h-[48px] items-center justify-center gap-1 rounded-2xl bg-(--primary) text-[14px] font-extrabold text-white dark:bg-(--primary) dark:text-[#151515]"
+              className="press flex min-h-[48px] items-center justify-center gap-1 rounded-[var(--radius-control)] bg-(--primary) text-[length:var(--fs-subhead)] font-semibold text-(--primary-foreground)"
             >
               <Plus size={16} /> Add
             </button>
@@ -496,31 +500,31 @@ export default function SettingsScreen() {
         </section>
 
         {/* Sync status — durable outbox at a glance */}
-        <section className="glass rounded-[24px] p-4">
+        <section className="glass rounded-[calc(var(--radius-card) - 4px)] p-4">
           <div className="flex items-center gap-3">
-            <span className="flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl bg-(--glass-soft) text-(--ink-2)">
+            <span className="flex h-11 w-11 shrink-0 items-center justify-center rounded-[var(--radius-control)] bg-(--glass-soft) text-(--ink-2)">
               <RefreshCw size={20} className={refreshing ? 'animate-spin' : ''} />
             </span>
             <span className="min-w-0 flex-1">
-              <span className="block text-[15px] font-extrabold tracking-tight text-(--ink)">{syncState}</span>
-              <span className="tnum block text-[12px] font-medium text-(--ink-2)">
+              <span className="block text-[length:var(--fs-headline)] font-semibold tracking-[-0.01em] text-(--ink)">{syncState}</span>
+              <span className="tnum block text-[length:var(--fs-footnote)] font-normal text-(--ink-2)">
                 Last sync: {lastSyncLabel} · Cache {cacheKb} KB
               </span>
             </span>
           </div>
           {failedCount > 0 ? (
-            <div className="mt-3 rounded-2xl border border-rose-500/25 bg-rose-500/10 px-3.5 py-3">
-              <p className="text-[13px] font-bold text-(--ink)">
+            <div className="mt-3 rounded-[var(--radius-control)] border border-(--destructive)/25 bg-(--destructive)/10 px-3.5 py-3">
+              <p className="text-[length:var(--fs-footnote)] font-bold text-(--ink)">
                 {failedCount} change{failedCount === 1 ? '' : 's'} couldn&apos;t sync
               </p>
-              <p className="mt-0.5 text-[12px] leading-relaxed text-(--ink-2)">
+              <p className="mt-0.5 text-[length:var(--fs-footnote)] leading-relaxed text-(--ink-2)">
                 Nothing is lost — review each one from the sync banner or retry them all here.
               </p>
               <button
                 type="button"
                 onClick={() => void retryAll()}
                 disabled={syncBusy}
-                className="press mt-2.5 flex min-h-[48px] w-full items-center justify-center gap-1.5 rounded-2xl bg-(--primary) text-[14px] font-extrabold text-white disabled:opacity-50 dark:bg-(--primary) dark:text-[#151515]"
+                className="press mt-2.5 flex min-h-[48px] w-full items-center justify-center gap-1.5 rounded-[var(--radius-control)] bg-(--primary) text-[length:var(--fs-subhead)] font-semibold disabled:opacity-50 text-(--primary-foreground)"
               >
                 <RefreshCw size={16} className={syncBusy ? 'animate-spin' : ''} />
                 {syncBusy ? 'Retrying…' : `Retry all (${failedCount})`}
@@ -531,7 +535,7 @@ export default function SettingsScreen() {
             type="button"
             onClick={() => void refresh()}
             disabled={refreshing}
-            className="glass-soft press mt-3 flex min-h-[48px] w-full items-center justify-center gap-1.5 rounded-2xl text-[14px] font-extrabold text-(--ink) disabled:opacity-50"
+            className="glass-soft press mt-3 flex min-h-[48px] w-full items-center justify-center gap-1.5 rounded-[var(--radius-control)] text-[length:var(--fs-headline)] font-semibold text-(--ink) disabled:opacity-50"
           >
             <RefreshCw size={16} className={refreshing ? 'animate-spin' : ''} />
             {refreshing ? 'Syncing…' : 'Sync now'}
@@ -539,19 +543,19 @@ export default function SettingsScreen() {
         </section>
 
         {/* Appearance — compact card matching Cloud style */}
-        <section className="glass rounded-[20px] p-3">
+        <section className="glass rounded-[var(--radius-row)] p-3">
           <div className="flex items-center gap-2.5 px-1 pb-2.5">
-            <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-2xl bg-(--glass-soft) text-(--ink-2)">
+            <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-[var(--radius-control)] bg-(--glass-soft) text-(--ink-2)">
               <Sun size={18} />
             </span>
             <div className="min-w-0 flex-1">
-              <p className="text-[14px] font-extrabold tracking-tight text-(--ink)">Appearance</p>
-              <p className="text-[11.5px] font-medium text-(--ink-2)">
+              <p className="text-[length:var(--fs-subhead)] font-semibold tracking-tight text-(--ink)">Appearance</p>
+              <p className="text-[length:var(--fs-caption)] font-medium text-(--ink-2)">
                 {theme === 'system' ? 'Follows your system' : theme === 'dark' ? 'Dark mode' : 'Light mode'}
               </p>
             </div>
           </div>
-          <div className="grid auto-cols-fr grid-flow-col gap-1 rounded-2xl bg-(--glass-soft) p-1">
+          <div className="grid auto-cols-fr grid-flow-col gap-1 rounded-[var(--radius-control)] bg-(--glass-soft) p-1">
             {themeOptions.map((t) => {
               const active = theme === t.k;
               return (
@@ -559,11 +563,11 @@ export default function SettingsScreen() {
                   key={t.k}
                   onClick={() => setTheme(t.k)}
                   aria-pressed={active}
-                  className={`press flex items-center justify-center gap-1.5 rounded-xl px-2 py-2.5 text-[12.5px] font-extrabold transition ${
-                    active
-                      ? 'bg-(--primary) text-white dark:bg-(--primary) dark:text-[#151515]'
-                      : 'text-(--ink-2) hover:bg-(--accent-soft)/50'
-                  }`}
+                  className={`press flex items-center justify-center gap-1.5 rounded-[var(--radius-icon)] px-2 py-2.5 text-[length:var(--fs-footnote)] font-semibold transition ${
+ active
+ ? 'bg-(--primary) text-(--primary-foreground)'
+ : 'text-(--ink-2) hover:bg-(--accent-soft)/50'
+ }`}
                 >
                   {t.icon}
                   {t.label}
@@ -574,38 +578,38 @@ export default function SettingsScreen() {
         </section>
 
         {/* Data & about */}
-        <section className="glass rounded-[24px] p-4">
+        <section className="glass rounded-[calc(var(--radius-card) - 4px)] p-4">
           <div className="flex items-start gap-3">
-            <span className="flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl bg-(--glass-soft) text-(--ink-2)">
+            <span className="flex h-11 w-11 shrink-0 items-center justify-center rounded-[var(--radius-control)] bg-(--glass-soft) text-(--ink-2)">
               <Database size={20} />
             </span>
-            <p className="text-[13px] leading-relaxed text-(--ink-2)">
+            <p className="text-[length:var(--fs-footnote)] leading-relaxed text-(--ink-2)">
               Data lives in <b className="text-(--ink)">your Google Sheet</b> — this phone only caches it. Works across multiple devices via sync.
             </p>
           </div>
-          <div className="mt-3 overflow-hidden rounded-[18px] bg-(--glass-soft)">
+          <div className="mt-3 overflow-hidden rounded-[var(--radius-row)] bg-(--glass-soft)">
             <div className="flex w-full items-center gap-3 px-3.5 py-3.5">
-              <span className="flex h-9 w-9 items-center justify-center rounded-xl bg-(--glass-soft) text-(--ink-2)">
+              <span className="flex h-9 w-9 items-center justify-center rounded-[var(--radius-icon)] bg-(--glass-soft) text-(--ink-2)">
                 <ShieldCheck size={16} />
               </span>
-              <span className="flex-1 text-[14px] font-bold text-(--ink)">Version</span>
-              <span className="tnum rounded-full bg-(--stroke-dim)/60 px-2.5 py-1 text-[11px] font-extrabold text-(--ink-2)">v{APP_VERSION}</span>
+              <span className="flex-1 text-[length:var(--fs-subhead)] font-bold text-(--ink)">Version</span>
+              <span className="tnum rounded-full bg-(--stroke-dim)/60 px-2.5 py-1 text-[length:var(--fs-caption)] font-semibold text-(--ink-2)">v{APP_VERSION}</span>
             </div>
           </div>
         </section>
 
         {/* Log out — disconnects the cloud database and clears this phone */}
-        <section className="glass rounded-[24px] border-red-500/20 p-4">
+        <section className="glass rounded-[calc(var(--radius-card) - 4px)] border-(--destructive)/20 p-4">
           <button
             onClick={() => setLogoutOpen(true)}
             className="flex w-full items-center gap-3 text-left"
           >
-            <span className="flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl bg-red-500/10 text-red-500">
+            <span className="flex h-11 w-11 shrink-0 items-center justify-center rounded-[var(--radius-control)] bg-(--destructive)/10 text-(--destructive-ink)">
               <LogOut size={20} />
             </span>
             <span className="min-w-0 flex-1">
-              <span className="block text-[15px] font-extrabold tracking-tight text-red-500">Log out</span>
-              <span className="block text-[12px] font-medium text-(--ink-2)">
+              <span className="block text-[length:var(--fs-headline)] font-semibold tracking-[-0.01em] text-(--destructive-ink)">Log out</span>
+              <span className="block text-[length:var(--fs-footnote)] font-normal text-(--ink-2)">
                 Disconnects the cloud database and clears this phone’s cache
               </span>
             </span>
@@ -613,34 +617,34 @@ export default function SettingsScreen() {
           </button>
         </section>
 
-        <p className="settings-footnote px-2 pb-2 text-center text-[11.5px] font-medium text-(--ink-3)">
+        <p className="settings-footnote px-2 pb-2 text-center text-[length:var(--fs-caption)] font-medium text-(--ink-3)">
           Made for small businesses · your data stays yours
         </p>
       </div>
 
       {/* Cloud database popup — server-verified connection (no URLs held here) */}
       <Sheet open={cloudOpen} onClose={() => setCloudOpen(false)} title="Cloud database">
-        <p className="mb-3 text-[12px] font-medium text-(--ink-2)">Your own Google Sheet, verified by the server</p>
-        <div className="mb-3 flex items-center justify-between gap-3 rounded-xl bg-(--glass-soft) px-3.5 py-3" role="status" aria-live="polite">
-          <span className="flex items-center gap-2 text-[13px] font-bold text-(--ink)">
-            <span className={`h-2 w-2 rounded-full ${syncState === 'Synced' ? 'bg-emerald-500' : syncState === 'Failed' ? 'bg-rose-500' : syncState === 'Offline' ? 'bg-amber-500' : 'bg-(--ink-3)'}`} />
+        <p className="mb-3 text-[length:var(--fs-footnote)] font-normal text-(--ink-2)">Your own Google Sheet, verified by the server</p>
+        <div className="mb-3 flex items-center justify-between gap-3 rounded-[var(--radius-icon)] bg-(--glass-soft) px-3.5 py-3" role="status" aria-live="polite">
+          <span className="flex items-center gap-2 text-[length:var(--fs-footnote)] font-bold text-(--ink)">
+            <span className={`h-2 w-2 rounded-full ${syncState === 'Synced' ? 'bg-(--success)' : syncState === 'Failed' ? 'bg-(--destructive)' : syncState === 'Offline' ? 'bg-(--warning)' : 'bg-(--ink-3)'}`} />
             {syncState}
           </span>
-          <span className="tnum text-right text-[11px] font-medium text-(--ink-2)">Last successful sync · {lastSyncLabel}</span>
+          <span className="tnum text-right text-[length:var(--fs-caption)] font-medium text-(--ink-2)">Last successful sync · {lastSyncLabel}</span>
         </div>
-        <div className="mb-3 rounded-xl bg-(--glass-soft) px-3.5 py-3" role="status" aria-live="polite">
-          <p className="flex items-center gap-2 text-[13px] font-bold text-(--ink)">
-            <span className={`h-2 w-2 rounded-full ${connState === 'verified' ? 'bg-emerald-500' : connState ? 'bg-amber-500' : 'bg-(--ink-3)'}`} />
+        <div className="mb-3 rounded-[var(--radius-icon)] bg-(--glass-soft) px-3.5 py-3" role="status" aria-live="polite">
+          <p className="flex items-center gap-2 text-[length:var(--fs-footnote)] font-bold text-(--ink)">
+            <span className={`h-2 w-2 rounded-full ${connState === 'verified' ? 'bg-(--success)' : connState ? 'bg-(--warning)' : 'bg-(--ink-3)'}`} />
             {connState === 'verified'
               ? `Sheet verified${connVerifiedAt ? ` · ${new Date(connVerifiedAt).toLocaleDateString()}` : ''}`
               : connState
                 ? `Sheet ${connState} — reconnect below`
                 : 'Checking connection…'}
           </p>
-          {connError ? <p className="mt-1 text-[12px] font-medium text-rose-600 dark:text-rose-300">{connError}</p> : null}
+          {connError ? <p className="mt-1 text-[length:var(--fs-footnote)] font-medium text-(--destructive-ink)">{connError}</p> : null}
         </div>
-        <p className="mt-2 flex items-start gap-1.5 text-[12px] leading-relaxed text-(--ink-2)">
-          <ShieldCheck size={14} className="mt-0.5 shrink-0 text-emerald-600 dark:text-emerald-300" />
+        <p className="mt-2 flex items-start gap-1.5 text-[length:var(--fs-footnote)] leading-relaxed text-(--ink-2)">
+          <ShieldCheck size={14} className="mt-0.5 shrink-0 text-(--success-ink)" />
           Your sheet association is stored and verified server-side. Linked devices share this same sheet automatically.
         </p>
         <div className="mt-3 space-y-2 pb-2">
@@ -648,7 +652,7 @@ export default function SettingsScreen() {
             type="button"
             onClick={() => void checkConnection()}
             disabled={connBusy}
-            className="glass-soft press flex min-h-[48px] w-full items-center justify-center gap-1.5 rounded-2xl text-[14px] font-extrabold text-(--ink) disabled:opacity-50"
+            className="glass-soft press flex min-h-[48px] w-full items-center justify-center gap-1.5 rounded-[var(--radius-control)] text-[length:var(--fs-headline)] font-semibold text-(--ink) disabled:opacity-50"
           >
             <RefreshCw size={16} className={connBusy ? 'animate-spin' : ''} />
             {connBusy ? 'Verifying…' : 'Verify connection'}
@@ -656,14 +660,14 @@ export default function SettingsScreen() {
           <button
             type="button"
             onClick={() => { setCloudOpen(false); setSheetChangeOpen(true); }}
-            className="press flex min-h-[52px] w-full items-center justify-center gap-1.5 rounded-2xl bg-(--primary) text-[15px] font-extrabold text-white dark:bg-(--primary) dark:text-[#151515]"
+            className="press flex min-h-[52px] w-full items-center justify-center gap-1.5 rounded-[var(--radius-control)] bg-(--primary) text-[length:var(--fs-headline)] font-semibold text-(--primary-foreground)"
           >
             Change sheet
           </button>
           <button
             onClick={() => void refresh()}
             disabled={refreshing}
-            className="glass-soft press flex min-h-[48px] w-full items-center justify-center gap-1.5 rounded-2xl text-[14px] font-extrabold text-(--ink) disabled:opacity-50"
+            className="glass-soft press flex min-h-[48px] w-full items-center justify-center gap-1.5 rounded-[var(--radius-control)] text-[length:var(--fs-headline)] font-semibold text-(--ink) disabled:opacity-50"
           >
             <RefreshCw size={16} className={refreshing ? 'animate-spin' : ''} />
             {refreshing ? 'Syncing…' : 'Sync now'}
@@ -671,8 +675,8 @@ export default function SettingsScreen() {
         </div>
 
         {/* How syncing works — merged into the Cloud popup */}
-        <p className="mt-3 px-1 text-[12px] font-bold uppercase tracking-wider text-(--ink-2)">How syncing works</p>
-        <ol className="mt-1.5 list-decimal space-y-2 pl-5 text-[13.5px] leading-relaxed text-(--ink)">
+        <p className="mt-3 px-1 text-[length:var(--fs-footnote)] font-bold uppercase tracking-wider text-(--ink-2)">How syncing works</p>
+        <ol className="mt-1.5 list-decimal space-y-2 pl-5 text-[length:var(--fs-footnote)] leading-relaxed text-(--ink)">
           {[
             'Create your own Google Sheet (keep it private).',
             'Open Extensions → Apps Script, paste the code from apps-script/Code.gs in this project.',
@@ -680,13 +684,13 @@ export default function SettingsScreen() {
             'Connect it once from the setup screen — the server verifies access before storing anything.',
             'Linked devices share the same verified sheet automatically.',
           ].map((step, i) => (
-            <li key={i} className="rounded-2xl bg-(--glass-soft) px-3 py-2.5">
+            <li key={i} className="rounded-[var(--radius-control)] bg-(--glass-soft) px-3 py-2.5">
               {step}
             </li>
           ))}
         </ol>
-        <p className="mt-2.5 flex items-start gap-2 rounded-[20px] bg-emerald-500/10 px-3.5 py-3 text-[12.5px] leading-relaxed text-(--ink-2)">
-          <ShieldCheck size={16} className="mt-0.5 shrink-0 text-emerald-600 dark:text-emerald-300" />
+        <p className="mt-2.5 flex items-start gap-2 rounded-[var(--radius-row)] bg-(--success)/10 px-3.5 py-3 text-[length:var(--fs-footnote)] leading-relaxed text-(--ink-2)">
+          <ShieldCheck size={16} className="mt-0.5 shrink-0 text-(--success-ink)" />
           Data lives in your Google Sheet — this phone only caches it. Stock changes apply inside a sheet lock with
           idempotency keys, so retries and two phones updating at once stay consistent.
         </p>
@@ -707,24 +711,24 @@ export default function SettingsScreen() {
               autoFocus
             />
           </Field>
-          {catError ? <p id="category-form-error" className="mt-1.5 text-[12px] font-semibold text-rose-600 dark:text-rose-300" role="alert">{catError}</p> : null}
+          {catError ? <p id="category-form-error" className="mt-1.5 text-[length:var(--fs-footnote)] font-semibold text-(--destructive-ink)" role="alert">{catError}</p> : null}
           <div className="mt-2 flex justify-end gap-2">
             {editingCat ? (
-              <button type="button" onClick={() => { setEditingCat(null); setQuickCat(''); setCatError(''); }} className="press min-h-11 rounded-xl px-4 text-[13px] font-bold text-(--ink-2)">Cancel</button>
+              <button type="button" onClick={() => { setEditingCat(null); setQuickCat(''); setCatError(''); }} className="press min-h-11 rounded-[var(--radius-icon)] px-4 text-[length:var(--fs-footnote)] font-bold text-(--ink-2)">Cancel</button>
             ) : null}
           <button
             type="submit"
             disabled={quickBusy}
-            className="press flex min-h-11 items-center gap-1.5 rounded-xl bg-(--primary) px-4 text-[13px] font-extrabold text-white disabled:opacity-50 dark:bg-(--primary) dark:text-[#151515]"
+            className="press flex min-h-11 items-center gap-1.5 rounded-[var(--radius-icon)] bg-(--primary) px-4 text-[length:var(--fs-footnote)] font-semibold disabled:opacity-50 text-(--primary-foreground)"
           >
             {quickBusy ? 'Saving…' : editingCat ? 'Save category' : 'Add category'}
           </button>
           </div>
         </form>
         {categories.length === 0 ? (
-          <div className="rounded-[20px] border border-dashed border-(--stroke-dim) px-4 py-6 text-center">
-            <p className="text-[14px] font-bold text-(--ink)">No categories yet</p>
-            <p className="mx-auto mt-1 max-w-[30ch] text-[12.5px] text-(--ink-2)">Type a name above and tap Add — e.g. Beverages, Snacks, Essentials.</p>
+          <div className="rounded-[var(--radius-row)] border border-dashed border-(--stroke-dim) px-4 py-6 text-center">
+            <p className="text-[length:var(--fs-subhead)] font-bold text-(--ink)">No categories yet</p>
+            <p className="mx-auto mt-1 max-w-[30ch] text-[length:var(--fs-footnote)] text-(--ink-2)">Type a name above and tap Add — e.g. Beverages, Snacks, Essentials.</p>
           </div>
         ) : (
           <div className="space-y-1.5 pb-2">
@@ -732,20 +736,20 @@ export default function SettingsScreen() {
               const count = products.filter((p) => p.categoryId === c.id).length;
               const editing = editingCat?.id === c.id;
               return (
-                <div key={c.id} className={`flex items-center gap-3 rounded-[18px] px-2.5 py-2 ${editing ? 'bg-(--accent-soft)' : 'bg-(--glass-soft)'}`}>
-                  <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-2xl bg-(--accent-soft) text-[15px] font-extrabold text-(--ink) dark:text-(--accent)">
+                <div key={c.id} className={`flex items-center gap-3 rounded-[var(--radius-row)] px-2.5 py-2 ${editing ? 'bg-(--accent-soft)' : 'bg-(--glass-soft)'}`}>
+                  <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-[var(--radius-control)] bg-(--accent-soft) text-[length:var(--fs-headline)] font-semibold text-(--ink) dark:text-(--accent)">
                     {c.name.slice(0, 1).toUpperCase()}
                   </span>
                   <span className="min-w-0 flex-1">
-                    <span className="block truncate text-[14px] font-bold text-(--ink)">{c.name}</span>
-                    <span className="tnum block text-[11.5px] font-medium text-(--ink-2)">
+                    <span className="block truncate text-[length:var(--fs-subhead)] font-bold text-(--ink)">{c.name}</span>
+                    <span className="tnum block text-[length:var(--fs-caption)] font-medium text-(--ink-2)">
                       {count} product{count === 1 ? '' : 's'}
                     </span>
                   </span>
-                  <button type="button" onClick={() => { setEditingCat(c); setQuickCat(c.name); setCatError(''); }} aria-label={`Rename ${c.name}`} className="press flex h-10 w-10 shrink-0 items-center justify-center rounded-2xl bg-(--bg-elev)/60 text-(--ink-2) shadow-sm">
+                  <button type="button" onClick={() => { setEditingCat(c); setQuickCat(c.name); setCatError(''); }} aria-label={`Rename ${c.name}`} className="press flex h-10 w-10 shrink-0 items-center justify-center rounded-[var(--radius-control)] bg-(--bg-elev)/60 text-(--ink-2) shadow-sm">
                     <Pencil size={16} />
                   </button>
-                  <button type="button" onClick={() => setDelCat(c)} aria-label={`Delete ${c.name}`} className="press flex h-10 w-10 shrink-0 items-center justify-center rounded-2xl bg-rose-500/10 text-rose-500 dark:text-rose-400">
+                  <button type="button" onClick={() => setDelCat(c)} aria-label={`Delete ${c.name}`} className="press flex h-10 w-10 shrink-0 items-center justify-center rounded-[var(--radius-control)] bg-(--destructive)/10 text-(--destructive-ink) dark:text-(--destructive-ink)">
                     <Trash2 size={16} />
                   </button>
                 </div>
@@ -787,52 +791,52 @@ export default function SettingsScreen() {
       <Sheet open={accountOpen} onClose={() => { setAccountOpen(false); setAccError(''); setAccStatus(''); }} title="Account">
         {profile ? (
           <div>
-            <div className="rounded-[20px] bg-(--glass-soft) px-3.5 py-3">
-              <p className="text-[15px] font-extrabold text-(--ink)">{profile.name}</p>
-              <p className="text-[12.5px] text-(--ink-2)">{profile.email}</p>
-              <p className="tnum mt-1 text-[11.5px] font-bold text-(--ink-2)">Status: {profile.accountStatus}</p>
+            <div className="rounded-[var(--radius-row)] bg-(--glass-soft) px-3.5 py-3">
+              <p className="text-[length:var(--fs-headline)] font-semibold text-(--ink)">{profile.name}</p>
+              <p className="text-[length:var(--fs-footnote)] text-(--ink-2)">{profile.email}</p>
+              <p className="tnum mt-1 text-[length:var(--fs-caption)] font-bold text-(--ink-2)">Status: {profile.accountStatus}</p>
             </div>
-            {accStatus ? <p className="mt-2 px-1 text-[12.5px] font-semibold text-(--ink-2)">{accStatus}</p> : null}
+            {accStatus ? <p className="mt-2 px-1 text-[length:var(--fs-footnote)] font-medium text-(--ink-2)">{accStatus}</p> : null}
             <div className="mt-3 grid grid-cols-2 gap-2 pb-1">
               <button
                 type="button"
                 onClick={() => void doRefreshStatus()}
                 disabled={accBusy}
-                className="glass-soft press min-h-[52px] rounded-2xl text-[14px] font-extrabold text-(--ink) disabled:opacity-50"
+                className="glass-soft press min-h-[52px] rounded-[var(--radius-control)] text-[length:var(--fs-headline)] font-semibold text-(--ink) disabled:opacity-50"
               >
                 {accBusy ? 'Checking…' : 'Check status'}
               </button>
               <button
                 type="button"
                 onClick={() => { signOutAccount(); setProfile(null); setAccountOpen(false); notify('Signed out on this device.'); }}
-                className="press min-h-[52px] rounded-2xl bg-rose-500/12 text-[14px] font-extrabold text-rose-600 dark:text-rose-300"
+                className="press min-h-[52px] rounded-[var(--radius-control)] bg-(--destructive)/12 text-[length:var(--fs-subhead)] font-semibold text-(--destructive-ink)"
               >
                 Sign out
               </button>
             </div>
-            <p className="mt-2 px-1 text-[12px] leading-relaxed text-(--ink-2)">
+            <p className="mt-2 px-1 text-[length:var(--fs-footnote)] leading-relaxed text-(--ink-2)">
               Profiles sync to the owner’s admin area automatically. Account status is owner-managed and enforced by
               the backend.
             </p>
           </div>
         ) : (
           <div>
-            <p className="mb-3 text-[13px] leading-relaxed text-(--ink-2)">
+            <p className="mb-3 text-[length:var(--fs-footnote)] leading-relaxed text-(--ink-2)">
               Signed in with a server-verified Stockly account. Sign-in methods attach to one identity — Google and
               password logins for the same verified email share this account.
             </p>
-            {accError ? <p role="alert" className="mt-2 text-[12.5px] font-semibold text-rose-600 dark:text-rose-300">{accError}</p> : null}
+            {accError ? <p role="alert" className="mt-2 text-[length:var(--fs-footnote)] font-semibold text-(--destructive-ink)">{accError}</p> : null}
             <button
               type="button"
               onClick={() => { setAccountOpen(false); setDevicesMode('link'); setDevicesOpen(true); }}
-              className="glass-soft press mt-2 flex min-h-[52px] w-full items-center justify-center gap-1.5 rounded-2xl text-[14px] font-extrabold text-(--ink)"
+              className="glass-soft press mt-2 flex min-h-[52px] w-full items-center justify-center gap-1.5 rounded-[var(--radius-control)] text-[length:var(--fs-headline)] font-semibold text-(--ink)"
             >
               <Link2 size={16} /> Link another device
             </button>
             <button
               type="button"
               onClick={() => { signOutAccount(); setProfile(null); setAccountOpen(false); logout(); }}
-              className="press mt-2 min-h-[52px] w-full rounded-2xl bg-rose-500/12 text-[14px] font-extrabold text-rose-600 dark:text-rose-300"
+              className="press mt-2 min-h-[52px] w-full rounded-[var(--radius-control)] bg-(--destructive)/12 text-[length:var(--fs-subhead)] font-semibold text-(--destructive-ink)"
             >
               Sign out
             </button>
@@ -846,9 +850,9 @@ export default function SettingsScreen() {
           <Suspense
             fallback={
               <div className="mx-auto max-w-md space-y-3 p-4" aria-label="Loading device linking">
-                <div className="h-14 animate-pulse rounded-2xl bg-(--accent-soft)" />
-                <div className="h-40 animate-pulse rounded-[26px] bg-(--accent-soft)" />
-                <div className="h-24 animate-pulse rounded-[26px] bg-(--accent-soft)" />
+                <div className="h-14 animate-pulse rounded-[var(--radius-control)] bg-(--accent-soft)" />
+                <div className="h-40 animate-pulse rounded-[calc(var(--radius-card) - 4px)] bg-(--accent-soft)" />
+                <div className="h-24 animate-pulse rounded-[calc(var(--radius-card) - 4px)] bg-(--accent-soft)" />
               </div>
             }
           >

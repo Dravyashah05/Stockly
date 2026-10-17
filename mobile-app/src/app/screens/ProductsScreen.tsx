@@ -100,7 +100,7 @@ export default function ProductsScreen({
           <button
             onClick={onAdd}
             aria-label="Add product"
-            className="press flex h-10 w-10 shrink-0 items-center justify-center rounded-2xl bg-(--primary) text-white dark:bg-(--primary) dark:text-[#151515]"
+            className="press flex h-10 w-10 shrink-0 items-center justify-center rounded-[var(--radius-control)] bg-(--primary) text-(--primary-foreground)"
           >
             <Plus size={20} />
           </button>
@@ -110,8 +110,8 @@ export default function ProductsScreen({
       {/* Fixed controls */}
       <div className="products-controls mx-auto w-full max-w-md shrink-0 space-y-3 px-4 pt-3">
         <div className="desktop-products-heading hidden items-center justify-between">
-          <p className="text-[13px] font-semibold text-(--ink-2)">{list.length} matching product{list.length === 1 ? '' : 's'}</p>
-          <button type="button" onClick={onAdd} className="press flex min-h-11 items-center gap-2 rounded-xl bg-(--primary) px-4 text-[13px] font-bold text-(--primary-foreground)">
+          <p className="text-[length:var(--fs-footnote)] font-semibold text-(--ink-2)">{list.length} matching product{list.length === 1 ? '' : 's'}</p>
+          <button type="button" onClick={onAdd} className="press flex min-h-11 items-center gap-2 rounded-[var(--radius-icon)] bg-(--primary) px-4 text-[length:var(--fs-footnote)] font-bold text-(--primary-foreground)">
             <Plus size={16} /> Add product
           </button>
         </div>
@@ -147,7 +147,7 @@ export default function ProductsScreen({
               setSort((s) => (s === 'updated' ? 'name' : s === 'name' ? 'stock' : s === 'stock' ? 'price' : 'updated'))
             }
             aria-label="Change sorting"
-            className="glass press flex min-h-[44px] items-center gap-1.5 rounded-2xl px-3 py-2.5 text-[13px] font-bold text-(--ink)"
+            className="glass press flex min-h-[44px] items-center gap-1.5 rounded-[var(--radius-control)] px-3 py-2.5 text-[length:var(--fs-footnote)] font-bold text-(--ink)"
           >
             <ArrowDownUp size={16} />
             {sort === 'updated' ? 'Recent' : sort === 'name' ? 'Name' : sort === 'stock' ? 'Stock' : 'Price'}
@@ -156,7 +156,7 @@ export default function ProductsScreen({
             <button
               type="button"
               onClick={clearFilters}
-              className="press flex min-h-[44px] shrink-0 items-center gap-1 rounded-2xl bg-rose-500/10 px-3 py-2.5 text-[13px] font-bold text-rose-600 dark:text-rose-400"
+              className="press flex min-h-[44px] shrink-0 items-center gap-1 rounded-[var(--radius-control)] bg-(--destructive)/10 px-3 py-2.5 text-[length:var(--fs-footnote)] font-medium text-(--destructive-ink)"
             >
               <X size={16} /> Clear
             </button>
@@ -183,14 +183,14 @@ export default function ProductsScreen({
               <button
                 type="button"
                 onClick={clearFilters}
-                className="press mx-auto mt-1 flex min-h-11 items-center gap-2 rounded-xl bg-(--primary) px-4 text-sm font-bold text-(--primary-foreground)"
+                className="press mx-auto mt-1 flex min-h-11 items-center gap-2 rounded-[var(--radius-icon)] bg-(--primary) px-4 text-sm font-bold text-(--primary-foreground)"
               >
                 <X size={16} /> Clear filters
               </button>
             ) : null}
           </div>
         ) : (
-          <div className="glass sheet-scroll min-h-0 flex-1 overflow-auto rounded-[26px] px-1.5 pt-1 pb-4">
+          <div className="glass sheet-scroll min-h-0 flex-1 overflow-auto rounded-[calc(var(--radius-card) - 4px)] px-1.5 pt-1 pb-4">
             <div className="desktop-product-table">
               <div className="desktop-product-table-head" role="row">
                 <span role="columnheader">Product</span><span role="columnheader">SKU</span><span role="columnheader">Category</span><span role="columnheader" className="text-right">Stock</span><span role="columnheader" className="text-right">Minimum</span><span role="columnheader" className="text-right">Price</span><span role="columnheader">Status</span><span role="columnheader" aria-label="Actions" />
@@ -212,7 +212,7 @@ export default function ProductsScreen({
               <button
                 type="button"
                 onClick={() => setVisible((v) => v + PAGE_SIZE)}
-                className="press mt-1 flex min-h-[48px] w-full items-center justify-center rounded-2xl bg-(--accent-soft) text-[14px] font-bold text-(--accent)"
+                className="press mt-1 flex min-h-[48px] w-full items-center justify-center rounded-[var(--radius-control)] bg-(--accent-soft) text-[length:var(--fs-subhead)] font-bold text-(--accent)"
               >
                 Show more ({list.length - visible} remaining)
               </button>
@@ -300,7 +300,7 @@ const ProductRow = memo(function ProductRow({
       tabIndex={0}
       aria-label={`${p.name}, ${p.currentStock} in stock`}
       onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); onView(p); } }}
-      className="product-list-row press cv-row flex cursor-pointer items-center gap-3 rounded-[20px] px-2.5 py-2.5 hover:bg-(--accent-soft)/50"
+      className="product-list-row press cv-row flex cursor-pointer items-center gap-3 px-2.5 py-3 transition-colors hover:bg-(--accent-soft)/50"
     >
       <div className="product-identity" role="cell">
       {p.image ? (
@@ -310,38 +310,38 @@ const ProductRow = memo(function ProductRow({
           loading="lazy"
           decoding="async"
           draggable={false}
-          className="h-12 w-12 shrink-0 rounded-2xl border border-(--stroke-dim) object-cover"
+          className="h-12 w-12 shrink-0 rounded-[var(--radius-control)] border border-(--stroke-dim) object-cover"
           onError={(e) => {
             (e.target as HTMLImageElement).style.display = 'none';
           }}
         />
       ) : (
-        <span className="flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl bg-(--accent-soft) text-[17px] font-bold text-(--ink) dark:text-(--accent)">
+        <span className="flex h-12 w-12 shrink-0 items-center justify-center rounded-[var(--radius-control)] bg-(--accent-soft) text-[length:var(--fs-title3)] font-bold text-(--ink) dark:text-(--accent)">
           {p.name.slice(0, 1).toUpperCase()}
         </span>
       )}
       <div className="product-mobile-details min-w-0 flex-1">
-        <p className="truncate text-[14.5px] font-semibold text-(--ink)">{p.name}</p>
-        {sub ? <p className="tnum truncate text-xs text-(--ink-2)">{sub}</p> : null}
+        <p className="truncate text-[length:var(--fs-subhead)] font-semibold text-(--ink)">{p.name}</p>
+        {sub ? <p className="tnum truncate text-[length:var(--fs-caption)] text-(--ink-2)">{sub}</p> : null}
         <div className="mt-1 flex flex-wrap items-center gap-x-2 gap-y-0.5">
           {pending ? (
-            <span className="rounded-full bg-(--accent-soft) px-2 py-0.5 text-[11px] font-extrabold text-(--accent)">
+            <span className="rounded-full bg-(--accent-soft) px-2 py-0.5 text-[length:var(--fs-caption)] font-semibold text-(--accent)">
               Saving…
             </span>
           ) : null}
           <span
-            className={`tnum text-[12px] font-bold ${
-              st === 'out'
-                ? 'text-rose-600 dark:text-rose-300'
-                : st === 'low'
-                  ? 'text-amber-600 dark:text-amber-300'
-                  : 'text-emerald-600 dark:text-emerald-300'
-            }`}
+            className={`tnum text-[length:var(--fs-caption)] font-semibold ${
+ st === 'out'
+ ? 'text-(--destructive-ink)'
+ : st === 'low'
+ ? 'text-(--warning-ink)'
+ : 'text-(--success-ink)'
+ }`}
           >
             {st === 'out' ? 'Out of stock' : st === 'low' ? `${p.currentStock} · Low` : `${p.currentStock} in stock`}
           </span>
           {p.sellingPrice > 0 ? (
-            <span className="tnum text-[12.5px] font-bold text-(--ink)">{formatMoney(p.sellingPrice)}</span>
+            <span className="tnum text-[length:var(--fs-footnote)] font-bold text-(--ink)">{formatMoney(p.sellingPrice)}</span>
           ) : null}
         </div>
       </div>
@@ -427,7 +427,7 @@ function DetailPage({
       <div className="ambient" aria-hidden="true" />
       <div className="product-detail-layout relative z-[1] mx-auto min-h-dvh max-w-md pb-6 md:max-w-2xl lg:max-w-4xl lg:px-8">
         {/* Hero image */}
-        <div className="product-detail-hero relative lg:mt-6 lg:overflow-hidden lg:rounded-[28px]">
+        <div className="product-detail-hero relative lg:mt-6 lg:overflow-hidden lg:rounded-[var(--radius-hero)]">
           {p.image ? (
             <img
               src={p.image}
@@ -441,7 +441,7 @@ function DetailPage({
             />
           ) : (
             <div className="flex h-64 w-full items-center justify-center bg-(--accent-soft) lg:h-96">
-              <span className="glass-strong flex h-24 w-24 items-center justify-center rounded-[28px] text-[44px] font-bold text-(--ink) dark:text-(--accent)">
+              <span className="glass-strong flex h-24 w-24 items-center justify-center rounded-[var(--radius-hero)] text-[length:var(--fs-large-title)] font-semibold text-(--ink)">
                 {p.name.slice(0, 1).toUpperCase()}
               </span>
             </div>
@@ -459,7 +459,7 @@ function DetailPage({
             <button
               onClick={onEdit}
               aria-label={`Edit ${p.name}`}
-              className="glass-strong press flex h-11 items-center gap-1.5 rounded-full px-4 text-[14px] font-bold text-(--ink)"
+              className="glass-strong press flex h-11 items-center gap-1.5 rounded-full px-4 text-[length:var(--fs-subhead)] font-semibold text-(--ink)"
             >
               <Pencil size={16} /> Edit
             </button>
@@ -467,18 +467,18 @@ function DetailPage({
           {/* Status over image */}
           <div className="absolute bottom-3 left-4 flex flex-wrap gap-1.5">
             <span
-              className={`glass-strong tnum rounded-full px-3 py-1.5 text-[12px] font-bold ${
-                st === 'out'
-                  ? 'text-rose-600 dark:text-rose-300'
-                  : st === 'low'
-                    ? 'text-amber-600 dark:text-amber-300'
-                    : 'text-emerald-600 dark:text-emerald-300'
-              }`}
+              className={`glass-strong tnum rounded-full px-3 py-1.5 text-[length:var(--fs-caption)] font-semibold ${
+ st === 'out'
+ ? 'text-(--destructive-ink)'
+ : st === 'low'
+ ? 'text-(--warning-ink)'
+ : 'text-(--success-ink)'
+ }`}
             >
               {st === 'out' ? 'Out of stock' : st === 'low' ? `Low stock · ${p.currentStock} left` : `${p.currentStock} in stock`}
             </span>
             {catLabel ? (
-              <span className="glass-strong rounded-full px-3 py-1.5 text-[12px] font-bold text-(--ink)">
+              <span className="glass-strong rounded-full px-3 py-1.5 text-[length:var(--fs-caption)] font-semibold text-(--ink)">
                 {catLabel}
               </span>
             ) : null}
@@ -489,16 +489,16 @@ function DetailPage({
           {/* Title + price */}
           <div className="product-detail-overview md:col-span-2">
             {(p.sku || '').trim() ? (
-              <p className="tnum text-xs font-semibold uppercase tracking-wider text-(--ink-2)">{p.sku}</p>
+              <p className="tnum text-[length:var(--fs-caption)] font-medium uppercase tracking-[0.06em] text-(--ink-3)">{p.sku}</p>
             ) : null}
-            <h2 className="mt-0.5 text-[24px] font-bold leading-tight tracking-tight text-(--ink) lg:text-[32px]">{p.name}</h2>
+            <h2 className="mt-0.5 text-[length:var(--fs-title2)] font-bold leading-tight tracking-[-0.025em] text-(--ink)">{p.name}</h2>
             {unitPrice > 0 ? (
               <div className="tnum mt-1.5 flex items-baseline gap-2">
-                <span className="text-[26px] font-bold text-(--ink)">{formatMoney(unitPrice)}</span>
+                <span className="text-[length:var(--fs-title3)] font-semibold text-(--ink)">{formatMoney(unitPrice)}</span>
               </div>
             ) : null}
             {dateFmt(p.createdAt) || dateFmt(p.updatedAt) ? (
-              <p className="mt-1 text-[11.5px] font-medium text-(--ink-3)">
+              <p className="mt-1 text-[length:var(--fs-caption)] font-normal text-(--ink-2)">
                 {dateFmt(p.createdAt) ? `Added ${dateFmt(p.createdAt)}` : ''}
                 {dateFmt(p.createdAt) && dateFmt(p.updatedAt) ? ' · ' : ''}
                 {dateFmt(p.updatedAt) ? `Updated ${dateFmt(p.updatedAt)}` : ''}
@@ -507,75 +507,75 @@ function DetailPage({
           </div>
 
           {/* Stock stats */}
-          <div className="product-detail-stats glass grid grid-cols-3 divide-x divide-(--stroke-dim) rounded-[26px] py-3 text-center md:col-span-2">
+          <div className="product-detail-stats glass grid grid-cols-3 divide-x divide-(--stroke-dim) rounded-[calc(var(--radius-card) - 4px)] py-3 text-center md:col-span-2">
             <div>
-              <p className="tnum text-[19px] font-bold text-(--ink)">{p.currentStock}</p>
-              <p className="mt-0.5 text-[11px] font-semibold text-(--ink-2)">In stock</p>
+              <p className="tnum text-[length:var(--fs-title3)] font-semibold text-(--ink)">{p.currentStock}</p>
+              <p className="mt-0.5 text-[length:var(--fs-caption)] font-medium text-(--ink-2)">In stock</p>
             </div>
             <div>
-              <p className="tnum text-[19px] font-bold text-(--ink)">{p.minimumStock}</p>
-              <p className="mt-0.5 text-[11px] font-semibold text-(--ink-2)">Minimum</p>
+              <p className="tnum text-[length:var(--fs-title3)] font-semibold text-(--ink)">{p.minimumStock}</p>
+              <p className="mt-0.5 text-[length:var(--fs-caption)] font-medium text-(--ink-2)">Minimum</p>
             </div>
             <div>
-              <p className="tnum text-[19px] font-bold text-(--accent)">
+              <p className="tnum text-[length:var(--fs-title3)] font-semibold text-(--accent)">
                 {p.currentStock > 0 ? Math.floor((p.currentStock / Math.max(p.minimumStock, 1)) * 100) : 0}%
               </p>
-              <p className="mt-0.5 text-[11px] font-semibold text-(--ink-2)">Of minimum</p>
+              <p className="mt-0.5 text-[length:var(--fs-caption)] font-medium text-(--ink-2)">Of minimum</p>
             </div>
           </div>
 
           {(p.description || '').trim() ? (
-            <div className="product-detail-desc glass rounded-[26px] p-5">
-              <p className="mb-1.5 flex items-center gap-2 text-[12px] font-bold uppercase tracking-wider text-(--ink-2)">
-                <span aria-hidden="true" className="h-3 w-1 rounded-full bg-[#007AFF]" />
+            <div className="product-detail-desc glass rounded-[calc(var(--radius-card) - 4px)] p-5">
+              <p className="mb-1.5 flex items-center gap-2 text-[length:var(--fs-caption)] font-semibold uppercase tracking-[0.06em] text-(--ink-3)">
+                
                 Description
               </p>
-              <p className="whitespace-pre-wrap break-words text-[14.5px] leading-relaxed text-(--ink)">{p.description}</p>
+              <p className="whitespace-pre-wrap break-words text-[length:var(--fs-subhead)] leading-relaxed text-(--ink)">{p.description}</p>
             </div>
           ) : null}
 
           {/* Stock In / Out history for this product */}
-          <div className="product-detail-history glass rounded-[26px] p-4">
+          <div className="product-detail-history glass rounded-[calc(var(--radius-card) - 4px)] p-4">
             <div className="mb-2 flex items-center justify-between gap-2">
-              <p className="flex items-center gap-2 text-[12px] font-bold uppercase tracking-wider text-(--ink-2)">
-                <span aria-hidden="true" className="h-3 w-1 rounded-full bg-[#007AFF]" />
+              <p className="flex items-center gap-2 text-[length:var(--fs-caption)] font-semibold uppercase tracking-[0.06em] text-(--ink-3)">
+                
                 Stock history{history.length > 0 ? ` · ${history.length}` : ''}
               </p>
               {history.length > 0 ? (
-                <p className="tnum shrink-0 text-[11.5px] font-bold">
-                  <span className="text-emerald-600 dark:text-emerald-300">+{totalIn} in</span>
+                <p className="tnum shrink-0 text-[length:var(--fs-caption)] font-semibold">
+                  <span className="text-(--success-ink)">+{totalIn} in</span>
                   <span className="text-(--ink-3)"> · </span>
-                  <span className="text-rose-600 dark:text-rose-300">−{totalOut} out</span>
+                  <span className="text-(--destructive-ink)">−{totalOut} out</span>
                 </p>
               ) : null}
             </div>
             {history.length === 0 ? (
-              <p className="py-3 text-center text-[13px] text-(--ink-2)">
+              <p className="py-3 text-center text-[length:var(--fs-footnote)] text-(--ink-2)">
                 No stock movements yet — use Stock In / Out below.
               </p>
             ) : (
               <div className="divide-y divide-(--stroke-dim)">
                 {history.slice(0, 20).map((t) => (
-                  <div key={t.id} className="flex items-center gap-3 rounded-[18px] px-2 py-3 transition-colors hover:bg-(--accent-soft)/40">
+                  <div key={t.id} className="flex items-center gap-3 rounded-[var(--radius-row)] px-2 py-3 transition-colors hover:bg-(--accent-soft)/40">
                     <StockBadge kind={t.type} />
                     {isPending(t.id) ? (
-                      <span className="shrink-0 rounded-full bg-(--accent-soft) px-2 py-0.5 text-[10.5px] font-extrabold text-(--accent)">
+                      <span className="shrink-0 rounded-full bg-(--accent-soft) px-2 py-0.5 text-[length:var(--fs-caption)] font-semibold text-(--accent)">
                         Saving…
                       </span>
                     ) : null}
                     <div className="min-w-0 flex-1">
-                      <p className="text-xs font-medium leading-relaxed text-(--ink-2)">
+                      <p className="text-[length:var(--fs-caption)] leading-relaxed text-(--ink-2)">
                         {dateTimeFmt(t.createdAt)}
                         {t.reason ? ` · ${t.reason}` : ''}
                       </p>
                       {t.note ? (
-                        <p className="mt-0.5 line-clamp-2 break-words text-[13px] leading-snug text-(--ink)">{t.note}</p>
+                        <p className="mt-0.5 line-clamp-2 break-words text-[length:var(--fs-footnote)] leading-snug text-(--ink-2)">{t.note}</p>
                       ) : null}
                     </div>
                     <span
-                      className={`tnum shrink-0 rounded-full px-2.5 py-1 text-[14px] font-extrabold ${
-                        t.type === 'IN' ? 'bg-emerald-500/12 text-emerald-600 dark:text-emerald-300' : 'bg-rose-500/12 text-rose-600 dark:text-rose-300'
-                      }`}
+                      className={`tnum shrink-0 rounded-full px-2.5 py-1 text-[length:var(--fs-subhead)] font-semibold ${
+ t.type === 'IN' ? 'bg-(--success)/12 text-(--success-ink)' : 'bg-(--destructive)/12 text-(--destructive-ink)'
+ }`}
                     >
                       {t.type === 'IN' ? '+' : '−'}
                       {t.quantity}
@@ -585,7 +585,7 @@ function DetailPage({
               </div>
             )}
             {history.length > 20 ? (
-              <p className="tnum pt-2 text-center text-xs font-medium text-(--ink-3)">
+              <p className="tnum pt-2 text-center text-[length:var(--fs-caption)] font-medium text-(--ink-3)">
                 Showing latest 20 of {history.length} — see History tab for all.
               </p>
             ) : null}
@@ -593,18 +593,18 @@ function DetailPage({
 
         {/* Sticky action bar */}
         <div className="product-detail-actions sticky bottom-[calc(1rem+env(safe-area-inset-bottom,0px))] md:static md:col-span-2">
-          <div className="glass-strong grid grid-cols-2 gap-2 rounded-[26px] p-2">
+          <div className="glass-strong grid grid-cols-2 gap-2 rounded-[calc(var(--radius-card) - 4px)] p-2">
             <button
               type="button"
               onClick={onStockIn}
-              className="press flex min-h-[48px] items-center justify-center gap-1.5 rounded-[20px] bg-(--primary) py-3.5 text-[14.5px] font-bold text-white dark:bg-(--primary) dark:text-[#151515]"
+              className="press flex min-h-[48px] items-center justify-center gap-1.5 rounded-[var(--radius-control)] bg-(--primary) py-3.5 text-[length:var(--fs-headline)] font-semibold text-(--primary-foreground)"
             >
               <ArrowDownToLine size={16} /> Stock In
             </button>
             <button
               type="button"
               onClick={onStockOut}
-              className="press flex min-h-[48px] items-center justify-center gap-1.5 rounded-[20px] bg-(--accent-soft) py-3.5 text-[14.5px] font-bold text-(--accent)"
+              className="press flex min-h-[48px] items-center justify-center gap-1.5 rounded-[var(--radius-control)] bg-(--accent-soft) py-3.5 text-[length:var(--fs-headline)] font-semibold text-(--accent)"
             >
               <ArrowUpFromLine size={16} /> Stock Out
             </button>
@@ -612,7 +612,7 @@ function DetailPage({
           <button
             type="button"
             onClick={onDelete}
-            className="press mx-auto mt-1 flex min-h-[44px] items-center gap-1.5 rounded-2xl px-4 py-2.5 text-[13px] font-bold text-rose-600 dark:text-rose-400"
+            className="press mx-auto mt-1 flex min-h-[44px] items-center gap-1.5 rounded-[var(--radius-control)] px-4 py-2.5 text-[length:var(--fs-footnote)] font-medium text-(--destructive-ink)"
           >
             <Trash2 size={14} /> Delete product
           </button>
@@ -630,9 +630,9 @@ export const Chip = memo(function Chip({ active, onClick, label }: { active: boo
       type="button"
       onClick={onClick}
       aria-pressed={active}
-      className={`chip-glass min-h-[40px] shrink-0 rounded-full px-4 py-2 text-[13px] font-bold ${
-        active ? 'bg-(--primary) text-(--primary-foreground)' : 'glass text-(--ink-2)'
-      }`}
+      className={`chip-glass min-h-[40px] shrink-0 rounded-full px-4 py-2 text-[length:var(--fs-footnote)] font-bold ${
+ active ? 'bg-(--primary) text-(--primary-foreground)' : 'glass text-(--ink-2)'
+ }`}
     >
       {label}
     </button>

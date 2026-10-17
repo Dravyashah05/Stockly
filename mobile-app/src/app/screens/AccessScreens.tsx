@@ -76,15 +76,15 @@ export function SheetSetupScreen({
 
   return (
     <div className="app-page-viewport mx-auto max-w-md pb-10">
-      <div className="mx-auto max-w-md space-y-5 px-4 pt-8">
-        <div className="glass relative overflow-hidden rounded-[28px] p-5">
+      <div className="gate-screen mx-auto w-full max-w-md gap-4 px-4 pt-8">
+        <div className="glass relative overflow-hidden rounded-[var(--radius-hero)] p-5">
           <div className="relative flex items-center gap-3.5">
-            <span className="flex h-14 w-14 shrink-0 items-center justify-center rounded-[20px] bg-(--accent-soft) text-(--accent)">
+            <span className="flex h-14 w-14 shrink-0 items-center justify-center rounded-[var(--radius-control)] bg-(--accent-soft) text-(--accent)">
               <Database size={28} />
             </span>
             <div className="min-w-0 flex-1">
-              <p className="text-[18px] font-extrabold leading-tight tracking-tight">Connect Your Google Sheet</p>
-              <p className="text-[12px] font-medium text-(--ink-2)">
+              <p className="text-[length:var(--fs-title3)] font-semibold leading-tight tracking-[-0.02em]">Connect Your Google Sheet</p>
+              <p className="text-[length:var(--fs-footnote)] font-medium text-(--ink-2)">
                 Connect your own Google Sheet to store and manage your Stockly inventory data.
               </p>
             </div>
@@ -92,21 +92,21 @@ export function SheetSetupScreen({
         </div>
 
         {mode === 'repair' ? (
-          <p className="rounded-2xl border border-amber-500/25 bg-amber-500/10 px-3.5 py-3 text-[12.5px] leading-relaxed text-(--ink-2)">
+          <p className="rounded-[var(--radius-control)] border border-(--warning)/25 bg-(--warning)/10 px-3.5 py-3 text-[length:var(--fs-footnote)] leading-relaxed text-(--ink-2)">
             Your sheet connection needs attention. Reconnect or verify below — your data stays in your sheet.
           </p>
         ) : null}
 
-        <div className="glass space-y-3 rounded-[24px] p-4">
-          <div className="flex items-center justify-between gap-3 rounded-xl bg-(--glass-soft) px-3.5 py-3" role="status" aria-live="polite">
-            <span className="flex items-center gap-2 text-[13px] font-bold text-(--ink)">
+        <div className="gate-panel">
+          <div className="flex items-center justify-between gap-3 rounded-[var(--radius-icon)] bg-(--glass-soft) px-3.5 py-3" role="status" aria-live="polite">
+            <span className="flex items-center gap-2 text-[length:var(--fs-footnote)] font-semibold text-(--ink)">
               <span
-                className={`h-2 w-2 rounded-full ${conn?.connected ? 'bg-emerald-500' : error ? 'bg-rose-500' : 'bg-(--ink-3)'}`}
+                className={`h-2 w-2 rounded-full ${conn?.connected ? 'bg-(--success)' : error ? 'bg-(--destructive)' : 'bg-(--ink-3)'}`}
               />
               {conn?.connected ? 'Verified' : error ? 'Not verified' : 'Not connected'}
             </span>
             {conn?.spreadsheetId ? (
-              <span className="tnum truncate text-right text-[11px] font-medium text-(--ink-2)">
+              <span className="tnum truncate text-right text-[length:var(--fs-caption)] font-medium text-(--ink-2)">
                 Sheet …{conn.spreadsheetId.slice(-6)}
               </span>
             ) : null}
@@ -129,26 +129,26 @@ export function SheetSetupScreen({
                   type="button"
                   onClick={() => setUrl('')}
                   aria-label="Clear URL"
-                  className="press absolute right-2 top-1/2 flex h-8 w-8 -translate-y-1/2 items-center justify-center rounded-xl text-(--ink-3)"
+                  className="press absolute right-2 top-1/2 flex h-8 w-8 -translate-y-1/2 items-center justify-center rounded-[var(--radius-icon)] text-(--ink-3)"
                 >
                   <X size={16} />
                 </button>
               ) : null}
             </div>
           </Field>
-          {error ? <p role="alert" className="text-[12.5px] font-semibold text-rose-600 dark:text-rose-300">{error}</p> : null}
+          {error ? <p role="alert" className="text-[length:var(--fs-footnote)] font-medium text-(--destructive-ink)">{error}</p> : null}
           {conn?.connected ? (
-            <p className="flex items-start gap-1.5 text-[12.5px] font-semibold text-emerald-600 dark:text-emerald-300">
+            <p className="flex items-start gap-1.5 text-[length:var(--fs-footnote)] font-medium text-(--success-ink)">
               <CheckCircle2 size={15} className="mt-0.5 shrink-0" /> Connected and verified.
             </p>
           ) : null}
 
-          <div className="space-y-2">
+          <div className="gate-actions">
             <button
               type="button"
               onClick={() => void connect()}
               disabled={busy}
-              className="press min-h-[52px] w-full rounded-2xl bg-(--primary) text-[15px] font-extrabold text-white disabled:opacity-50 dark:bg-(--primary) dark:text-[#151515]"
+              className="press min-h-[50px] w-full rounded-[var(--radius-control)] bg-(--primary) text-[length:var(--fs-headline)] font-semibold disabled:opacity-50 text-(--primary-foreground)"
             >
               {busy ? 'Verifying…' : 'Connect Sheet'}
             </button>
@@ -156,7 +156,7 @@ export function SheetSetupScreen({
               type="button"
               onClick={() => void verify()}
               disabled={verifying}
-              className="glass-soft press flex min-h-[48px] w-full items-center justify-center gap-1.5 rounded-2xl text-[14px] font-extrabold text-(--ink) disabled:opacity-50"
+              className="glass-soft press flex min-h-[48px] w-full items-center justify-center gap-1.5 rounded-[var(--radius-control)] text-[length:var(--fs-headline)] font-semibold text-(--ink) disabled:opacity-50"
             >
               <RefreshCw size={15} className={verifying ? 'animate-spin' : ''} />
               {verifying ? 'Verifying…' : 'Verify Connection'}
@@ -165,7 +165,7 @@ export function SheetSetupScreen({
               <button
                 type="button"
                 onClick={onBack}
-                className="press flex min-h-[48px] w-full items-center justify-center gap-1.5 rounded-2xl text-[14px] font-bold text-(--ink-2)"
+                className="press flex min-h-[48px] w-full items-center justify-center gap-1.5 rounded-[var(--radius-control)] text-[length:var(--fs-headline)] font-medium text-(--ink-2)"
               >
                 <ArrowLeft size={15} /> Back
               </button>
@@ -173,9 +173,9 @@ export function SheetSetupScreen({
           </div>
         </div>
 
-        <div className="glass rounded-[24px] p-4">
-          <p className="px-1 text-[12px] font-bold uppercase tracking-wider text-(--ink-2)">How to connect (private sheet stays private)</p>
-          <ol className="mt-1.5 list-decimal space-y-2 pl-5 text-[13px] leading-relaxed text-(--ink)">
+        <div className="gate-panel">
+          <p className="px-1 text-[length:var(--fs-caption)] font-semibold uppercase tracking-[0.06em] text-(--ink-3)">How to connect (private sheet stays private)</p>
+          <ol className="mt-1.5 list-decimal space-y-2 pl-5 text-[length:var(--fs-footnote)] leading-relaxed text-(--ink)">
             {[
               'Create a new Google Sheet (any name) — keep it private, never make it public.',
               'Open Extensions → Apps Script, paste apps-script/Code.gs from this project, Save.',
@@ -183,7 +183,7 @@ export function SheetSetupScreen({
               'Deploy → New deployment → Web app: execute as Me, access Anyone. Copy the /exec URL.',
               'Paste the URL above and tap Connect Sheet. The server verifies it before anything is stored.',
             ].map((step, i) => (
-              <li key={i} className="rounded-2xl bg-(--glass-soft) px-3 py-2.5">
+              <li key={i} className="rounded-[var(--radius-control)] bg-(--glass-soft) px-3 py-2.5">
                 {step}
               </li>
             ))}
@@ -208,13 +208,13 @@ function repairHint(e: unknown): string {
 export function RestrictedScreen({ status, onSignOut }: { status: string; onSignOut: () => void }) {
   return (
     <div className="app-page-viewport mx-auto max-w-md pb-10">
-      <div className="mx-auto max-w-md space-y-5 px-4 pt-16 text-center">
-        <span className="mx-auto flex h-16 w-16 items-center justify-center rounded-[22px] bg-rose-500/12 text-rose-500">
+      <div className="gate-screen mx-auto w-full max-w-md gap-5 px-4 text-center">
+        <span className="mx-auto flex h-16 w-16 items-center justify-center rounded-[var(--radius-card)] bg-(--destructive)/12 text-(--destructive-ink)">
           <ShieldAlert size={30} />
         </span>
         <div>
-          <p className="text-[19px] font-extrabold text-(--ink)">Access restricted</p>
-          <p className="mx-auto mt-1.5 max-w-[36ch] text-[13.5px] leading-relaxed text-(--ink-2)">
+          <p className="text-[length:var(--fs-title2)] font-semibold tracking-[-0.02em] text-(--ink)">Access restricted</p>
+          <p className="mx-auto mt-1.5 max-w-[36ch] text-[length:var(--fs-footnote)] leading-relaxed text-(--ink-2)">
             {status === 'suspended'
               ? 'Your account is suspended, so the main application is unavailable. Contact the owner to reactivate it.'
               : 'Your account is deactivated, so the main application is unavailable. Contact the owner.'}
@@ -226,7 +226,7 @@ export function RestrictedScreen({ status, onSignOut }: { status: string; onSign
             signOutAccount();
             onSignOut();
           }}
-          className="press min-h-[52px] w-full rounded-2xl bg-(--primary) text-[15px] font-extrabold text-white dark:bg-(--primary) dark:text-[#151515]"
+          className="press min-h-[50px] w-full rounded-[var(--radius-control)] bg-(--primary) text-[length:var(--fs-headline)] font-semibold text-(--primary-foreground)"
         >
           Sign out
         </button>
@@ -238,20 +238,20 @@ export function RestrictedScreen({ status, onSignOut }: { status: string; onSign
 export function AccessDeniedScreen({ onBack }: { onBack: () => void }) {
   return (
     <div className="app-page-viewport mx-auto max-w-md pb-10">
-      <div className="mx-auto max-w-md space-y-5 px-4 pt-16 text-center">
-        <span className="mx-auto flex h-16 w-16 items-center justify-center rounded-[22px] bg-amber-500/12 text-amber-600 dark:text-amber-300">
+      <div className="gate-screen mx-auto w-full max-w-md gap-5 px-4 text-center">
+        <span className="mx-auto flex h-16 w-16 items-center justify-center rounded-[var(--radius-card)] bg-(--warning)/12 text-(--warning-ink)">
           <ShieldAlert size={30} />
         </span>
         <div>
-          <p className="text-[19px] font-extrabold text-(--ink)">Owner area only</p>
-          <p className="mx-auto mt-1.5 max-w-[36ch] text-[13.5px] leading-relaxed text-(--ink-2)">
+          <p className="text-[length:var(--fs-title2)] font-semibold tracking-[-0.02em] text-(--ink)">Owner area only</p>
+          <p className="mx-auto mt-1.5 max-w-[36ch] text-[length:var(--fs-footnote)] leading-relaxed text-(--ink-2)">
             This area is restricted to the verified app owner.
           </p>
         </div>
         <button
           type="button"
           onClick={onBack}
-          className="press min-h-[52px] w-full rounded-2xl bg-(--primary) text-[15px] font-extrabold text-white dark:bg-(--primary) dark:text-[#151515]"
+          className="press min-h-[50px] w-full rounded-[var(--radius-control)] bg-(--primary) text-[length:var(--fs-headline)] font-semibold text-(--primary-foreground)"
         >
           Back to Settings
         </button>

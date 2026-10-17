@@ -186,8 +186,8 @@ export default function StockSheet({
           <span
             aria-hidden="true"
             className={`absolute inset-y-1.5 left-1.5 w-[calc(50%-6px)] rounded-full transition-transform duration-300 ${
-              isIn ? 'translate-x-0' : 'translate-x-full'
-            } bg-(--primary) dark:bg-(--primary)`}
+ isIn ? 'translate-x-0' : 'translate-x-full'
+ } bg-(--primary) `}
           />
           {(
             [
@@ -202,11 +202,11 @@ export default function StockSheet({
                 type="button"
                 aria-pressed={active}
                 onClick={() => switchMode(o.m)}
-                className={`relative z-[1] flex items-center justify-center gap-2 rounded-full py-2.5 text-[13.5px] font-extrabold transition-colors ${
-                  active
-                    ? 'text-white dark:text-[#151515]'
-                    : 'text-(--ink-2) hover:text-(--ink)'
-                }`}
+                className={`relative z-[1] flex items-center justify-center gap-2 rounded-full py-2.5 text-[length:var(--fs-footnote)] font-semibold transition-colors ${
+ active
+ ? 'text-(--primary-foreground)'
+ : 'text-(--ink-2) hover:text-(--ink)'
+ }`}
               >
                 {o.icon}
                 {o.label}
@@ -224,7 +224,7 @@ export default function StockSheet({
             />
           </div>
         ) : (
-          <div className="space-y-5 pt-4">
+          <div className="stock-sheet-form mt-4">
             {/* Product selector */}
             <button
               type="button"
@@ -233,35 +233,35 @@ export default function StockSheet({
                 setPickerOpen(true);
               }}
               aria-haspopup="dialog"
-              className="press flex w-full items-center gap-3 rounded-2xl border border-transparent px-2 py-2 text-left transition-colors hover:border-(--stroke-dim) hover:bg-(--glass-soft)"
+              className="stock-field press flex w-full items-center gap-3 text-left transition-colors hover:bg-(--glass-soft)"
             >
               {selected?.image ? (
-                <img src={selected.image} alt="" className="h-11 w-11 shrink-0 rounded-xl object-cover" onError={(e) => { (e.currentTarget as HTMLImageElement).style.display = 'none'; }} />
+                <img src={selected.image} alt="" className="h-11 w-11 shrink-0 rounded-[var(--radius-icon)] object-cover" onError={(e) => { (e.currentTarget as HTMLImageElement).style.display = 'none'; }} />
               ) : (
-                <span className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-(--accent-soft) text-[15px] font-bold text-(--ink) dark:text-(--accent)">
+                <span className="flex h-11 w-11 shrink-0 items-center justify-center rounded-[var(--radius-icon)] bg-(--accent-soft) text-[length:var(--fs-subhead)] font-semibold text-(--ink) dark:text-(--accent)">
                   {selected ? selected.name.slice(0, 1).toUpperCase() : <Search size={18} aria-hidden="true" />}
                 </span>
               )}
               <span className="min-w-0 flex-1">
                 {selected ? (
                   <>
-                    <span className="block truncate text-[16px] font-bold text-(--ink)">{selected.name}</span>
-                    <span className="tnum mt-0.5 block text-[12.5px] text-(--ink-2)">
+                    <span className="block truncate text-[length:var(--fs-headline)] font-semibold text-(--ink)">{selected.name}</span>
+                    <span className="tnum mt-0.5 block text-[length:var(--fs-footnote)] text-(--ink-2)">
                       {selected.currentStock} in stock
                       {selected.costPrice > 0 ? ` · ${formatMoney(selected.costPrice)}` : ''}
                     </span>
                   </>
                 ) : (
-                  <span className="block text-[16px] font-medium text-(--ink-3)">Search products…</span>
+                  <span className="block text-[length:var(--fs-headline)] font-normal text-(--ink-3)">Search products…</span>
                 )}
               </span>
               <ChevronRight size={18} className="shrink-0 text-(--ink-3)" aria-hidden="true" />
             </button>
 
             {/* Quantity */}
-            <div className="stock-quantity-panel">
+            <div className="stock-field stock-field-quantity">
               <div className="flex items-center justify-between gap-3">
-                <p id="stock-qty-label" className="text-[11px] font-extrabold uppercase tracking-[0.14em] text-(--ink-2)">
+                <p id="stock-qty-label" className="text-[length:var(--fs-caption)] font-semibold uppercase tracking-[0.08em] text-(--ink-3)">
                   Quantity
                 </p>
                 <div className="flex gap-1.5" aria-label="Quick add">
@@ -271,7 +271,7 @@ export default function StockSheet({
                       type="button"
                       onClick={() => bump(n)}
                       aria-label={`Add ${n} to quantity`}
-                      className="tnum press rounded-full bg-(--bg) px-2.5 py-1 text-[12px] font-extrabold text-(--ink) transition-colors hover:bg-(--accent-soft)"
+                      className="tnum press rounded-full bg-(--bg) px-2.5 py-1 text-[length:var(--fs-caption)] font-semibold text-(--ink) transition-colors hover:bg-(--accent-soft)"
                     >
                       +{n}
                     </button>
@@ -294,13 +294,13 @@ export default function StockSheet({
                   inputMode="numeric"
                   placeholder="0"
                   aria-labelledby="stock-qty-label"
-                  className="tnum min-w-0 flex-1 bg-transparent text-center text-[40px] font-black leading-none tracking-tight text-(--ink) outline-none placeholder:text-(--ink-3)"
+                  className="tnum min-w-0 flex-1 bg-transparent text-center text-[length:var(--fs-headline)] font-black leading-none tracking-tight text-(--ink) outline-none placeholder:text-(--ink-3)"
                 />
                 <button
                   type="button"
                   onClick={() => bump(1)}
                   aria-label="Increase quantity"
-                  className="press flex h-11 w-11 shrink-0 items-center justify-center rounded-full bg-(--primary) text-white transition-transform hover:scale-105 active:scale-95 dark:bg-(--primary) dark:text-[#151515]"
+                  className="press flex h-11 w-11 shrink-0 items-center justify-center rounded-full bg-(--primary) transition-transform hover:scale-105 active:scale-95 text-(--primary-foreground)"
                 >
                   <Plus size={18} />
                 </button>
@@ -308,15 +308,15 @@ export default function StockSheet({
               {/* Reserved space keeps the form stable when hints appear. */}
               <div className="flex min-h-[22px] items-center justify-center pt-1" aria-live="polite">
                 {overdraw ? (
-                  <p className="text-[13px] font-bold text-rose-600 dark:text-rose-300">
+                  <p className="text-[length:var(--fs-footnote)] font-medium text-(--destructive-ink)">
                     Only {selected?.currentStock} available.
                   </p>
                 ) : hitsLow ? (
-                  <p className="text-[13px] font-semibold text-amber-600 dark:text-amber-300">
+                  <p className="text-[length:var(--fs-footnote)] font-medium text-(--warning-ink)">
                     Hits the low-stock level ({selected?.minimumStock}).
                   </p>
                 ) : selected && qtyNum > 0 ? (
-                  <p className="tnum text-[13px] font-bold text-(--ink-2)">
+                  <p className="tnum text-[length:var(--fs-footnote)] font-medium text-(--ink-2)">
                     {selected.currentStock} → {resulting}
                   </p>
                 ) : null}
@@ -325,9 +325,9 @@ export default function StockSheet({
 
             {/* Cost (In) / Reason (Out) */}
             {isIn ? (
-              <Field label="Cost price">
+              <Field label="Cost price" className="stock-field">
                 <div className="relative">
-                  <span aria-hidden="true" className="pointer-events-none absolute left-4 top-1/2 -translate-y-1/2 text-[15px] font-bold text-(--ink-3)">₹</span>
+                  <span aria-hidden="true" className="pointer-events-none absolute left-4 top-1/2 -translate-y-1/2 text-[length:var(--fs-subhead)] font-medium text-(--ink-3)">₹</span>
                   <input
                     value={price}
                     onChange={(e) => setPrice(e.target.value.replace(/[^0-9.]/g, ''))}
@@ -339,8 +339,8 @@ export default function StockSheet({
                 </div>
               </Field>
             ) : (
-              <fieldset>
-                <legend className="mb-2 block text-[13px] font-semibold text-(--ink)">Reason</legend>
+              <fieldset className="stock-field">
+                <legend className="mb-2 block text-[length:var(--fs-footnote)] font-semibold text-(--ink-2)">Reason</legend>
                 <div className="flex flex-wrap gap-2">
                   {STOCK_OUT_REASONS.map((r) => (
                     <button
@@ -348,11 +348,11 @@ export default function StockSheet({
                       type="button"
                       onClick={() => setReason(r)}
                       aria-pressed={reason === r}
-                      className={`press flex items-center gap-1.5 rounded-full px-3.5 py-2 text-[13px] font-bold transition-colors ${
-                        reason === r
-                          ? 'bg-(--primary) text-white dark:bg-(--primary) dark:text-[#151515]'
-                          : 'bg-(--glass-soft) text-(--ink-2) hover:text-(--ink)'
-                      }`}
+                      className={`press flex items-center gap-1.5 rounded-full px-3.5 py-2 text-[length:var(--fs-footnote)] font-medium transition-colors ${
+ reason === r
+ ? 'bg-(--primary) text-(--primary-foreground)'
+ : 'bg-(--glass-soft) text-(--ink-2) hover:text-(--ink)'
+ }`}
                     >
                       {REASON_ICONS[r] ?? null}
                       {r}
@@ -363,7 +363,7 @@ export default function StockSheet({
             )}
 
             {/* Note */}
-            <Field label="Note">
+            <Field label="Note" className="stock-field">
               <textarea
                 value={note}
                 onChange={(e) => setNote(e.target.value)}
@@ -376,9 +376,9 @@ export default function StockSheet({
             {/* Reserved space prevents layout shift on error/success. */}
             <div className="flex min-h-[22px] items-center justify-center" aria-live="polite">
               {err ? (
-                <p className="text-[13px] font-semibold text-rose-600 dark:text-rose-300">{err}</p>
+                <p className="text-[length:var(--fs-footnote)] font-medium text-(--destructive-ink)">{err}</p>
               ) : savedMsg ? (
-                <p className="text-[13px] font-semibold text-(--ink-2)">{savedMsg}</p>
+                <p className="text-[length:var(--fs-footnote)] font-medium text-(--ink-2)">{savedMsg}</p>
               ) : null}
             </div>
           </div>
@@ -408,20 +408,20 @@ export default function StockSheet({
                   setErr(null);
                   setPickerOpen(false);
                 }}
-                className={`press flex w-full items-center gap-3 rounded-2xl px-3 py-2.5 text-left transition-colors ${
-                  activeRow ? 'bg-(--accent-soft)' : 'hover:bg-(--accent-soft)/50'
-                }`}
+                className={`press flex w-full items-center gap-3 rounded-[var(--radius-control)] px-3 py-2.5 text-left transition-colors ${
+ activeRow ? 'bg-(--accent-soft)' : 'hover:bg-(--accent-soft)/50'
+ }`}
               >
                 {p.image ? (
-                  <img src={p.image} alt="" loading="lazy" className="h-10 w-10 shrink-0 rounded-xl object-cover" onError={(e) => { (e.currentTarget as HTMLImageElement).style.display = 'none'; }} />
+                  <img src={p.image} alt="" loading="lazy" className="h-10 w-10 shrink-0 rounded-[var(--radius-icon)] object-cover" onError={(e) => { (e.currentTarget as HTMLImageElement).style.display = 'none'; }} />
                 ) : (
-                  <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-(--accent-soft) text-[14px] font-bold text-(--ink) dark:text-(--accent)">
+                  <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-[var(--radius-icon)] bg-(--accent-soft) text-[length:var(--fs-footnote)] font-semibold text-(--ink) dark:text-(--accent)">
                     {p.name.slice(0, 1).toUpperCase()}
                   </span>
                 )}
                 <span className="min-w-0 flex-1">
-                  <span className="block truncate text-[14px] font-semibold text-(--ink)">{p.name}</span>
-                  <span className={`tnum block text-xs ${low ? 'font-bold text-amber-600 dark:text-amber-300' : 'text-(--ink-2)'}`}>
+                  <span className="block truncate text-[length:var(--fs-subhead)] font-medium text-(--ink)">{p.name}</span>
+                  <span className={`tnum block text-xs ${low ? 'font-bold text-(--warning-ink)' : 'text-(--ink-2)'}`}>
                     {(p.sku || '').trim()
                       ? `${p.sku} · ${p.currentStock} in stock${low ? ' · low' : ''}`
                       : `${p.currentStock} in stock${low ? ' · low' : ''}`}
@@ -432,7 +432,7 @@ export default function StockSheet({
             );
           })}
           {filtered.length === 0 ? (
-            <p className="py-6 text-center text-[13.5px] text-(--ink-2)">No products match “{q}”.</p>
+            <p className="py-6 text-center text-[length:var(--fs-footnote)] text-(--ink-2)">No products match “{q}”.</p>
           ) : null}
         </div>
       </Sheet>

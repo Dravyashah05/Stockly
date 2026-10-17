@@ -11,10 +11,7 @@ node_modules
 dist
 mobile-app/dist
 admin/dist
-website/dist
 server/dist
-mobile/dist-app
-dist-web
 dist-ssr
 *.local
 .env
@@ -23,7 +20,6 @@ dist-ssr
 !mobile-app/.env.example
 !admin/.env.example
 !server/.env.example
-!website/.env.example
 mobile-app/.env
 admin/.env
 server/.env

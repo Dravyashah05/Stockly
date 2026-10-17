@@ -1,14 +1,28 @@
 import react from '@vitejs/plugin-react';
 import tailwindcss from '@tailwindcss/vite';
 import { resolve } from 'node:path';
-import { defineConfig } from 'vite';
+import { defineConfig, loadEnv } from 'vite';
 
-// Stockly user frontend — dev on http://localhost:3001.
-// /api/* is proxied to the ONE shared backend (server/, port 5000), so the
-// app and the admin frontend always talk to the same API implementation.
+// Android app preview — dev on http://localhost:3001. Browser development
+// proxies /api/* to the shared backend; native builds embed the public HTTPS
+// API origin directly and cannot silently ship with a localhost endpoint.
 const BACKEND = process.env.STOCKLY_API_URL || 'http://localhost:5000';
 
-export default defineConfig({
+export default defineConfig(({ command, mode }) => {
+  const env = loadEnv(mode, process.cwd(), '');
+  if (command === 'build') {
+    const configured = env.VITE_API_BASE_URL?.trim();
+    let api: URL | undefined;
+    try {
+      api = configured ? new URL(configured) : undefined;
+    } catch {
+      throw new Error('Set VITE_API_BASE_URL to the public HTTPS API origin in mobile-app/.env before building Android.');
+    }
+    if (!api || api.protocol !== 'https:' || api.pathname !== '/' || api.search || api.hash || api.username || api.password) {
+      throw new Error('Set VITE_API_BASE_URL to the public HTTPS API origin in mobile-app/.env before building Android.');
+    }
+  }
+  return ({
   plugins: [react(), tailwindcss()],
   resolve: {
     alias: [{ find: /^react$/, replacement: resolve(import.meta.dirname, 'node_modules/react') }],
@@ -49,4 +63,5 @@ export default defineConfig({
       },
     },
   },
+  });
 });

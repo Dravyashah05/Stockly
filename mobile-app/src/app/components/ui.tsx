@@ -3,16 +3,11 @@ import { createPortal } from 'react-dom';
 import {
   ArrowDownToLine,
   ArrowUpFromLine,
-  Boxes,
   CheckCircle2,
-  Cloud,
   History,
   Home,
   Info,
   LayoutGrid,
-  PackagePlus,
-  PanelLeftClose,
-  PanelLeftOpen,
   RefreshCw,
   RotateCcw,
   Search,
@@ -103,8 +98,7 @@ export function useOverlayOpen(): boolean {
   return open;
 }
 
-/* ---------- Floating glass app header (no refresh button — sync lives
- * in Settings > Cloud database and runs automatically) ---------- */
+/* ---------- Screen header ---------- */
 export const Header = memo(function Header({
   title,
   subtitle,
@@ -115,15 +109,16 @@ export const Header = memo(function Header({
   right?: React.ReactNode;
 }) {
   return (
-    <div className="safe-top px-4 pt-4">
-      <div className="mx-auto flex max-w-md items-center gap-3">
+    <div className="safe-top px-4 pb-1 pt-3">
+      <div className="mx-auto flex max-w-md items-start gap-3">
         <div className="min-w-0 flex-1">
-          <h1 className="flex items-center gap-2 text-[22px] font-extrabold leading-tight tracking-tight text-(--ink)">
-            <span aria-hidden="true" className="h-[18px] w-[5px] shrink-0 rounded-full bg-[#007AFF]" />
-            <span className="min-w-0 truncate">{title}</span>
+          <h1 className="desktop-header-title truncate text-[length:var(--fs-large-title)] font-bold leading-tight tracking-[-0.022em] text-(--ink)">
+            {title}
           </h1>
           {subtitle ? (
-            <p className="mt-0.5 truncate text-[13px] font-medium text-(--ink-2)">{subtitle}</p>
+            <p className="mt-0.5 truncate text-[length:var(--fs-subhead)] font-normal text-(--ink-2)">
+              {subtitle}
+            </p>
           ) : null}
         </div>
         {right}
@@ -195,12 +190,11 @@ export const BottomNav = memo(function BottomNav({ tab, setTab }: { tab: TabKey;
 
   return (
     <nav className={`bottom-navigation nav-bottom-offset fixed inset-x-0 z-30 px-4 ${keyboardOpen ? 'is-keyboard-open' : ''}`}>
-      <div className="glass-strong relative mx-auto grid max-w-md grid-cols-4 gap-0.5 rounded-[28px] p-1.5">
-        {/* The selected tab uses a soft accent surface to keep the glass bar light. */}
+      <div className="glass-strong relative mx-auto grid max-w-md grid-cols-4 gap-0.5 rounded-[calc(var(--radius-card) - 4px)] p-1">
         {pill ? (
           <span
             aria-hidden="true"
-            className="nav-slide-pill absolute left-0 top-1.5 rounded-[22px] bg-(--accent-soft)"
+            className="nav-slide-pill absolute left-0 top-1 rounded-[calc(var(--radius-card) - 4px)] bg-(--accent-soft)"
             style={{ width: pill.w, height: pill.h, transform: `translateX(${pill.x}px)` }}
           />
         ) : null}
@@ -216,9 +210,9 @@ export const BottomNav = memo(function BottomNav({ tab, setTab }: { tab: TabKey;
               onClick={() => pick(t.key)}
               aria-label={t.label}
               aria-current={active ? 'page' : undefined}
-              className={`nav-pill relative z-[1] flex min-h-[56px] flex-col items-center justify-center gap-1 rounded-[22px] text-[10.5px] font-semibold ${
-                active ? 'text-(--accent)' : 'text-(--ink-3)'
-              }`}
+              className={`nav-pill relative z-[1] flex min-h-[54px] flex-col items-center justify-center gap-0.5 rounded-[calc(var(--radius-card) - 4px)] text-[length:var(--fs-tab)] font-medium tracking-[0.01em] ${
+ active ? 'text-(--accent)' : 'text-(--ink-3)'
+ }`}
             >
               <span className={active ? 'animate-pop-in' : ''}>{t.icon}</span>
               {t.label}
@@ -229,118 +223,6 @@ export const BottomNav = memo(function BottomNav({ tab, setTab }: { tab: TabKey;
     </nav>
   );
 });
-
-const SIDE_LINKS: { key: TabKey | 'stock-in' | 'stock-out'; label: string; icon: React.ReactNode }[] = [
-  { key: 'home', label: 'Dashboard', icon: <Home size={18} /> },
-  { key: 'products', label: 'Products', icon: <Boxes size={18} /> },
-  { key: 'stock-in', label: 'Stock In', icon: <ArrowDownToLine size={18} /> },
-  { key: 'stock-out', label: 'Stock Out', icon: <ArrowUpFromLine size={18} /> },
-  { key: 'history', label: 'Transaction History', icon: <History size={18} /> },
-  { key: 'settings', label: 'Settings', icon: <SettingsIcon size={18} /> },
-];
-
-export function DesktopSidebar({
-  tab,
-  onNavigate,
-  onStock,
-  collapsed,
-}: {
-  tab: TabKey;
-  onNavigate: (tab: TabKey) => void;
-  onStock: (mode: 'IN' | 'OUT') => void;
-  collapsed?: boolean;
-}) {
-  const renderLinks = (items: typeof SIDE_LINKS) =>
-    items.map((item) => {
-      const selected = item.key === 'stock-in' || item.key === 'stock-out' ? false : tab === item.key;
-      return (
-        <button
-          key={item.key}
-          type="button"
-          title={item.label}
-          aria-current={selected ? 'page' : undefined}
-          onClick={() => {
-            if (item.key === 'stock-in') onStock('IN');
-            else if (item.key === 'stock-out') onStock('OUT');
-            else onNavigate(item.key);
-          }}
-          className={`desktop-side-link ${selected ? 'is-active' : ''}`}
-        >
-          {item.icon}
-          <span className="desktop-side-label">{item.label}</span>
-        </button>
-      );
-    });
-  return (
-    <aside
-      className={`desktop-sidebar ${collapsed ? 'is-collapsed' : ''}`}
-      aria-label="Main navigation"
-      aria-hidden={collapsed || undefined}
-    >
-      <div className="desktop-brand">
-        <span aria-hidden="true" className="desktop-brand-mark"><BrandMark size={22} /></span>
-        <span>Stockly</span>
-      </div>
-      <p className="desktop-nav-caption">Workspace</p>
-      <nav className="desktop-side-links" aria-label="Workspace">
-        {renderLinks(SIDE_LINKS.filter((i) => i.key !== 'stock-in' && i.key !== 'stock-out'))}
-      </nav>
-      <p className="desktop-nav-caption">Actions</p>
-      <nav className="desktop-side-links" aria-label="Quick stock actions">
-        {renderLinks(SIDE_LINKS.filter((i) => i.key === 'stock-in' || i.key === 'stock-out'))}
-      </nav>
-      <div className="desktop-sidebar-foot">
-        <span className="desktop-sidebar-foot-icon"><PackagePlus size={18} /></span>
-        <span><b>Stockly</b><small>Inventory workspace</small></span>
-      </div>
-    </aside>
-  );
-}
-
-export function DesktopToolbar({
-  title,
-  online,
-  pending,
-  failed,
-  lastSync,
-  sideCollapsed,
-  onToggleSidebar,
-}: {
-  title: string;
-  online: boolean;
-  pending: number;
-  failed: number;
-  lastSync: Date | null;
-  sideCollapsed?: boolean;
-  onToggleSidebar?: () => void;
-}) {
-  const syncLabel = failed > 0 ? `${failed} sync issue${failed === 1 ? '' : 's'}` : !online ? 'Offline' : pending > 0 ? `${pending} changes syncing` : lastSync ? `Synced ${lastSync.toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit' })}` : 'Not synced yet';
-  return (
-    <header className="desktop-toolbar">
-      {onToggleSidebar ? (
-        <button
-          type="button"
-          onClick={onToggleSidebar}
-          aria-expanded={!sideCollapsed}
-          aria-label={sideCollapsed ? 'Show sidebar' : 'Hide sidebar'}
-          title={sideCollapsed ? 'Show sidebar' : 'Hide sidebar'}
-          className="desktop-sidebar-toggle"
-        >
-          {sideCollapsed ? <PanelLeftOpen size={18} /> : <PanelLeftClose size={18} />}
-        </button>
-      ) : null}
-      <div className="desktop-toolbar-heading">
-        <span className="desktop-toolbar-eyebrow">Stockly / Workspace</span>
-        <h1>{title}</h1>
-      </div>
-      <div className={`desktop-sync-indicator ${failed ? 'has-error' : !online ? 'is-offline' : ''}`} role="status" aria-live="polite">
-        <Cloud size={16} />
-        <span className="desktop-sync-dot" />
-        <span>{syncLabel}</span>
-      </div>
-    </header>
-  );
-}
 
 /* ---------- Bottom sheet modal (single reusable implementation) ----------
  * Content-driven height: the panel grows with its content up to
@@ -428,7 +310,7 @@ export function Sheet({
           className="sheet-dialog-panel glass-strong animate-sheet-up flex max-h-[86dvh] w-full flex-col overflow-hidden rounded-t-[28px] border-b-0 border-x-0"
         >
           <div
-            className="shrink-0 cursor-grab touch-none select-none px-5 pb-2.5 pt-2.5 active:cursor-grabbing"
+            className="shrink-0 cursor-grab touch-none select-none px-5 pb-3 pt-2.5 active:cursor-grabbing"
             onPointerDown={(e) => {
               if (!e.isPrimary) return;
               // The X close button lives inside this drag zone. Capturing the
@@ -461,24 +343,24 @@ export function Sheet({
             <div
               role="presentation"
               onPointerDown={tapHandle}
-              className={`sheet-handle mx-auto mb-2 h-1.5 rounded-full transition-all duration-200 ease-out ${
-                handleTap ? 'w-16 bg-(--accent)' : 'w-10 bg-(--ink-3)/40'
-              }`}
+              className={`sheet-handle mx-auto mb-3 h-1.5 rounded-full transition-all duration-200 ease-out ${
+ handleTap ? 'w-16 bg-(--accent)' : 'w-9 bg-(--ink-3)/35'
+ }`}
             />
             <div className="flex items-center justify-between gap-3">
               <div className="min-w-0 flex-1">
-                <h2 className="truncate text-[16px] font-bold tracking-tight text-(--ink)">{title}</h2>
+                <h2 className="truncate text-[length:var(--fs-title3)] font-semibold tracking-[-0.015em] text-(--ink)">{title}</h2>
                 {subtitle ? (
-                  <p className="truncate text-[12.5px] font-medium text-(--ink-2)">{subtitle}</p>
+                  <p className="mt-0.5 truncate text-[length:var(--fs-footnote)] font-normal text-(--ink-2)">{subtitle}</p>
                 ) : null}
               </div>
               <button
                 type="button"
                 onClick={onClose}
                 aria-label="Close dialog"
-                className="press glass-soft flex h-11 w-11 shrink-0 items-center justify-center rounded-full text-(--ink-2)"
+                className="press glass-soft -mr-1 flex h-11 w-11 shrink-0 items-center justify-center rounded-full text-(--ink-2)"
               >
-                <X size={18} />
+                <X size={17} />
               </button>
             </div>
           </div>
@@ -498,22 +380,27 @@ export function Field({
   label,
   children,
   hint,
+  className,
 }: {
   label: string;
   children: React.ReactNode;
   hint?: string;
+  /** Extra classes on the wrapper, for grouping inside a field surface. */
+  className?: string;
 }) {
   return (
-    <label className="block">
-      <span className="mb-1.5 block text-[13px] font-semibold text-(--ink)">{label}</span>
+    <label className={`block${className ? ` ${className}` : ''}`}>
+      <span className="mb-1.5 block text-[length:var(--fs-footnote)] font-semibold tracking-[0.005em] text-(--ink-2)">
+        {label}
+      </span>
       {children}
-      {hint ? <span className="mt-1 block text-xs text-(--ink-2)">{hint}</span> : null}
+      {hint ? <span className="mt-1 block text-[length:var(--fs-caption)] text-(--ink-3)">{hint}</span> : null}
     </label>
   );
 }
 
 export const inputCls =
-  'min-h-[48px] w-full rounded-2xl border border-(--stroke-dim) bg-(--field) px-4 py-3 text-[15px] text-(--ink) outline-none transition placeholder:text-(--ink-3) focus:border-(--accent) focus:ring-[3px] focus:ring-(--accent-soft)';
+  'min-h-[50px] w-full rounded-[var(--radius-control)] border border-(--stroke-dim) bg-(--field) px-4 py-3 text-[length:var(--fs-callout)] text-(--ink) outline-none transition-[border-color,box-shadow] duration-150 placeholder:text-(--ink-3) focus:border-(--accent) focus:ring-[3px] focus:ring-(--accent-soft)';
 
 /* ---------- Shared search bar (single implementation for every list) ---------- */
 export const SearchBar = memo(function SearchBar({
@@ -540,7 +427,7 @@ export const SearchBar = memo(function SearchBar({
           placeholder={placeholder}
           aria-label={label || placeholder}
           role="searchbox"
-          className="min-h-12 w-full rounded-xl border border-(--stroke) bg-(--field) py-2.5 pl-10 pr-4 text-[16px] text-(--ink) outline-none transition focus:border-(--accent) focus:ring-[3px] focus:ring-(--accent-soft) placeholder:text-(--ink-3)"
+          className="min-h-12 w-full rounded-[var(--radius-control)] border border-(--stroke-dim) bg-(--field) py-2.5 pl-10 pr-4 text-[length:var(--fs-callout)] text-(--ink) outline-none transition-[border-color,box-shadow] duration-150 focus:border-(--accent) focus:ring-[3px] focus:ring-(--accent-soft) placeholder:text-(--ink-3)"
         />
     </div>
   );
@@ -559,20 +446,27 @@ export function Segmented<T extends string>({
   label?: string;
 }) {
   return (
-    <div className="glass-soft grid auto-cols-fr grid-flow-col gap-1 rounded-2xl p-1" role="group" aria-label={label}>
-      {options.map((o) => (
-        <button
-          key={o.key}
-          type="button"
-          onClick={() => onChange(o.key)}
-          aria-pressed={value === o.key}
-          className={`chip-glass rounded-xl py-2 text-[13px] font-bold ${
-            value === o.key ? 'bg-(--accent-soft) text-(--accent)' : 'text-(--ink-2)'
-          }`}
-        >
-          {o.label}
-        </button>
-      ))}
+    <div className="grid auto-cols-fr grid-flow-col gap-0.5 rounded-[var(--radius-row)] bg-(--glass-soft) p-0.5"
+      role="group"
+      aria-label={label}>
+      {options.map((o) => {
+        const active = value === o.key;
+        return (
+          <button
+            key={o.key}
+            type="button"
+            onClick={() => onChange(o.key)}
+            aria-pressed={active}
+            className={`chip-glass press rounded-[var(--radius-icon)] py-2 text-[length:var(--fs-footnote)] transition-colors ${
+ active
+ ? 'bg-(--bg-elev) font-semibold text-(--ink) shadow-[0_1px_3px_rgba(0,0,0,0.10)]'
+ : 'font-medium text-(--ink-2)'
+ }`}
+          >
+            {o.label}
+          </button>
+        );
+      })}
     </div>
   );
 }
@@ -581,7 +475,9 @@ export function Segmented<T extends string>({
 export function SectionTitle({ title, action }: { title: string; action?: React.ReactNode }) {
   return (
     <div className="mb-2 flex items-center justify-between px-1">
-      <p className="text-[13px] font-bold uppercase tracking-wide text-(--ink-2)">{title}</p>
+      <p className="text-[length:var(--fs-caption)] font-semibold uppercase tracking-[0.06em] text-(--ink-3)">
+        {title}
+      </p>
       {action}
     </div>
   );
@@ -598,14 +494,16 @@ export function ErrorState({
   retrying?: boolean;
 }) {
   return (
-    <div className="glass rounded-2xl border-rose-500/25 px-4 py-4" role="alert">
-      <p className="text-[13.5px] font-medium leading-relaxed text-rose-600 dark:text-rose-300">{message}</p>
+    <div className="glass rounded-[calc(var(--radius-card) - 4px)] border-(--destructive)/25 px-4 py-4" role="alert">
+      <p className="text-[length:var(--fs-subhead)] font-medium leading-relaxed text-(--destructive-ink)">
+        {message}
+      </p>
       {onRetry ? (
         <button
           type="button"
           onClick={onRetry}
           disabled={retrying}
-          className="press glass-soft mt-3 flex min-h-[44px] w-full items-center justify-center gap-1.5 rounded-2xl text-[14px] font-bold text-(--ink) disabled:opacity-50"
+          className="press glass-soft mt-3 flex min-h-[44px] w-full items-center justify-center gap-1.5 rounded-[var(--radius-control)] text-[length:var(--fs-subhead)] font-semibold text-(--ink) disabled:opacity-50"
         >
           <RefreshCw size={16} className={retrying ? 'animate-spin' : ''} />
           {retrying ? 'Retrying…' : 'Retry'}
@@ -634,7 +532,9 @@ export function PrimaryBtn({
       type={type}
       disabled={disabled}
       onClick={onClick}
-      className={`press flex min-h-12 w-full items-center justify-center gap-2 rounded-xl bg-(--primary) text-[15px] font-bold text-(--primary-foreground) disabled:opacity-50 ${dense ? 'py-3' : 'py-4'}`}
+      className={`press flex w-full items-center justify-center gap-2 rounded-[var(--radius-control)] bg-(--primary) text-[length:var(--fs-headline)] font-semibold tracking-[-0.01em] text-(--primary-foreground) shadow-[0_1px_2px_rgba(0,0,0,0.08)] disabled:opacity-50 ${
+ dense ? 'min-h-[44px] py-2.5' : 'min-h-[50px] py-3.5'
+ }`}
     >
       {children}
     </button>
@@ -644,19 +544,21 @@ export function PrimaryBtn({
 /* ---------- Empty state ---------- */
 export function EmptyState({ icon, title, hint }: { icon: React.ReactNode; title: string; hint?: string }) {
   return (
-    <div className="glass flex flex-col items-center gap-2 rounded-3xl px-6 py-10 text-center">
-      <div className="glass-soft mb-1 flex h-13 w-13 items-center justify-center rounded-2xl p-3 text-(--ink-2)">
+    <div className="glass flex flex-col items-center gap-1.5 rounded-[calc(var(--radius-card) - 4px)] px-6 py-10 text-center">
+      <div className="glass-soft mb-2 flex h-14 w-14 items-center justify-center rounded-[var(--radius-row)] text-(--ink-3)">
         {icon}
       </div>
-      <p className="text-[15px] font-semibold text-(--ink)">{title}</p>
-      {hint ? <p className="max-w-[28ch] text-[13px] leading-relaxed text-(--ink-2)">{hint}</p> : null}
+      <p className="text-[length:var(--fs-headline)] font-semibold text-(--ink)">{title}</p>
+      {hint ? (
+        <p className="max-w-[30ch] text-[length:var(--fs-footnote)] leading-relaxed text-(--ink-2)">{hint}</p>
+      ) : null}
     </div>
   );
 }
 
 /* ---------- Loading skeletons ---------- */
 export const SkeletonRow = memo(function SkeletonRow({ h = 76 }: { h?: number }) {
-  return <div className="shimmer rounded-3xl border border-(--stroke-dim)" style={{ height: h }} />;
+  return <div className="shimmer rounded-[calc(var(--radius-card) - 4px)] border border-(--stroke-dim)" style={{ height: h }} />;
 });
 
 /* ---------- Sync status banner (optimistic writes) ----------
@@ -678,7 +580,7 @@ export const SyncStatus = memo(function SyncStatus({
   return createPortal(
     <div className="safe-bottom pointer-events-none fixed inset-x-0 bottom-24 z-30 mx-auto flex max-w-md flex-col items-center gap-2 px-5">
       {pending > 0 ? (
-        <div className="glass-strong animate-toast-in pointer-events-auto flex w-full items-center gap-2.5 rounded-2xl px-4 py-3 text-[13px] font-semibold text-(--ink)">
+        <div className="glass-strong animate-toast-in pointer-events-auto flex w-full items-center gap-2.5 rounded-[calc(var(--radius-card) - 4px)] px-4 py-3 text-[length:var(--fs-footnote)] font-medium text-(--ink)">
           <RefreshCw size={16} className="shrink-0 animate-spin text-(--accent)" />
           <span className="flex-1">
             Saving… {pending} change{pending === 1 ? '' : 's'} syncing to Google Sheets
@@ -689,22 +591,22 @@ export const SyncStatus = memo(function SyncStatus({
         <div
           key={f.key}
           role="alert"
-          className="glass-strong animate-toast-in pointer-events-auto w-full rounded-2xl border-rose-500/30 px-4 py-3"
+          className="glass-strong animate-toast-in pointer-events-auto w-full rounded-[calc(var(--radius-card) - 4px)] border-(--destructive)/30 px-4 py-3"
         >
-          <p className="text-[13px] font-bold text-(--ink)">Unsaved: {f.label}</p>
-          <p className="mt-0.5 truncate text-[12px] text-(--ink-2)">{f.detail}</p>
+          <p className="text-[length:var(--fs-footnote)] font-bold text-(--ink)">Unsaved: {f.label}</p>
+          <p className="mt-0.5 truncate text-[length:var(--fs-footnote)] text-(--ink-2)">{f.detail}</p>
           <div className="mt-2 grid grid-cols-2 gap-2">
             <button
               type="button"
               onClick={() => onRetry(f.key)}
-              className="press flex min-h-[44px] items-center justify-center gap-1.5 rounded-2xl bg-(--primary) text-[13.5px] font-extrabold text-white dark:bg-(--primary) dark:text-[#151515]"
+              className="press flex min-h-[44px] items-center justify-center gap-1.5 rounded-[var(--radius-control)] bg-(--primary) text-[length:var(--fs-footnote)] font-semibold text-(--primary-foreground)"
             >
               <RotateCcw size={16} /> Retry
             </button>
             <button
               type="button"
               onClick={() => onDismiss(f.key)}
-              className="press glass-soft min-h-[44px] rounded-2xl text-[13.5px] font-bold text-(--ink-2)"
+              className="press glass-soft min-h-[44px] rounded-[var(--radius-control)] text-[length:var(--fs-footnote)] font-semibold text-(--ink-2)"
             >
               Discard
             </button>
@@ -726,12 +628,12 @@ export function Toasts({ toasts, onDismiss, lifted }: { toasts: ToastMsg[]; onDi
           key={t.id}
           type="button"
           onClick={() => onDismiss(t.id)}
-          className="glass-strong animate-toast-in pointer-events-auto flex w-full items-center gap-2.5 rounded-2xl px-4 py-3 text-left text-[13.5px] font-medium text-(--ink)"
+          className="glass-strong animate-toast-in pointer-events-auto flex w-full items-center gap-2.5 rounded-[calc(var(--radius-card) - 4px)] px-4 py-3 text-left text-[length:var(--fs-footnote)] font-medium text-(--ink)"
         >
           {t.kind === 'success' ? (
-            <CheckCircle2 size={18} className="shrink-0 text-emerald-500" />
+            <CheckCircle2 size={18} className="shrink-0 text-(--success)" />
           ) : t.kind === 'error' ? (
-            <XCircle size={18} className="shrink-0 text-rose-500" />
+            <XCircle size={18} className="shrink-0 text-(--destructive-ink)" />
           ) : (
             <Info size={18} className="shrink-0 text-(--accent)" />
           )}
@@ -744,7 +646,7 @@ export function Toasts({ toasts, onDismiss, lifted }: { toasts: ToastMsg[]; onDi
 }
 
 /* ---------- Canonical Stockly mark ----------
- * Stacked inventory bars — same geometry as the website logo. Inherits
+ * Stacked inventory bars — the Stockly app mark. Inherits
  * color via currentColor: place on an ink tile for lime, anywhere else
  * for a monochrome mark. Decorative (hidden from screen readers). */
 export function BrandMark({ size = 32 }: { size?: number }) {
@@ -768,18 +670,18 @@ export function AppLoader({ status, fading }: { status: string; fading?: boolean
       aria-label="Loading Stockly"
       aria-hidden={fading || undefined}
       className={`fixed inset-0 z-[80] flex flex-col items-center justify-center bg-(--bg) px-8 transition-opacity duration-300 ${
-        fading ? 'pointer-events-none opacity-0' : 'opacity-100'
-      }`}
+ fading ? 'pointer-events-none opacity-0' : 'opacity-100'
+ }`}
     >
-      <span className="animate-pop-in flex h-20 w-20 items-center justify-center rounded-[26px] bg-(--primary) text-white">
+      <span className="animate-pop-in flex h-20 w-20 items-center justify-center rounded-[calc(var(--radius-card) - 4px)] bg-(--primary) text-(--primary-foreground) shadow-[0_15px_40px_-14px_rgba(0,122,255,0.55)]">
         <BrandMark size={38} />
       </span>
-      <h1 className="mt-5 text-[26px] font-extrabold tracking-tight text-(--ink)">Stockly</h1>
-      <p className="mt-1 text-[13px] font-medium text-(--ink-2)">Small-business inventory</p>
-      <div className="mt-7 h-1.5 w-44 overflow-hidden rounded-full bg-(--stroke-dim)" aria-hidden="true">
-        <div className="loader-bar h-full w-2/5 rounded-full bg-(--primary) dark:bg-(--primary)" />
+      <h1 className="mt-5 text-[length:var(--fs-title1)] font-bold tracking-[-0.03em] text-(--ink)">Stockly</h1>
+      <p className="mt-1 text-[length:var(--fs-footnote)] font-normal text-(--ink-2)">Small-business inventory</p>
+      <div className="mt-7 h-1.5 w-44 overflow-hidden rounded-[var(--radius-chip)] bg-(--stroke-dim)" aria-hidden="true">
+        <div className="loader-bar h-full w-2/5 rounded-[var(--radius-chip)] bg-(--primary)" />
       </div>
-      <p className="tnum mt-3.5 text-[12.5px] font-semibold text-(--ink-2)">{status}</p>
+      <p className="tnum mt-3.5 text-[length:var(--fs-caption)] font-medium text-(--ink-2)">{status}</p>
     </div>
   );
 }
@@ -804,12 +706,12 @@ export function Confirm({
 }) {
   return (
     <Sheet open={open} onClose={onCancel} title={title}>
-      <p className="text-[14px] leading-relaxed text-(--ink-2)">{body}</p>
-      <div className="mt-5 grid grid-cols-2 gap-3">
+      <p className="text-[length:var(--fs-subhead)] leading-relaxed text-(--ink-2)">{body}</p>
+      <div className="mt-5 grid grid-cols-2 gap-2.5">
         <button
           type="button"
           onClick={onCancel}
-          className="press glass-soft min-h-[48px] rounded-2xl py-3.5 text-[15px] font-bold text-(--ink)"
+          className="press glass-soft min-h-[48px] rounded-[var(--radius-control)] py-3.5 text-[length:var(--fs-headline)] font-semibold text-(--ink)"
         >
           Cancel
         </button>
@@ -817,7 +719,7 @@ export function Confirm({
           type="button"
           onClick={onConfirm}
           disabled={busy}
-          className="press min-h-[48px] rounded-2xl bg-[#C2332D] py-3.5 text-[15px] font-bold text-white disabled:opacity-50"
+          className="press min-h-[48px] rounded-[var(--radius-control)] bg-(--destructive) py-3.5 text-[length:var(--fs-headline)] font-semibold text-white shadow-[0_1px_2px_rgba(0,0,0,0.10)] disabled:opacity-50"
         >
           {busy ? 'Working…' : confirmLabel}
         </button>
@@ -849,11 +751,17 @@ export function ActionSheet({
               onClose();
               a.onClick();
             }}
-            className={`press flex w-full items-center gap-3 rounded-2xl px-4 py-3.5 text-[15px] font-semibold ${
-              a.danger ? 'text-rose-600 dark:text-rose-400' : 'text-(--ink)'
-            } hover:bg-(--accent-soft)`}
+            className={`press flex w-full items-center gap-3 rounded-[var(--radius-row)] px-3.5 py-3 text-left text-[length:var(--fs-headline)] font-medium ${
+ a.danger ? 'text-(--destructive-ink)' : 'text-(--ink)'
+ } hover:bg-(--accent-soft)`}
           >
-            <span className="glass-soft flex h-9 w-9 items-center justify-center rounded-xl">{a.icon}</span>
+            <span
+              className={`glass-soft flex h-9 w-9 shrink-0 items-center justify-center rounded-[var(--radius-icon)] ${
+ a.danger ? 'text-(--destructive-ink)' : 'text-(--ink-2)'
+ }`}
+            >
+              {a.icon}
+            </span>
             {a.label}
           </button>
         ))}
@@ -864,25 +772,13 @@ export function ActionSheet({
 
 export function StockBadge({ kind }: { kind: 'IN' | 'OUT' }) {
   return kind === 'IN' ? (
-    <span className="inline-flex items-center gap-1 rounded-full bg-emerald-500/12 px-2.5 py-1 text-[11px] font-bold text-emerald-600 dark:text-emerald-300">
+    <span className="inline-flex items-center gap-1 rounded-[var(--radius-chip)] bg-(--success)/12 px-2.5 py-1 text-[length:var(--fs-caption)] font-semibold text-(--success-ink)">
       <ArrowDownToLine size={12} /> IN
     </span>
   ) : (
-    <span className="inline-flex items-center gap-1 rounded-full bg-rose-500/12 px-2.5 py-1 text-[11px] font-bold text-rose-600 dark:text-rose-300">
+    <span className="inline-flex items-center gap-1 rounded-[var(--radius-chip)] bg-(--destructive)/12 px-2.5 py-1 text-[length:var(--fs-caption)] font-semibold text-(--destructive-ink)">
       <ArrowUpFromLine size={12} /> OUT
     </span>
   );
 }
 
-/* ---------- Liquid Glass aliases (same components, spec names) ---------- */
-export const GlassHeader = Header;
-export const GlassBottomNavigation = BottomNav;
-export const GlassBottomSheet = Sheet;
-export const GlassDialog = Confirm;
-export const GlassInputCls = inputCls;
-export const GlassSearchBar = SearchBar;
-export const GlassToast = Toasts;
-export const GlassSyncStatus = SyncStatus;
-export const GlassEmptyState = EmptyState;
-export const GlassErrorState = ErrorState;
-export const GlassSkeleton = SkeletonRow;
