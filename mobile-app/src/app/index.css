@@ -399,6 +399,65 @@ select {
   box-shadow: none;
 }
 
+/* --- Floating action button (MD3) ---------------------------------------- */
+
+.fab {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: var(--space-2);
+  min-width: 56px;
+  min-height: 56px;
+  padding: 0 1rem;
+  border: none;
+  border-radius: var(--shape-lg);
+  background: var(--primary-container);
+  color: var(--on-primary-container);
+  box-shadow: var(--elev-2);
+  font-size: var(--fs-label-lg);
+  font-weight: 600;
+  transition: box-shadow var(--dur-fast) var(--ease-standard),
+    transform var(--dur-fast) var(--ease-standard),
+    background-color var(--dur-fast) var(--ease-standard);
+}
+.fab:hover { box-shadow: var(--elev-3); }
+.fab:active { transform: scale(0.97); }
+
+/* --- Stat tile (dashboard metrics) ---------------------------------------- */
+
+.stat-tile {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 0.25rem;
+  padding: 0.875rem 1rem;
+  border: 1px solid var(--outline-variant);
+  border-radius: var(--shape-lg);
+  background: var(--surface-container-lowest);
+  text-align: left;
+  color: var(--on-surface);
+  transition: background-color var(--dur-fast) var(--ease-standard);
+}
+button.stat-tile:hover { background: var(--surface-container); }
+.stat-tile-label {
+  font-size: var(--fs-body-sm);
+  color: var(--on-surface-variant);
+}
+.stat-tile-value {
+  font-size: var(--fs-headline-sm);
+  font-weight: 600;
+  letter-spacing: -0.02em;
+}
+
+/* --- Divider -------------------------------------------------------------- */
+
+.divider {
+  height: 1px;
+  border: none;
+  background: var(--outline-variant);
+  margin: 0;
+}
+
 /* --- Grouped list ------------------------------------------------------ */
 
 .group-list {

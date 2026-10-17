@@ -100,7 +100,7 @@ export default function ProductsScreen({
           <button
             onClick={onAdd}
             aria-label="Add product"
-            className="icon-btn bg-(--primary) text-(--on-primary) shadow-[var(--elev-1)] hover:bg-(--primary)]"
+            className="icon-btn bg-(--primary) text-(--on-primary) shadow-[var(--elev-1)] hover:brightness-110"
           >
             <Plus size={20} />
           </button>
