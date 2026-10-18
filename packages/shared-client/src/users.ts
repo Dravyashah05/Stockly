@@ -13,6 +13,33 @@ import type { UserProfile } from '@stockly/shared-types';
 
 export type { UserProfile };
 
+/* Fresh-authentication fast path for the route guard: right after a verified
+ * login/register/adopt, Gate may skip its duplicate me() re-check — identity
+ * + status were proven seconds ago. Every protected API still re-validates
+ * session + suspension server-side, so this removes a duplicate round-trip,
+ * never a security check. Single-shot: consumed by the next Gate run. */
+let freshAuthAt = 0;
+const FRESH_AUTH_MS = 120_000;
+export function markFreshAuth(): void {
+  freshAuthAt = Date.now();
+}
+export function consumeFreshAuth(): boolean {
+  if (Date.now() - freshAuthAt > FRESH_AUTH_MS) return false;
+  freshAuthAt = 0;
+  return true;
+}
+
+/** Progress stages for sign-in UI (optional callback, backwards compatible). */
+export type AuthProgressStep = 'account' | 'device';
+
+/** Outcome of register/login: the verified profile plus this device's
+ *  enrollment state. Anything but 'enrolled' means inventory stays locked
+ *  until resolved — callers must surface it, never silently continue. */
+export interface AccountResult {
+  profile: UserProfile;
+  device: 'enrolled' | 'link-required' | 'unavailable';
+}
+
 const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
 export function validateAccountInput(name: string, email: string): { name: string; email: string } {
@@ -45,16 +72,19 @@ function cacheProfile(profile: UserProfile | null): void {
   }
 }
 
-export async function registerAccount(name: string, email: string, password: string): Promise<UserProfile> {
+export async function registerAccount(name: string, email: string, password: string, onStep?: (s: AuthProgressStep) => void): Promise<AccountResult> {
   const input = validateAccountInput(name, email);
   if (!password || password.length < 8) throw new Error('Password must be at least 8 characters.');
+  onStep?.('account');
   const res = await authApi.register({ ...input, password });
   setAuthSession(res.session);
   setCurrentUserId(res.user.userId);
   const profile = toUserProfile(res.user);
   cacheProfile(profile);
-  await ensureDeviceEnrolled(res.user.userId);
-  return profile;
+  markFreshAuth();
+  onStep?.('device');
+  const device = await ensureDeviceEnrolled(res.user.userId);
+  return { profile, device };
 }
 
 function toUserProfile(u: { userId: string; email: string; name: string; accountStatus: string }): UserProfile {
@@ -67,12 +97,12 @@ function toUserProfile(u: { userId: string; email: string; name: string; account
  *  this device just created/claimed the account). Later devices MUST use
  *  the link flow — the server rejects direct enrollment for them.
  *  Never throws: when the device service is unconfigured the app keeps
- *  working in legacy single-device mode. */
+ *  working in legacy single-device mode.
+ *  No follow-up touch call: enrollPrimary already stamps lastActiveAt. */
 export async function ensureDeviceEnrolled(userId: string): Promise<'enrolled' | 'link-required' | 'unavailable'> {
   try {
     const res = await devicesApi.enrollPrimary(userId);
     setDeviceSession(res.deviceSession);
-    await devicesApi.touchDevice();
     return 'enrolled';
   } catch (e) {
     const reason = (e as { reason?: string })?.reason;
@@ -81,16 +111,19 @@ export async function ensureDeviceEnrolled(userId: string): Promise<'enrolled' |
   }
 }
 
-export async function loginAccount(email: string, password: string): Promise<UserProfile> {
+export async function loginAccount(email: string, password: string, onStep?: (s: AuthProgressStep) => void): Promise<AccountResult> {
   const e = email.trim().toLowerCase();
   if (!e) throw new Error('Enter a valid email address.');
+  onStep?.('account');
   const res = await authApi.login({ email: e, password });
   setAuthSession(res.session);
   setCurrentUserId(res.user.userId);
   const profile = toUserProfile(res.user);
   cacheProfile(profile);
-  await ensureDeviceEnrolled(res.user.userId);
-  return getCachedProfile() ?? profile;
+  markFreshAuth();
+  onStep?.('device');
+  const device = await ensureDeviceEnrolled(res.user.userId);
+  return { profile: getCachedProfile() ?? profile, device };
 }
 
 export async function refreshMyProfile(): Promise<UserProfile | null> {
@@ -131,6 +164,7 @@ export async function adoptLinkedAccount(args: {
   const res = await authApi.linkAdopt({ linkId: args.linkId, token: args.token, deviceId: args.deviceId });
   setAuthSession(res.session);
   setCurrentUserId(res.user.userId);
+  markFreshAuth();
   setDeviceSession(args.deviceSession);
   try {
     localStorage.setItem(LS_KEYS.deviceId, args.deviceId);

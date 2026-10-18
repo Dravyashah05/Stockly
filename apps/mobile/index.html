@@ -8,17 +8,17 @@
       name="viewport"
       content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover"
     />
-    <meta name="theme-color" content="#F7F7F2" media="(prefers-color-scheme: light)" />
-    <meta name="theme-color" content="#111210" media="(prefers-color-scheme: dark)" />
+    <meta name="theme-color" content="#F5F5F7" media="(prefers-color-scheme: light)" />
+    <meta name="theme-color" content="#111114" media="(prefers-color-scheme: dark)" />
     <script>
       (() => {
         try {
           const saved = localStorage.getItem('stockly.theme');
-          const dark = saved === 'dark' || (saved !== 'light' && matchMedia('(prefers-color-scheme: dark)').matches);
+          const dark = saved === 'dark' || (saved === 'system' && matchMedia('(prefers-color-scheme: dark)').matches);
           document.documentElement.classList.toggle('dark', dark);
           document.documentElement.style.colorScheme = dark ? 'dark' : 'light';
           document.querySelectorAll('meta[name="theme-color"]').forEach((meta) => {
-            meta.setAttribute('content', dark ? '#111210' : '#F7F7F2');
+            meta.setAttribute('content', dark ? '#111114' : '#F5F5F7');
           });
         } catch { /* Theme is applied by the app once it starts. */ }
       })();
@@ -31,6 +31,6 @@
   </head>
   <body>
     <div id="root"></div>
-    <script type="module" src="/src/main.tsx"></script>
+    <script type="module" src="/src/app/main.tsx"></script>
   </body>
 </html>

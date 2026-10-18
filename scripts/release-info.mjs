@@ -1,168 +1,181 @@
 #!/usr/bin/env node
-/* Release helpers for Stockly's automated pipeline (and local verification).
+/* Stockly release metadata helper (CI only — never bundled into the app).
  *
- * Single source of truth: package.json `version` must equal the Android
- * `versionName`; `versionCode` only ever moves forward (bumped by hand when
- * releasing — never reset, never auto-edited by CI).
+ * The release workflow needs four small, side-effect-free operations that are
+ * easier to keep correct in one reviewed file than as inline shell inside YAML:
  *
- * No secrets, no network calls here. Usage:
- *   node scripts/release-info.mjs check
- *   node scripts/release-info.mjs notes [previous-tag]
- *   node scripts/release-info.mjs write --tag v1.2.0 --apk stockly-1.2.0.apk \
- *     --apk-url https://.../stockly-1.2.0.apk --release-url https://.../tag/v1.2.0 \
- *     --commit abc123 --build debug --notes-file NOTES.md --out release.json
+ *   check   — read package.json + android/app/build.gradle, fail fast when the
+ *             two version identities disagree, and print `key=value` pairs the
+ *             workflow forwards into $GITHUB_OUTPUT.
+ *   notes   — render the commit range since the previous tag as markdown.
+ *   write   — assemble release.json (the machine-readable asset the in-app
+ *             updater prefers) from the built APK and the run context.
+ *
+ * Exports (used by the workflow's APK-identity verification step):
+ *   readVersions()   — { versionName, versionCode } from the Gradle file.
+ *   parseBadging(l)  — { applicationId, versionCode, versionName } from the
+ *                      first line of `aapt dump badging`.
+ *
+ * No network access, no secrets, no writes outside an explicit --out path.
  */
-import { readFileSync, writeFileSync, statSync } from 'node:fs';
-import { createHash } from 'node:crypto';
+
 import { execFileSync } from 'node:child_process';
-import { join, dirname } from 'node:path';
-import { fileURLToPath, pathToFileURL } from 'node:url';
+import { createHash } from 'node:crypto';
+import { readFileSync, statSync, writeFileSync } from 'node:fs';
+import { dirname, resolve } from 'node:path';
+import { fileURLToPath } from 'node:url';
 
-const here = dirname(fileURLToPath(import.meta.url));
-const rootDir = join(here, '..');
+const ROOT = resolve(dirname(fileURLToPath(import.meta.url)), '..');
+const PACKAGE_JSON = resolve(ROOT, 'package.json');
+const GRADLE = resolve(ROOT, 'mobile-app/android/app/build.gradle');
+const APP_ID = 'com.stockly.inventory';
 
+<<<<<<< HEAD
 export function readVersions(root = rootDir) {
   const pkg = JSON.parse(readFileSync(join(root, 'package.json'), 'utf8'));
   const gradle = readFileSync(join(root, 'apps/mobile/android/app/build.gradle'), 'utf8');
   const code = gradle.match(/versionCode\s+(\d+)/)?.[1];
   const name = gradle.match(/versionName\s+"([^"]+)"/)?.[1];
   if (!pkg.version) throw new Error('package.json has no version.');
+=======
+function readJson(path) {
+  return JSON.parse(readFileSync(path, 'utf8'));
+}
+
+/** package.json `version` is the single source of truth for the marketing version. */
+export function readPackageVersion() {
+  const v = String(readJson(PACKAGE_JSON).version || '').trim();
+  if (!/^\d+\.\d+\.\d+$/.test(v)) {
+    throw new Error(`package.json version "${v}" is not a semver x.y.z string.`);
+  }
+  return v;
+}
+
+/** android/app/build.gradle is the single source of truth for the Android identity. */
+export function readVersions() {
+  const gradle = readFileSync(GRADLE, 'utf8');
+  const code = /^\s*versionCode\s+(\d+)\s*$/m.exec(gradle);
+  const name = /^\s*versionName\s+"([^"]+)"\s*$/m.exec(gradle);
+>>>>>>> bc90ae3b25b8be70ddda745a7984f0a2ba4ae22d
   if (!code || !name) {
     throw new Error('Could not read versionCode/versionName from apps/mobile/android/app/build.gradle.');
   }
-  return { appVersion: String(pkg.version), versionCode: Number(code), versionName: String(name) };
+  return { versionName: name[1].trim(), versionCode: Number(code[1]) };
 }
 
-export function assertVersionsMatch(v = readVersions()) {
-  if (v.versionName !== v.appVersion) {
-    throw new Error(
-      `Version mismatch: package.json (${v.appVersion}) !== android versionName (${v.versionName}). ` +
-      'Bump both together before releasing.',
-    );
-  }
-  if (!Number.isInteger(v.versionCode) || v.versionCode < 1) {
-    throw new Error(`Invalid android versionCode (${v.versionCode}). It must be a positive integer.`);
-  }
-  return v;
-}
-
-/** Parse the first line of `aapt dump badging` output. */
+/** First line of `aapt dump badging <apk>`. */
 export function parseBadging(line) {
-  const get = (k) => line.match(new RegExp(`${k}='([^']*)'`))?.[1] ?? '';
+  const appId = /package: name='([^']+)'/.exec(line);
+  const vCode = /versionCode='([^']+)'/.exec(line);
+  const vName = /versionName='([^']+)'/.exec(line);
+  if (!appId || !vCode || !vName) {
+    throw new Error('Could not parse aapt badging output: ' + line.slice(0, 200));
+  }
   return {
-    applicationId: get('name'),
-    versionCode: Number(get('versionCode')),
-    versionName: get('versionName'),
+    applicationId: appId[1],
+    versionCode: Number(vCode[1]),
+    versionName: vName[1],
   };
 }
 
-export function sha256File(path) {
+function git(...args) {
+  return execFileSync('git', args, { cwd: ROOT, encoding: 'utf8' }).trim();
+}
+
+function flagValue(name) {
+  const argv = process.argv;
+  const i = argv.indexOf(name);
+  if (i === -1 || i === argv.length - 1) {
+    throw new Error(`Missing required argument ${name}`);
+  }
+  return argv[i + 1];
+}
+
+function sha256File(path) {
   return createHash('sha256').update(readFileSync(path)).digest('hex');
 }
 
-/** Human release notes from commits since the previous tag (never invented). */
-export function gitNotes(previousTag) {
-  try {
-    const range = previousTag ? `${previousTag}..HEAD` : 'HEAD';
-    const args = ['log', range, '--pretty=format:- %s', '--no-merges', '-n', '30'];
-    const out = execFileSync('git', args, { encoding: 'utf8', cwd: rootDir }).trim();
-    const lines = out.split('\n').map((l) => l.trim()).filter(Boolean);
-    if (lines.length > 0) return lines.slice(0, 15);
-  } catch {
-    /* no history (shallow checkout) — fall through */
-  }
-  return previousTag ? ['Automated release.'] : ['Initial automated release.'];
+/* Release notes: one bullet per commit since the previous tag, newest first.
+ * Falls back to the last 20 commits when no previous tag exists (first release). */
+function renderNotes(prevTag) {
+  const range = prevTag ? `${prevTag}..HEAD` : 'HEAD';
+  const log = git('log', '--no-merges', '--pretty=format:%s', '--max-count=40', range);
+  const subjects = log.split('\n').map((s) => s.trim()).filter(Boolean);
+  const lines = subjects.length
+    ? subjects.map((s) => `- ${s}`)
+    : ['- Initial release.'];
+  return lines.slice(0, 30).join('\n');
 }
 
-export function buildReleaseJson({ version, versionCode, build, apkPath, apkUrl, releaseUrl, commit, notes, minimumSupportedVersion = '1.0.0' }) {
-  const size = statSync(apkPath).size;
-  if (!size) throw new Error(`APK is empty: ${apkPath}`);
-  if (!version || !apkUrl || !releaseUrl) throw new Error('version, apkUrl and releaseUrl are required.');
-  return {
-    app: 'Stockly',
-    version,
-    versionCode,
+function check() {
+  const versionName = readPackageVersion();
+  const gradle = readVersions();
+  if (gradle.versionName !== versionName) {
+    throw new Error(
+      `Version mismatch: package.json says ${versionName} but android versionName says ` +
+        `${gradle.versionName}. Bump both together (and raise versionCode).`,
+    );
+  }
+  process.stdout.write(`version=${versionName}\nversionCode=${gradle.versionCode}\n`);
+}
+
+function notes() {
+  process.stdout.write(renderNotes(process.argv[3] || '') + '\n');
+}
+
+function write() {
+  const tag = flagValue('--tag').replace(/^v/i, '');
+  const apk = flagValue('--apk');
+  const apkUrl = flagValue('--apk-url');
+  const releaseUrl = flagValue('--release-url');
+  const commit = flagValue('--commit');
+  const build = flagValue('--build');
+  const notesFile = flagValue('--notes-file');
+  const out = flagValue('--out');
+
+  const notesBody = readFileSync(notesFile, 'utf8');
+  const releaseNotes = notesBody
+    .split('\n')
+    .map((l) => l.trim())
+    .filter((l) => l.startsWith('- '))
+    .map((l) => l.replace(/^-\s*/, ''))
+    .slice(0, 12);
+
+  const meta = {
+    tag,
+    version: tag,
+    versionCode: readVersions().versionCode,
     build,
     publishedAt: new Date().toISOString(),
-    minimumSupportedVersion,
-    releaseNotes: notes,
+    minimumSupportedVersion: '1.0.0',
+    releaseNotes,
     apkUrl,
-    apkSize: size,
-    sha256: sha256File(apkPath),
+    apkSize: statSync(apk).size,
+    sha256: sha256File(apk),
     releaseUrl,
     commit,
   };
+
+  writeFileSync(out, JSON.stringify(meta, null, 2) + '\n', 'utf8');
+  process.stdout.write(`Wrote ${out} for v${tag} (${APP_ID}).\n`);
 }
 
-function arg(name) {
-  const i = process.argv.indexOf(`--${name}`);
-  return i === -1 ? '' : (process.argv[i + 1] || '');
-}
-
-/** Required CLI flag: fails with a helpful message instead of a downstream ENOENT. */
-function requireArg(name) {
-  const v = arg(name);
-  if (!v) throw new Error(`Missing required --${name} argument.`);
-  return v;
-}
-
-async function main() {
-  const cmd = process.argv[2] || '';
-  if (cmd === 'check') {
-    const v = assertVersionsMatch();
-    console.log(`version=${v.appVersion}`);
-    console.log(`versionCode=${v.versionCode}`);
-    return;
+const command = process.argv[2];
+try {
+  switch (command) {
+    case 'check':
+      check();
+      break;
+    case 'notes':
+      notes();
+      break;
+    case 'write':
+      write();
+      break;
+    default:
+      throw new Error(`Unknown command "${command ?? ''}". Use: check | notes [prevTag] | write`);
   }
-  if (cmd === 'notes') {
-    const prev = process.argv[3] || '';
-    for (const line of gitNotes(prev)) console.log(line);
-    return;
-  }
-  if (cmd === 'write') {
-    const tag = requireArg('tag');
-    const v = assertVersionsMatch();
-    const version = v.appVersion;
-    if (tag !== `v${version}`) {
-      throw new Error(`Tag ${tag} does not match package version v${version}.`);
-    }
-    const apkPath = requireArg('apk');
-    const notesFile = requireArg('notes-file');
-    const outFile = requireArg('out');
-    const notes = readFileSync(notesFile, 'utf8').split('\n').map((l) => l.trim()).filter(Boolean);
-    const info = buildReleaseJson({
-      version,
-      versionCode: v.versionCode,
-      build: arg('build') || 'debug',
-      apkPath,
-      apkUrl: requireArg('apk-url'),
-      releaseUrl: requireArg('release-url'),
-      commit: requireArg('commit'),
-      notes,
-    });
-    writeFileSync(outFile, JSON.stringify(info, null, 2) + '\n');
-    console.log(`wrote ${outFile} for ${tag}`);
-    return;
-  }
-  throw new Error('Usage: release-info.mjs <check|notes [prevTag]|write ...>');
-}
-
-/**
- * Direct-execution check that is safe for every invocation style.
- * `process.argv[1]` is undefined under `node -e` (and in some embeddings),
- * so the unguarded comparison used to throw at import time — breaking any
- * `import` of this module, including the workflow's `node -e` verifier.
- */
-function isDirectExecution() {
-  const entry = process.argv[1];
-  if (typeof entry !== 'string' || entry === '') return false;
-  try {
-    return import.meta.url === pathToFileURL(entry).href;
-  } catch {
-    return false;
-  }
-}
-
-if (isDirectExecution()) {
-  await main();
+} catch (error) {
+  process.stderr.write(`[release-info] ${error instanceof Error ? error.message : String(error)}\n`);
+  process.exit(1);
 }

@@ -51,7 +51,7 @@ export function isNativeApp(): boolean {
 /** Absolute backend URL on native builds (same-origin on web). All
  *  /api/* calls go through here so Android reaches the deployment. */
 export function apiUrl(route: string): string {
-  if (API_BASE_URL && isNativeApp()) return `${API_BASE_URL}${route}`;
+  if (API_BASE_URL) return `${API_BASE_URL}${route}`;
   return route;
 }
 

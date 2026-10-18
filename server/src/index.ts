@@ -26,12 +26,17 @@
  * while both frontends proxy /api/* to it.
  */
 
+<<<<<<< HEAD
 import cors from 'cors';
+=======
+import dotenv from 'dotenv';
+>>>>>>> bc90ae3b25b8be70ddda745a7984f0a2ba4ae22d
 import express, {
   type NextFunction,
   type Request,
   type Response,
 } from 'express';
+<<<<<<< HEAD
 
 // Load + validate the SINGLE root .env before any handler module runs
 // (path anchored to this file — independent of the caller's cwd).
@@ -47,6 +52,24 @@ import authHandler from '../../api/auth.ts';
 import devicesHandler from '../../api/devices.ts';
 import sheetsHandler from '../../api/sheets.ts';
 import stocklyHandler from '../../api/stockly.ts';
+=======
+import { fileURLToPath } from 'node:url';
+import path from 'node:path';
+
+// Load server/.env first, then fall back to repo-root .env so existing
+// local setups keep working without copying files around.
+const here = path.dirname(fileURLToPath(import.meta.url));
+dotenv.config({ path: path.resolve(here, '../.env') });
+dotenv.config({ path: path.resolve(here, '../../.env') });
+
+// Canonical handlers — the single implementation (also used by Vercel).
+import adminHandler from '../../api/admin.js';
+import authHandler from '../../api/auth.js';
+import devicesHandler from '../../api/devices.js';
+import sheetsHandler from '../../api/sheets.js';
+import stocklyHandler from '../../api/stockly.js';
+import { applyApiCors } from '../../api/cors.js';
+>>>>>>> bc90ae3b25b8be70ddda745a7984f0a2ba4ae22d
 
 type VercelQuery = Record<string, string | string[] | undefined>;
 type VercelHeaders = Record<string, string | string[] | undefined>;
@@ -96,11 +119,37 @@ function adapt(handler: ApiHandler) {
   };
 }
 
+<<<<<<< HEAD
 export function createApp(): express.Express {
   const app = express();
   app.disable('x-powered-by');
   // Same CORS posture as the handlers themselves (open, token-auth, no cookies).
   app.use(cors({ origin: '*', allowedHeaders: ['Content-Type', 'Authorization', 'X-Device-Session'] }));
+=======
+/** Required secrets (names only — values are never read here beyond
+ *  presence). Missing entries are logged at startup so a misconfigured
+ *  deploy fails visibly instead of serving 501s from every route. */
+const REQUIRED_ENV = [
+  'ADMIN_SCRIPT_URL',
+  'ADMIN_SCRIPT_TOKEN',
+  'ADMIN_SETUP_KEY',
+  'ADMIN_SESSION_SECRET',
+  'DEVICE_SESSION_SECRET',
+  'AUTH_SESSION_SECRET',
+] as const;
+
+export function missingEnvVars(env: NodeJS.ProcessEnv = process.env): string[] {
+  return REQUIRED_ENV.filter((name) => !(env[name] ?? '').trim());
+}
+
+export function createApp(): express.Express {
+  const app = express();
+  app.disable('x-powered-by');
+  app.use((req, res, next) => {
+    applyApiCors(req, res);
+    next();
+  });
+>>>>>>> bc90ae3b25b8be70ddda745a7984f0a2ba4ae22d
   app.use(express.json({ limit: '1mb' }));
   app.use(express.text({ type: 'text/plain', limit: '1mb' }));
 
@@ -111,7 +160,17 @@ export function createApp(): express.Express {
   const stockly = adapt(stocklyHandler as unknown as ApiHandler);
 
   app.get('/api/health', (_req, res) => {
+<<<<<<< HEAD
     res.json({ success: true, data: { ok: true, time: new Date().toISOString(), version: '1.0.0' } });
+=======
+    // Liveness + configuration report (secret names and booleans only —
+    // never values). A healthy-looking 200 with missing_* entries explains
+    // per-route 501s without exposing anything sensitive.
+    res.json({
+      success: true,
+      data: { ok: true, time: new Date().toISOString(), version: '1.0.0', missing: missingEnvVars() },
+    });
+>>>>>>> bc90ae3b25b8be70ddda745a7984f0a2ba4ae22d
   });
 
   // Canonical routes (identical paths to the Vercel deployment).
@@ -127,9 +186,14 @@ export function createApp(): express.Express {
   app.all('/api/users', auth);
   app.all('/api/inventory', sheets);
 
+<<<<<<< HEAD
   // eslint-disable-next-line @typescript-eslint/no-unused-vars
   app.use((err: unknown, _req: Request, res: Response, _next: NextFunction) => {
     console.error('[stockly-server] unhandled error');
+=======
+  app.use((err: unknown, _req: Request, res: Response, _next: NextFunction) => {
+    console.error('[stockly-server] unhandled error:', err);
+>>>>>>> bc90ae3b25b8be70ddda745a7984f0a2ba4ae22d
     if (!res.headersSent) res.status(500).json({ success: false, error: 'Internal server error.' });
   });
 
@@ -138,7 +202,14 @@ export function createApp(): express.Express {
 
 const PORT = Number(process.env.PORT || '5000');
 if (process.env.NODE_ENV !== 'test') {
+<<<<<<< HEAD
   validateEnvOrExit();
+=======
+  const missing = missingEnvVars();
+  if (missing.length > 0) {
+    console.warn(`[stockly-server] missing env (routes using them answer 501): ${missing.join(', ')}`);
+  }
+>>>>>>> bc90ae3b25b8be70ddda745a7984f0a2ba4ae22d
   createApp().listen(PORT, () => {
     console.info(`[stockly-server] listening on http://localhost:${PORT}`);
   });

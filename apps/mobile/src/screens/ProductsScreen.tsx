@@ -1,9 +1,15 @@
 import { memo, useCallback, useDeferredValue, useEffect, useMemo, useState } from 'react';
 import { createPortal } from 'react-dom';
 import { ArrowDownToLine, ArrowDownUp, ArrowLeft, ArrowUpFromLine, MoreVertical, Pencil, Plus, Search, Trash2, X } from 'lucide-react';
+<<<<<<<< HEAD:apps/mobile/src/screens/ProductsScreen.tsx
 import { formatMoney } from '@stockly/shared-client/config';
 import { stockStatus, useStore } from '@stockly/shared-client/store';
 import type { Product } from '@stockly/shared-types';
+========
+import { formatMoney } from '../../shared/config';
+import { stockStatus, useStore } from '../../shared/store';
+import type { Product } from '../../shared/types';
+>>>>>>>> bc90ae3b25b8be70ddda745a7984f0a2ba4ae22d:mobile-app/src/app/screens/ProductsScreen.tsx
 import { ActionSheet, Confirm, EmptyState, Header, SearchBar, Segmented, SkeletonRow, StockBadge, useDismissable } from '../components/ui';
 
 type SortKey = 'name' | 'stock' | 'price' | 'updated';
@@ -88,7 +94,7 @@ export default function ProductsScreen({
   };
 
   return (
-    <div className="app-page-viewport flex flex-col overflow-hidden">
+    <div className="screen">
       <Header
         title="Products"
         subtitle={
@@ -100,7 +106,7 @@ export default function ProductsScreen({
           <button
             onClick={onAdd}
             aria-label="Add product"
-            className="press flex h-10 w-10 shrink-0 items-center justify-center rounded-2xl bg-[#151515] text-white dark:bg-[#C7FF4D] dark:text-[#151515]"
+            className="icon-btn bg-(--primary) text-(--on-primary) shadow-[var(--elev-1)] hover:brightness-110"
           >
             <Plus size={20} />
           </button>
@@ -108,21 +114,12 @@ export default function ProductsScreen({
       />
 
       {/* Fixed controls */}
-      <div className="products-controls mx-auto w-full max-w-md shrink-0 space-y-3 px-4 pt-3">
-        <div className="desktop-products-heading hidden items-center justify-between">
-          <p className="text-[13px] font-semibold text-(--ink-2)">{list.length} matching product{list.length === 1 ? '' : 's'}</p>
-          <button type="button" onClick={onAdd} className="press flex min-h-11 items-center gap-2 rounded-xl bg-(--primary) px-4 text-[13px] font-bold text-(--primary-foreground)">
-            <Plus size={16} /> Add product
-          </button>
-        </div>
-        {/* Floating glass search (header above is already sticky) */}
-        <div className="products-search">
-          <SearchBar value={q} onChange={setQ} placeholder="Search name, SKU…" />
-        </div>
+      <div className="app-column page-pad shrink-0 space-y-3 pb-3">
+        <SearchBar value={q} onChange={setQ} placeholder="Search name, SKU…" />
 
         {/* Category chips */}
         {categories.length > 0 ? (
-          <div className="no-scrollbar flex gap-2 overflow-x-auto pb-0.5">
+          <div className="no-scrollbar -mx-1 flex gap-2 overflow-x-auto px-1 pb-0.5">
             <Chip active={cat === 'all'} onClick={() => setCat('all')} label="All" />
             {categories.map((c) => (
               <Chip key={c.id} active={cat === c.id} onClick={() => setCat(c.id)} label={c.name} />
@@ -132,8 +129,8 @@ export default function ProductsScreen({
         ) : null}
 
         {/* Status filter + sort */}
-        <div className="products-filter-row flex items-center gap-2">
-          <div className="flex-1">
+        <div className="flex items-center gap-2">
+          <div className="min-w-0 flex-1">
             <Segmented<ProductFilter>
               label="Stock status filter"
               options={statusTabs}
@@ -147,55 +144,47 @@ export default function ProductsScreen({
               setSort((s) => (s === 'updated' ? 'name' : s === 'name' ? 'stock' : s === 'stock' ? 'price' : 'updated'))
             }
             aria-label="Change sorting"
-            className="glass press flex min-h-[44px] items-center gap-1.5 rounded-2xl px-3 py-2.5 text-[13px] font-bold text-(--ink)"
+            className="chip shrink-0"
           >
-            <ArrowDownUp size={16} />
+            <ArrowDownUp size={15} />
             {sort === 'updated' ? 'Recent' : sort === 'name' ? 'Name' : sort === 'stock' ? 'Stock' : 'Price'}
           </button>
           {filtersActive ? (
             <button
               type="button"
               onClick={clearFilters}
-              className="press flex min-h-[44px] shrink-0 items-center gap-1 rounded-2xl bg-rose-500/10 px-3 py-2.5 text-[13px] font-bold text-rose-600 dark:text-rose-400"
+              className="chip shrink-0 text-(--error)"
             >
-              <X size={16} /> Clear
+              <X size={15} /> Clear
             </button>
           ) : null}
         </div>
       </div>
 
-      {/* List card hugs its content when short; scrolls internally when long */}
-      <div className="products-results mx-auto flex min-h-0 w-full max-w-md flex-1 flex-col overflow-hidden px-4 pt-3">
+      {/* List scrolls under the fixed controls */}
+      <div className="app-column scroll-region page-pad">
         {loading && products.length === 0 ? (
-          <div className="sheet-scroll space-y-2.5 overflow-y-auto">
-            <SkeletonRow h={84} />
-            <SkeletonRow h={84} />
-            <SkeletonRow h={84} />
+          <div className="space-y-2.5 pb-4">
+            <SkeletonRow h={76} />
+            <SkeletonRow h={76} />
+            <SkeletonRow h={76} />
           </div>
         ) : list.length === 0 ? (
-          <div className="sheet-scroll overflow-y-auto">
+          <div className="pb-4">
             <EmptyState
               icon={<Search size={22} />}
               title={filtersActive ? 'No products match' : 'No products yet'}
               hint={filtersActive ? 'Try another search or clear the filters.' : 'Add a product to start tracking stock.'}
             />
             {filtersActive ? (
-              <button
-                type="button"
-                onClick={clearFilters}
-                className="press mx-auto mt-1 flex min-h-11 items-center gap-2 rounded-xl bg-(--primary) px-4 text-sm font-bold text-(--primary-foreground)"
-              >
+              <button type="button" onClick={clearFilters} className="btn btn-outline mx-auto flex">
                 <X size={16} /> Clear filters
               </button>
             ) : null}
           </div>
         ) : (
-          <div className="glass sheet-scroll min-h-0 flex-1 overflow-auto rounded-[26px] px-1.5 pt-1 pb-4">
-            <div className="desktop-product-table">
-              <div className="desktop-product-table-head" role="row">
-                <span role="columnheader">Product</span><span role="columnheader">SKU</span><span role="columnheader">Category</span><span role="columnheader" className="text-right">Stock</span><span role="columnheader" className="text-right">Minimum</span><span role="columnheader" className="text-right">Price</span><span role="columnheader">Status</span><span role="columnheader" aria-label="Actions" />
-              </div>
-              <div className="divide-y divide-(--stroke-dim)" role="rowgroup">
+          <div className="pb-4">
+            <div className="group-list">
               {list.slice(0, visible).map((p) => (
                 <ProductRow
                   key={p.id}
@@ -206,13 +195,12 @@ export default function ProductsScreen({
                   onMenu={handleMenu}
                 />
               ))}
-              </div>
             </div>
             {list.length > visible ? (
               <button
                 type="button"
                 onClick={() => setVisible((v) => v + PAGE_SIZE)}
-                className="press mt-1 flex min-h-[48px] w-full items-center justify-center rounded-2xl bg-(--accent-soft) text-[14px] font-bold text-(--accent)"
+                className="btn btn-tonal btn-block mt-3"
               >
                 Show more ({list.length - visible} remaining)
               </button>
@@ -296,13 +284,12 @@ const ProductRow = memo(function ProductRow({
   return (
     <div
       onClick={() => onView(p)}
-      role="row"
+      role="button"
       tabIndex={0}
       aria-label={`${p.name}, ${p.currentStock} in stock`}
       onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); onView(p); } }}
-      className="product-list-row press cv-row flex cursor-pointer items-center gap-3 rounded-[20px] px-2.5 py-2.5 hover:bg-(--accent-soft)/50"
+      className="group-row cursor-pointer !items-center"
     >
-      <div className="product-identity" role="cell">
       {p.image ? (
         <img
           src={p.image}
@@ -310,56 +297,44 @@ const ProductRow = memo(function ProductRow({
           loading="lazy"
           decoding="async"
           draggable={false}
-          className="h-12 w-12 shrink-0 rounded-2xl border border-(--stroke-dim) object-cover"
+          className="h-12 w-12 shrink-0 rounded-[var(--shape-md)] object-cover"
           onError={(e) => {
             (e.target as HTMLImageElement).style.display = 'none';
           }}
         />
       ) : (
-        <span className="flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl bg-(--accent-soft) text-[17px] font-bold text-(--ink) dark:text-(--accent)">
+        <span className="flex h-12 w-12 shrink-0 items-center justify-center rounded-[var(--shape-md)] bg-(--primary-container) text-[length:var(--fs-title-md)] font-bold text-(--on-primary-container)">
           {p.name.slice(0, 1).toUpperCase()}
         </span>
       )}
-      <div className="product-mobile-details min-w-0 flex-1">
-        <p className="truncate text-[14.5px] font-semibold text-(--ink)">{p.name}</p>
-        {sub ? <p className="tnum truncate text-xs text-(--ink-2)">{sub}</p> : null}
+      <div className="min-w-0 flex-1">
+        <p className="truncate text-[length:var(--fs-body-md)] font-semibold text-(--on-surface)">{p.name}</p>
+        {sub ? <p className="tnum truncate text-[length:var(--fs-body-sm)] text-(--on-surface-variant)">{sub}</p> : null}
         <div className="mt-1 flex flex-wrap items-center gap-x-2 gap-y-0.5">
-          {pending ? (
-            <span className="rounded-full bg-(--accent-soft) px-2 py-0.5 text-[11px] font-extrabold text-(--accent)">
-              Saving…
-            </span>
-          ) : null}
+          {pending ? <span className="badge badge-accent">Saving…</span> : null}
           <span
-            className={`tnum text-[12px] font-bold ${
+            className={`tnum text-[length:var(--fs-body-sm)] font-semibold ${
               st === 'out'
-                ? 'text-rose-600 dark:text-rose-300'
+                ? 'text-(--error)'
                 : st === 'low'
-                  ? 'text-amber-600 dark:text-amber-300'
-                  : 'text-emerald-600 dark:text-emerald-300'
+                  ? 'text-(--warning)'
+                  : 'text-(--success)'
             }`}
           >
             {st === 'out' ? 'Out of stock' : st === 'low' ? `${p.currentStock} · Low` : `${p.currentStock} in stock`}
           </span>
           {p.sellingPrice > 0 ? (
-            <span className="tnum text-[12.5px] font-bold text-(--ink)">{formatMoney(p.sellingPrice)}</span>
+            <span className="tnum text-[length:var(--fs-body-sm)] font-bold text-(--on-surface)">{formatMoney(p.sellingPrice)}</span>
           ) : null}
         </div>
       </div>
-      <span className="product-desktop-name hidden" title={p.name}>{p.name}</span>
-      </div>
-      <span className="product-desktop-cell" role="cell" title={sku}>{sku || '—'}</span>
-      <span className="product-desktop-cell" role="cell" title={catLabel}>{catLabel || '—'}</span>
-      <span className="product-desktop-cell tnum text-right" role="cell">{p.currentStock}</span>
-      <span className="product-desktop-cell tnum text-right" role="cell">{p.minimumStock}</span>
-      <span className="product-desktop-cell tnum text-right" role="cell">{p.sellingPrice > 0 ? formatMoney(p.sellingPrice) : '—'}</span>
-      <span className={`product-desktop-cell product-desktop-status ${st === 'low' ? 'is-low' : st === 'out' ? 'is-out' : ''}`} role="cell">{st === 'out' ? 'Out of stock' : st === 'low' ? 'Low stock' : 'In stock'}</span>
       <button
         onClick={(e) => {
           e.stopPropagation();
           onMenu(p);
         }}
         aria-label={`Actions for ${p.name}`}
-        className="product-desktop-actions press flex h-11 w-11 shrink-0 items-center justify-center self-center rounded-full text-(--ink-2) hover:bg-(--accent-soft)/60"
+        className="icon-btn shrink-0"
       >
         <MoreVertical size={18} />
       </button>
@@ -423,82 +398,75 @@ function DetailPage({
   // Portal to body so no transformed ancestor traps its fixed positioning.
   useDismissable(true, onClose);
   return createPortal(
-    <div className="product-detail-overlay animate-detail-in fixed inset-0 z-40 overflow-y-auto bg-(--bg)" role="dialog" aria-modal="true" aria-label={p.name}>
-      <div className="ambient" aria-hidden="true" />
-      <div className="product-detail-layout relative z-[1] mx-auto min-h-dvh max-w-md pb-6 md:max-w-2xl lg:max-w-4xl lg:px-8">
+    <div
+      className="animate-fade-in fixed inset-0 z-40 overflow-y-auto bg-(--surface)"
+      role="dialog"
+      aria-modal="true"
+      aria-label={p.name}
+    >
+      <div className="app-column min-h-dvh pb-6">
         {/* Hero image */}
-        <div className="product-detail-hero relative lg:mt-6 lg:overflow-hidden lg:rounded-[28px]">
+        <div className="relative">
           {p.image ? (
             <img
               src={p.image}
               alt=""
               loading="lazy"
               decoding="async"
-              className="h-72 w-full object-cover lg:h-96"
+              className="h-64 w-full object-cover"
               onError={(e) => {
                 (e.target as HTMLImageElement).style.display = 'none';
               }}
             />
           ) : (
-            <div className="flex h-64 w-full items-center justify-center bg-(--accent-soft) lg:h-96">
-              <span className="glass-strong flex h-24 w-24 items-center justify-center rounded-[28px] text-[44px] font-bold text-(--ink) dark:text-(--accent)">
+            <div className="flex h-52 w-full items-center justify-center bg-(--primary-container)">
+              <span className="flex h-24 w-24 items-center justify-center rounded-[var(--shape-xl)] bg-(--surface-container-lowest) text-[length:var(--fs-headline-md)] font-bold text-(--on-primary-container)">
                 {p.name.slice(0, 1).toUpperCase()}
               </span>
             </div>
           )}
-          <div aria-hidden="true" className="pointer-events-none absolute inset-0 bg-gradient-to-t from-[var(--bg)] via-transparent to-black/25" />
           {/* Floating top buttons */}
-          <div className="absolute inset-x-0 top-0 flex items-center justify-between p-4 pt-[calc(1rem+env(safe-area-inset-top,0px))]">
+          <div className="absolute inset-x-0 top-0 flex items-center justify-between p-3 pt-[calc(0.75rem+env(safe-area-inset-top,0px))]">
             <button
               onClick={onClose}
               aria-label="Back to products"
-              className="glass-strong press flex h-11 w-11 items-center justify-center rounded-full text-(--ink)"
+              className="icon-btn bg-(--surface-container-lowest) text-(--on-surface) shadow-[var(--elev-1)]"
             >
               <ArrowLeft size={20} />
             </button>
             <button
               onClick={onEdit}
               aria-label={`Edit ${p.name}`}
-              className="glass-strong press flex h-11 items-center gap-1.5 rounded-full px-4 text-[14px] font-bold text-(--ink)"
+              className="btn btn-sm rounded-full bg-(--surface-container-lowest) text-(--on-surface) shadow-[var(--elev-1)]"
             >
-              <Pencil size={16} /> Edit
+              <Pencil size={15} /> Edit
             </button>
           </div>
           {/* Status over image */}
-          <div className="absolute bottom-3 left-4 flex flex-wrap gap-1.5">
+          <div className="absolute bottom-3 left-3 flex flex-wrap gap-1.5">
             <span
-              className={`glass-strong tnum rounded-full px-3 py-1.5 text-[12px] font-bold ${
-                st === 'out'
-                  ? 'text-rose-600 dark:text-rose-300'
-                  : st === 'low'
-                    ? 'text-amber-600 dark:text-amber-300'
-                    : 'text-emerald-600 dark:text-emerald-300'
+              className={`badge tnum ${
+                st === 'out' ? 'badge-danger' : st === 'low' ? 'badge-warning' : 'badge-success'
               }`}
             >
               {st === 'out' ? 'Out of stock' : st === 'low' ? `Low stock · ${p.currentStock} left` : `${p.currentStock} in stock`}
             </span>
-            {catLabel ? (
-              <span className="glass-strong rounded-full px-3 py-1.5 text-[12px] font-bold text-(--ink)">
-                {catLabel}
-              </span>
-            ) : null}
+            {catLabel ? <span className="badge badge-neutral">{catLabel}</span> : null}
           </div>
         </div>
 
-        <div className="product-detail-content space-y-3 px-4 pt-3 md:grid md:grid-cols-2 md:items-start md:gap-5 md:space-y-0 md:px-0 md:pt-5">
+        <div className="page-pad space-y-4 pt-4">
           {/* Title + price */}
-          <div className="product-detail-overview md:col-span-2">
+          <div>
             {(p.sku || '').trim() ? (
-              <p className="tnum text-xs font-semibold uppercase tracking-wider text-(--ink-2)">{p.sku}</p>
+              <p className="tnum text-[length:var(--fs-body-sm)] font-medium tracking-[0.06em] text-(--outline) uppercase">{p.sku}</p>
             ) : null}
-            <h2 className="mt-0.5 text-[24px] font-bold leading-tight tracking-tight text-(--ink) lg:text-[32px]">{p.name}</h2>
+            <h2 className="mt-0.5 text-[length:var(--fs-headline-sm)] font-semibold leading-tight text-(--on-surface)">{p.name}</h2>
             {unitPrice > 0 ? (
-              <div className="tnum mt-1.5 flex items-baseline gap-2">
-                <span className="text-[26px] font-bold text-(--ink)">{formatMoney(unitPrice)}</span>
-              </div>
+              <p className="tnum mt-1 text-[length:var(--fs-title-lg)] font-semibold text-(--primary)">{formatMoney(unitPrice)}</p>
             ) : null}
             {dateFmt(p.createdAt) || dateFmt(p.updatedAt) ? (
-              <p className="mt-1 text-[11.5px] font-medium text-(--ink-3)">
+              <p className="mt-1 text-[length:var(--fs-body-sm)] font-normal text-(--on-surface-variant)">
                 {dateFmt(p.createdAt) ? `Added ${dateFmt(p.createdAt)}` : ''}
                 {dateFmt(p.createdAt) && dateFmt(p.updatedAt) ? ' · ' : ''}
                 {dateFmt(p.updatedAt) ? `Updated ${dateFmt(p.updatedAt)}` : ''}
@@ -507,75 +475,65 @@ function DetailPage({
           </div>
 
           {/* Stock stats */}
-          <div className="product-detail-stats glass grid grid-cols-3 divide-x divide-(--stroke-dim) rounded-[26px] py-3 text-center md:col-span-2">
+          <div className="card grid grid-cols-3 divide-x divide-(--outline-variant) py-3 text-center">
             <div>
-              <p className="tnum text-[19px] font-bold text-(--ink)">{p.currentStock}</p>
-              <p className="mt-0.5 text-[11px] font-semibold text-(--ink-2)">In stock</p>
+              <p className="tnum text-[length:var(--fs-headline-sm)] font-bold text-(--on-surface)">{p.currentStock}</p>
+              <p className="mt-0.5 text-[length:var(--fs-body-sm)] font-medium text-(--on-surface-variant)">In stock</p>
             </div>
             <div>
-              <p className="tnum text-[19px] font-bold text-(--ink)">{p.minimumStock}</p>
-              <p className="mt-0.5 text-[11px] font-semibold text-(--ink-2)">Minimum</p>
+              <p className="tnum text-[length:var(--fs-headline-sm)] font-bold text-(--on-surface)">{p.minimumStock}</p>
+              <p className="mt-0.5 text-[length:var(--fs-body-sm)] font-medium text-(--on-surface-variant)">Minimum</p>
             </div>
             <div>
-              <p className="tnum text-[19px] font-bold text-(--accent)">
+              <p className="tnum text-[length:var(--fs-headline-sm)] font-bold text-(--primary)">
                 {p.currentStock > 0 ? Math.floor((p.currentStock / Math.max(p.minimumStock, 1)) * 100) : 0}%
               </p>
-              <p className="mt-0.5 text-[11px] font-semibold text-(--ink-2)">Of minimum</p>
+              <p className="mt-0.5 text-[length:var(--fs-body-sm)] font-medium text-(--on-surface-variant)">Of minimum</p>
             </div>
           </div>
 
           {(p.description || '').trim() ? (
-            <div className="product-detail-desc glass rounded-[26px] p-5">
-              <p className="mb-1.5 flex items-center gap-2 text-[12px] font-bold uppercase tracking-wider text-(--ink-2)">
-                <span aria-hidden="true" className="h-3 w-1 rounded-full bg-[#C7FF4D]" />
-                Description
-              </p>
-              <p className="whitespace-pre-wrap break-words text-[14.5px] leading-relaxed text-(--ink)">{p.description}</p>
+            <div className="card-flat p-4">
+              <p className="section-label mb-1.5">Description</p>
+              <p className="whitespace-pre-wrap break-words text-[length:var(--fs-body-md)] leading-relaxed text-(--on-surface)">{p.description}</p>
             </div>
           ) : null}
 
           {/* Stock In / Out history for this product */}
-          <div className="product-detail-history glass rounded-[26px] p-4">
+          <div className="card-flat p-4">
             <div className="mb-2 flex items-center justify-between gap-2">
-              <p className="flex items-center gap-2 text-[12px] font-bold uppercase tracking-wider text-(--ink-2)">
-                <span aria-hidden="true" className="h-3 w-1 rounded-full bg-[#C7FF4D]" />
+              <p className="section-label">
                 Stock history{history.length > 0 ? ` · ${history.length}` : ''}
               </p>
               {history.length > 0 ? (
-                <p className="tnum shrink-0 text-[11.5px] font-bold">
-                  <span className="text-emerald-600 dark:text-emerald-300">+{totalIn} in</span>
-                  <span className="text-(--ink-3)"> · </span>
-                  <span className="text-rose-600 dark:text-rose-300">−{totalOut} out</span>
+                <p className="tnum shrink-0 text-[length:var(--fs-body-sm)] font-semibold">
+                  <span className="text-(--success)">+{totalIn} in</span>
+                  <span className="text-(--outline)"> · </span>
+                  <span className="text-(--error)">−{totalOut} out</span>
                 </p>
               ) : null}
             </div>
             {history.length === 0 ? (
-              <p className="py-3 text-center text-[13px] text-(--ink-2)">
+              <p className="py-3 text-center text-[length:var(--fs-body-md)] text-(--on-surface-variant)">
                 No stock movements yet — use Stock In / Out below.
               </p>
             ) : (
-              <div className="divide-y divide-(--stroke-dim)">
+              <div className="divide-y divide-(--outline-variant)">
                 {history.slice(0, 20).map((t) => (
-                  <div key={t.id} className="flex items-center gap-3 rounded-[18px] px-2 py-3 transition-colors hover:bg-(--accent-soft)/40">
+                  <div key={t.id} className="flex items-center gap-3 px-1 py-3">
                     <StockBadge kind={t.type} />
-                    {isPending(t.id) ? (
-                      <span className="shrink-0 rounded-full bg-(--accent-soft) px-2 py-0.5 text-[10.5px] font-extrabold text-(--accent)">
-                        Saving…
-                      </span>
-                    ) : null}
+                    {isPending(t.id) ? <span className="badge badge-accent">Saving…</span> : null}
                     <div className="min-w-0 flex-1">
-                      <p className="text-xs font-medium leading-relaxed text-(--ink-2)">
+                      <p className="text-[length:var(--fs-body-sm)] leading-relaxed text-(--on-surface-variant)">
                         {dateTimeFmt(t.createdAt)}
                         {t.reason ? ` · ${t.reason}` : ''}
                       </p>
                       {t.note ? (
-                        <p className="mt-0.5 line-clamp-2 break-words text-[13px] leading-snug text-(--ink)">{t.note}</p>
+                        <p className="mt-0.5 line-clamp-2 break-words text-[length:var(--fs-body-sm)] leading-snug text-(--on-surface-variant)">{t.note}</p>
                       ) : null}
                     </div>
                     <span
-                      className={`tnum shrink-0 rounded-full px-2.5 py-1 text-[14px] font-extrabold ${
-                        t.type === 'IN' ? 'bg-emerald-500/12 text-emerald-600 dark:text-emerald-300' : 'bg-rose-500/12 text-rose-600 dark:text-rose-300'
-                      }`}
+                      className={`tnum badge shrink-0 ${t.type === 'IN' ? 'badge-success' : 'badge-danger'}`}
                     >
                       {t.type === 'IN' ? '+' : '−'}
                       {t.quantity}
@@ -585,38 +543,30 @@ function DetailPage({
               </div>
             )}
             {history.length > 20 ? (
-              <p className="tnum pt-2 text-center text-xs font-medium text-(--ink-3)">
+              <p className="tnum pt-2 text-center text-[length:var(--fs-body-sm)] font-medium text-(--outline)">
                 Showing latest 20 of {history.length} — see History tab for all.
               </p>
             ) : null}
           </div>
 
-        {/* Sticky action bar */}
-        <div className="product-detail-actions sticky bottom-[calc(1rem+env(safe-area-inset-bottom,0px))] md:static md:col-span-2">
-          <div className="glass-strong grid grid-cols-2 gap-2 rounded-[26px] p-2">
+          {/* Sticky action bar */}
+          <div className="sticky bottom-2">
+            <div className="card-outlined grid grid-cols-2 gap-2 p-2">
+              <button type="button" onClick={onStockIn} className="btn btn-filled">
+                <ArrowDownToLine size={16} /> Stock In
+              </button>
+              <button type="button" onClick={onStockOut} className="btn btn-tonal">
+                <ArrowUpFromLine size={16} /> Stock Out
+              </button>
+            </div>
             <button
               type="button"
-              onClick={onStockIn}
-              className="press flex min-h-[48px] items-center justify-center gap-1.5 rounded-[20px] bg-[#151515] py-3.5 text-[14.5px] font-bold text-white dark:bg-[#C7FF4D] dark:text-[#151515]"
+              onClick={onDelete}
+              className="btn btn-text mx-auto mt-1 flex text-(--error)"
             >
-              <ArrowDownToLine size={16} /> Stock In
-            </button>
-            <button
-              type="button"
-              onClick={onStockOut}
-              className="press flex min-h-[48px] items-center justify-center gap-1.5 rounded-[20px] bg-[#151515] py-3.5 text-[14.5px] font-bold text-white dark:bg-[#C7FF4D] dark:text-[#151515]"
-            >
-              <ArrowUpFromLine size={16} /> Stock Out
+              <Trash2 size={14} /> Delete product
             </button>
           </div>
-          <button
-            type="button"
-            onClick={onDelete}
-            className="press mx-auto mt-1 flex min-h-[44px] items-center gap-1.5 rounded-2xl px-4 py-2.5 text-[13px] font-bold text-rose-600 dark:text-rose-400"
-          >
-            <Trash2 size={14} /> Delete product
-          </button>
-        </div>
         </div>
       </div>
     </div>,
@@ -626,14 +576,7 @@ function DetailPage({
 
 export const Chip = memo(function Chip({ active, onClick, label }: { active: boolean; onClick: () => void; label: string }) {
   return (
-    <button
-      type="button"
-      onClick={onClick}
-      aria-pressed={active}
-      className={`chip-glass min-h-[40px] shrink-0 rounded-full px-4 py-2 text-[13px] font-bold ${
-        active ? 'bg-(--primary) text-(--primary-foreground)' : 'glass text-(--ink-2)'
-      }`}
-    >
+    <button type="button" onClick={onClick} aria-pressed={active} className="chip shrink-0">
       {label}
     </button>
   );

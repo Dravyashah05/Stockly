@@ -10,18 +10,35 @@ lerna-debug.log*
 # Dependencies + build output
 node_modules
 dist
+<<<<<<< HEAD
+=======
+mobile-app/dist
+server/dist
+dist-ssr
+>>>>>>> bc90ae3b25b8be70ddda745a7984f0a2ba4ae22d
 *.local
 
 # Local environment (ONE root .env — never committed; .example is safe)
 .env
 .env.*
 !.env.example
+<<<<<<< HEAD
 
 # Android (native project lives in apps/mobile/android)
 apps/mobile/android/local.properties
 apps/mobile/android/.gradle
 apps/mobile/android/app/build
 apps/mobile/android/build
+=======
+!mobile-app/.env.example
+!server/.env.example
+mobile-app/.env
+server/.env
+mobile-app/android/local.properties
+mobile-app/android/.gradle
+mobile-app/android/app/build
+mobile-app/android/build
+>>>>>>> bc90ae3b25b8be70ddda745a7984f0a2ba4ae22d
 
 # Editor directories and files
 .vscode/*
@@ -33,3 +50,4 @@ apps/mobile/android/build
 *.njsproj
 *.sln
 *.sw?
+.vercel

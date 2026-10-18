@@ -1,5 +1,6 @@
 import React, { Suspense, lazy, useCallback, useEffect, useRef, useState, useTransition } from 'react';
 import { CloudOff } from 'lucide-react';
+<<<<<<<< HEAD:apps/mobile/src/App.tsx
 import { StoreProvider, useStore } from '@stockly/shared-client/store';
 import { LS_KEYS } from '@stockly/shared-client/config';
 import { authApi, getAuthSession } from '@stockly/shared-client/auth';
@@ -9,6 +10,16 @@ import AuthScreen from './screens/AuthScreen';
 import { RestrictedScreen, SheetSetupScreen } from './screens/AccessScreens';
 import type { Product } from '@stockly/shared-types';
 import { BottomNav, DesktopSidebar, DesktopToolbar, SyncStatus, Toasts, AppLoader, hasOpenOverlay, useOverlayOpen, type TabKey } from './components/ui';
+========
+import { StoreProvider, useStore } from '../shared/store';
+import { authApi, getAuthSession } from '../shared/auth';
+import { sheetsApi, SheetsApiError } from '../shared/connection';
+import { consumeFreshAuth, getCachedProfile, signOutAccount } from '../shared/users';
+import AuthScreen from './screens/AuthScreen';
+import { RestrictedScreen, SheetSetupScreen } from './screens/AccessScreens';
+import type { Product } from '../shared/types';
+import { BottomNav, SyncStatus, Toasts, AppLoader, hasOpenOverlay, useOverlayOpen, type TabKey } from './components/ui';
+>>>>>>>> bc90ae3b25b8be70ddda745a7984f0a2ba4ae22d:mobile-app/src/app/App.tsx
 import HomeScreen from './screens/HomeScreen';
 import type { ProductFilter } from './screens/ProductsScreen';
 
@@ -38,32 +49,16 @@ function Shell() {
     startSwitch(() => setTab(t));
   }, []);
   const [stockReq, setStockReq] = useState<StockRequest>(null);
-  // Desktop sidebar hide/show (persisted; desktop layout only).
-  const [sideCollapsed, setSideCollapsed] = useState(() => {
-    try {
-      return localStorage.getItem(LS_KEYS.sidebar) === '1';
-    } catch {
-      return false;
-    }
-  });
-  const toggleSidebar = useCallback(() => {
-    setSideCollapsed((v) => {
-      try {
-        localStorage.setItem(LS_KEYS.sidebar, v ? '0' : '1');
-      } catch { /* ignore */ }
-      return !v;
-    });
-  }, []);
   const [productFilter, setProductFilter] = useState<ProductFilter>('all');
   const [formOpen, setFormOpen] = useState(false);
   const [editing, setEditing] = useState<Product | null>(null);
-  const { toasts, dismissToast, configured, ready, loading, lastSync, online, pendingIds, failedOps, retryFailedOp, dismissFailedOp } = useStore();
+  const { toasts, dismissToast, configured, ready, loading, lastSync, pendingIds, failedOps, retryFailedOp, dismissFailedOp } = useStore();
   // Hide the bottom nav under any popup so sheet buttons are never covered.
   const overlayOpen = useOverlayOpen();
   const showSync = !overlayOpen && (pendingIds.length > 0 || failedOps.length > 0);
 
   /* Branded startup loader: shows on every cold start for a minimum
-   *  brand moment (~1.5s) while screens mount + fetch underneath. Cached
+   *  brand moment (~1s) while screens mount + fetch underneath. Cached
    *  screens are usable immediately after; uncached first installs keep
    *  the loader until the initial request settles. A 12s safety forces it
    *  away on hung networks — the app behind shows skeletons/offline
@@ -77,7 +72,7 @@ function Shell() {
     return () => window.clearTimeout(t);
   }, []);
   useEffect(() => {
-    const t = window.setTimeout(() => setMinElapsed(true), 1500);
+    const t = window.setTimeout(() => setMinElapsed(true), 1000);
     return () => window.clearTimeout(t);
   }, []);
   const dataReady = ready || !configured;
@@ -126,7 +121,6 @@ function Shell() {
   const closeForm = useCallback(() => setFormOpen(false), []);
   const closeStock = useCallback(() => setStockReq(null), []);
   const retryOp = useCallback((k: string) => void retryFailedOp(k), [retryFailedOp]);
-  const pageTitle = tab === 'home' ? 'Dashboard' : tab === 'products' ? 'Products' : tab === 'history' ? 'Transaction History' : 'Settings';
 
   /* Horizontal swipe switches tabs. Guards keep it out of the way:
    * - single touch only, inputs never start a swipe;
@@ -221,19 +215,16 @@ function Shell() {
   }, []);
 
   return (
-    <div className="min-h-dvh bg-(--bg) text-(--ink)">
-      <div className="ambient" aria-hidden="true" />
-      <div className={`app-shell relative z-[1] mx-auto min-h-dvh max-w-md sm:border-x sm:border-(--stroke-dim) ${sideCollapsed ? 'side-collapsed' : ''}`}>
-        <DesktopSidebar tab={tab} onNavigate={switchTab} onStock={openStock} collapsed={sideCollapsed} />
-        <DesktopToolbar title={pageTitle} online={online} pending={pendingIds.length} failed={failedOps.length} lastSync={lastSync} sideCollapsed={sideCollapsed} onToggleSidebar={toggleSidebar} />
+    <div className="min-h-dvh bg-(--surface) text-(--on-surface)">
+      <div className="relative z-[1] mx-auto min-h-dvh w-full max-w-[34rem]">
         {!configured ? (
-          <div className="backend-banner safe-top sticky top-0 z-20 px-3 pt-3">
+          <div className="safe-top sticky top-0 z-20 px-4 pt-3">
             <button
               onClick={() => setTab('settings')}
-              className="glass mx-auto flex w-full max-w-md items-center gap-2.5 rounded-2xl border-amber-500/25 px-4 py-3 text-left"
+              className="card-outlined state-tint flex w-full items-center gap-2.5 rounded-[var(--shape-md)] px-4 py-3 text-left"
             >
-              <CloudOff size={18} className="shrink-0 text-amber-500" />
-              <span className="flex-1 text-[13px] font-medium text-(--ink)">
+              <CloudOff size={18} className="shrink-0 text-(--warning-strong)" />
+              <span className="flex-1 text-[length:var(--fs-body-md)] font-medium text-(--on-surface)">
                 Backend not connected — tap to paste your Apps Script URL.
               </span>
             </button>
@@ -249,10 +240,9 @@ function Shell() {
           onTouchStart={onSwipeStart}
           onTouchEnd={onSwipeEnd}
           onTouchCancel={onSwipeCancel}
-          className="swipe-zone"
         >
         {tab === 'home' ? (
-          <div className="animate-page-in">
+          <div className="animate-screen-in">
             <HomeScreen
               onAddProduct={openAdd}
               onStockIn={stockInHome}
@@ -266,7 +256,7 @@ function Shell() {
         ) : null}
         <Suspense fallback={null}>
           {tab === 'products' ? (
-            <div key={productFilter} className="animate-page-in">
+            <div key={productFilter} className="animate-screen-in">
               <ProductsScreen
                 initialFilter={productFilter}
                 onAdd={openAdd}
@@ -277,12 +267,12 @@ function Shell() {
             </div>
           ) : null}
           {tab === 'history' ? (
-            <div className="animate-page-in">
+            <div className="animate-screen-in">
               <HistoryScreen />
             </div>
           ) : null}
           {tab === 'settings' ? (
-            <div className="animate-page-in">
+            <div className="animate-screen-in">
               <SettingsScreen />
             </div>
           ) : null}
@@ -343,14 +333,23 @@ function Gate() {
       setPhase({ name: 'login' });
       return;
     }
-    let accountStatus = 'active';
-    try {
-      const me = await authApi.me();
-      accountStatus = me.user.accountStatus;
-    } catch (e) {
+    /* Fast path: a just-verified login/register/adopt proved identity +
+     * status seconds ago — skip the duplicate me() round-trip. The sheet
+     * check below still re-validates session + suspension server-side.
+     * Otherwise both independent checks run in parallel (each is slow:
+     * separate Apps Script round-trips), account verdict first. */
+    const skipAccountCheck =
+      consumeFreshAuth() && getCachedProfile()?.accountStatus === 'active';
+    const [meRes, connRes] = await Promise.allSettled([
+      skipAccountCheck
+        ? Promise.resolve({ user: { accountStatus: 'active' } })
+        : authApi.me(),
+      sheetsApi.getConnection(),
+    ]);
+    if (meRes.status === 'rejected') {
       // Dead/expired session → back to login. Anything else keeps the
       // cached shell away from protected data until retry.
-      const status = (e as { status?: number }).status;
+      const status = (meRes.reason as { status?: number })?.status;
       if (status === 401) {
         signOutAccount();
         setPhase({ name: 'login' });
@@ -359,21 +358,12 @@ function Gate() {
       }
       return;
     }
-    if (accountStatus !== 'active') {
-      setPhase({ name: 'restricted', status: accountStatus });
+    if (meRes.value.user.accountStatus !== 'active') {
+      setPhase({ name: 'restricted', status: meRes.value.user.accountStatus });
       return;
     }
-    try {
-      const conn = await sheetsApi.getConnection();
-      if (conn.connected && conn.status === 'verified') {
-        setConfiguredFlag();
-        setPhase({ name: 'app' });
-      } else if (conn.status === 'failed' || conn.status === 'revoked') {
-        setPhase({ name: 'repair', message: 'Your sheet connection failed verification. Reconnect below.' });
-      } else {
-        setPhase({ name: 'setup' });
-      }
-    } catch (e) {
+    if (connRes.status === 'rejected') {
+      const e = connRes.reason;
       if (e instanceof SheetsApiError && e.status === 401) {
         signOutAccount();
         setPhase({ name: 'login' });
@@ -382,6 +372,16 @@ function Gate() {
       } else {
         setPhase({ name: 'setup', message: 'Could not check your sheet connection. Try again.' });
       }
+      return;
+    }
+    const conn = connRes.value;
+    if (conn.connected && conn.status === 'verified') {
+      setConfiguredFlag();
+      setPhase({ name: 'app' });
+    } else if (conn.status === 'failed' || conn.status === 'revoked') {
+      setPhase({ name: 'repair', message: 'Your sheet connection failed verification. Reconnect below.' });
+    } else {
+      setPhase({ name: 'setup' });
     }
   }, [setConfiguredFlag]);
 
@@ -416,9 +416,7 @@ function Gate() {
 
   if (phase.name === 'loading') {
     return (
-      <div className="min-h-dvh bg-(--bg) text-(--ink)">
-        <div className="ambient" aria-hidden="true" />
-      </div>
+      <div className="min-h-dvh bg-(--surface) text-(--on-surface)" />
     );
   }
   if (phase.name === 'login') {

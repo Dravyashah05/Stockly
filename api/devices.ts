@@ -1,5 +1,6 @@
-import { ensureSchemaCached } from './schema.ts';
-import { adminScriptConfigured, scriptAppendRow, scriptReadTab, scriptUpdateRowById } from './apps-script-client.ts';
+import { ensureSchemaCached } from './schema.js';
+import { applyApiCors } from './cors.js';
+import { adminScriptConfigured, scriptAppendRow, scriptReadTab, scriptUpdateRowById } from './apps-script-client.js';
 /* Stockly device-linking API (Vercel serverless, server-side only).
  *
  * WhatsApp-Web-style Stockly-to-Stockly linking (no WhatsApp integration).
@@ -21,7 +22,7 @@ import { adminScriptConfigured, scriptAppendRow, scriptReadTab, scriptUpdateRowB
  */
 
 import { createHmac, timingSafeEqual } from 'node:crypto';
-import { ADMIN_TABS, buildLogEntry, isValidEmail, newId } from './admin-logic.ts';
+import { ADMIN_TABS, buildLogEntry, isValidEmail, newId } from './admin-logic.js';
 import {
   CODE_LINK_TTL_MS,
   DEVICE_SESSION_TTL_MS,
@@ -50,8 +51,8 @@ import {
   type DeviceSession,
   type LinkMethod,
   type LinkedDevice,
-} from './device-logic.ts';
-import { verifyAuthSession } from './auth-logic.ts';
+} from './device-logic.js';
+import { verifyAuthSession } from './auth-logic.js';
 
 type QueryValue = string | string[] | undefined;
 
@@ -304,11 +305,7 @@ function setupHelp(): Record<string, string[]> {
 
 export default async function handler(req: DevicesReq, res: DevicesRes): Promise<void> {
   res.setHeader('Cache-Control', 'no-store');
-  // Native Android WebViews call the deployed backend cross-origin:
-  // allow preflight + Authorization/device headers (no cookies used).
-  res.setHeader('Access-Control-Allow-Origin', '*');
-  res.setHeader('Access-Control-Allow-Methods', 'GET, POST, OPTIONS');
-  res.setHeader('Access-Control-Allow-Headers', 'Content-Type, Authorization, X-Device-Session');
+  applyApiCors(req, res);
   if (req.method === 'OPTIONS') {
     res.status(200).json({ success: true });
     return;
@@ -481,12 +478,12 @@ export default async function handler(req: DevicesReq, res: DevicesRes): Promise
         return;
       }
       const { store } = getStore();
-      const device = await store.getDevice(deviceId);
+      // Both reads key off the presented session — run them together.
+      const [device, reg] = await Promise.all([store.getDevice(deviceId), readRegistryUser(userId)]);
       if (!device || device.userId !== userId || device.status !== 'active') {
         res.status(200).json({ success: true, data: { valid: false, reason: 'revoked' } });
         return;
       }
-      const reg = await readRegistryUser(userId);
       if (!reg || reg.accountStatus !== 'active') {
         res.status(200).json({ success: true, data: { valid: false, reason: 'suspended' } });
         return;
@@ -514,7 +511,12 @@ export default async function handler(req: DevicesReq, res: DevicesRes): Promise
       }
       const userId = authSession.userId;
       const { store } = getStore();
-      const reg = await readRegistryUser(userId);
+      // All three reads are independent — run them together.
+      const [reg, devices, prior] = await Promise.all([
+        readRegistryUser(userId),
+        store.listDevicesForUser(userId),
+        store.getDevice(deviceId),
+      ]);
       if (!reg) {
         res.status(404).json({ success: false, error: 'Account not found. Register first, then try again.' });
         return;
@@ -523,7 +525,7 @@ export default async function handler(req: DevicesReq, res: DevicesRes): Promise
         res.status(403).json({ success: false, error: 'This account is not active. Contact the owner.' });
         return;
       }
-      const existing = (await store.listDevicesForUser(userId)).filter((d) => d.status === 'active');
+      const existing = devices.filter((d) => d.status === 'active');
       if (existing.length > 0 && !existing.some((d) => d.deviceId === deviceId)) {
         res.status(409).json({
           success: false,
@@ -534,7 +536,6 @@ export default async function handler(req: DevicesReq, res: DevicesRes): Promise
       }
       const meta = sanitizeDeviceMeta({ name: body.deviceName, platform: body.platform, appInfo: body.appInfo });
       const now = new Date().toISOString();
-      const prior = await store.getDevice(deviceId);
       await store.upsertDevice({
         deviceId,
         userId,
@@ -545,12 +546,14 @@ export default async function handler(req: DevicesReq, res: DevicesRes): Promise
         linkedAt: prior?.linkedAt ?? now,
         lastActiveAt: now,
       });
-      await auditLog({
+      // Audit persists in the background: the response below carries the
+      // freshly minted device session and needs no write result.
+      auditLog({
         adminId: `device:${deviceId}`,
         action: 'device.enrollPrimary',
         targetUserId: userId,
         newValue: meta.name,
-      });
+      }).catch(() => undefined);
       const session = createDeviceSession(userId, deviceId, deviceSecret(), DEVICE_SESSION_TTL_MS);
       res.status(200).json({ success: true, data: { deviceSession: session, deviceId, userId } });
       return;

@@ -135,7 +135,7 @@ function readTheme(): ThemeMode {
     const t = localStorage.getItem(LS_KEYS.theme);
     if (t === 'light' || t === 'dark' || t === 'system') return t;
   } catch { /* noop */ }
-  return 'system';
+  return 'light';
 }
 
 let toastId = 1;
@@ -280,7 +280,7 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
     document.documentElement.classList.toggle('dark', dark);
     document.documentElement.style.colorScheme = dark ? 'dark' : 'light';
     document.querySelectorAll('meta[name="theme-color"]').forEach((meta) => {
-      meta.setAttribute('content', dark ? '#111210' : '#F7F7F2');
+      meta.setAttribute('content', dark ? '#111318' : '#F7F7FB');
     });
     try {
       localStorage.setItem(LS_KEYS.theme, theme);
@@ -290,7 +290,7 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
       try {
         const { StatusBar, Style } = await import('@capacitor/status-bar');
         await StatusBar.setStyle({ style: dark ? Style.Dark : Style.Light });
-        await StatusBar.setBackgroundColor({ color: dark ? '#111210' : '#f7f7f2' });
+      await StatusBar.setBackgroundColor({ color: dark ? '#111318' : '#F7F7FB' });
       } catch { /* web — ignore */ }
     })();
   }, [dark, theme]);
@@ -303,7 +303,7 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
       document.documentElement.classList.toggle('dark', mq.matches);
       document.documentElement.style.colorScheme = mq.matches ? 'dark' : 'light';
       document.querySelectorAll('meta[name="theme-color"]').forEach((meta) => {
-        meta.setAttribute('content', mq.matches ? '#111210' : '#F7F7F2');
+        meta.setAttribute('content', mq.matches ? '#111318' : '#F7F7FB');
       });
     };
     mq.addEventListener?.('change', apply);
