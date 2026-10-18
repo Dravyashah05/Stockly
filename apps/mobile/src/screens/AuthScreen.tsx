@@ -37,7 +37,12 @@ export default function AuthScreen({ onAuthed }: { onAuthed: () => void }) {
       }
       onAuthed();
     } catch (e) {
-      setError(errMsg(e));
+      const msg = errMsg(e);
+      if (mode === 'login' && msg.toLowerCase().includes('incorrect email or password')) {
+        setError('Incorrect email or password. If you are new, switch to "Register" to create your account.');
+      } else {
+        setError(msg);
+      }
     } finally {
       setBusy(false);
     }
