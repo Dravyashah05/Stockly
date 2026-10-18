@@ -1,7 +1,7 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
-import { interpretApiResponse } from '../src/shared/api-response.ts';
-import { isAppsScriptExecUrl } from '../src/shared/config.ts';
+import { interpretApiResponse } from '../packages/shared-types/src/api-response.ts';
+import { isAppsScriptExecUrl } from '../packages/shared-validation/src/index.ts';
 
 function meta(overrides: Partial<Parameters<typeof interpretApiResponse>[0]> = {}) {
   return {

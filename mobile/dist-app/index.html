@@ -1,0 +1,40 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <link rel="icon" type="image/svg+xml" href="/icons.svg" />
+    <link rel="apple-touch-icon" href="/icons.svg" />
+    <meta
+      name="viewport"
+      content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover"
+    />
+    <meta name="theme-color" content="#F7F7F2" media="(prefers-color-scheme: light)" />
+    <meta name="theme-color" content="#111210" media="(prefers-color-scheme: dark)" />
+    <script>
+      (() => {
+        try {
+          const saved = localStorage.getItem('stockly.theme');
+          const dark = saved === 'dark' || (saved !== 'light' && matchMedia('(prefers-color-scheme: dark)').matches);
+          document.documentElement.classList.toggle('dark', dark);
+          document.documentElement.style.colorScheme = dark ? 'dark' : 'light';
+          document.querySelectorAll('meta[name="theme-color"]').forEach((meta) => {
+            meta.setAttribute('content', dark ? '#111210' : '#F7F7F2');
+          });
+        } catch { /* Theme is applied by the app once it starts. */ }
+      })();
+    </script>
+    <meta name="mobile-web-app-capable" content="yes" />
+    <meta name="apple-mobile-web-app-capable" content="yes" />
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+    <meta name="description" content="Stockly - Simple mobile stock management for small business" />
+    <title>Stockly — Stock Management</title>
+    <script type="module" crossorigin src="/assets/app-aBP9PR2u.js"></script>
+    <link rel="modulepreload" crossorigin href="/assets/rolldown-runtime-hePW80VL.js">
+    <link rel="modulepreload" crossorigin href="/assets/libs-DLsFpCJM.js">
+    <link rel="modulepreload" crossorigin href="/assets/vendor-DsbJdxtn.js">
+    <link rel="stylesheet" crossorigin href="/assets/app-CWp7Pb2M.css">
+  </head>
+  <body>
+    <div id="root"></div>
+  </body>
+</html>

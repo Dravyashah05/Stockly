@@ -4,7 +4,7 @@ import { execFileSync } from 'node:child_process';
 import { mkdtempSync, writeFileSync, readFileSync, rmSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
-import { fetchLatestRelease, formatApkSize, isReleaseInfoLike, mapReleasePayload } from '../src/shared/releases.ts';
+import { fetchLatestRelease, formatApkSize, isReleaseInfoLike, mapReleasePayload } from '../packages/shared-client/src/releases.ts';
 import { assertVersionsMatch, buildReleaseJson, parseBadging, readVersions } from '../scripts/release-info.mjs';
 
 function ghRelease(overrides = {}) {

@@ -1,0 +1,13 @@
+{
+  "name": "@stockly/shared-validation",
+  "private": true,
+  "version": "1.0.0",
+  "type": "module",
+  "description": "Pure validation rules shared by the mobile app, the website, and the backend (accounts, sheet URLs, products, stock movements).",
+  "exports": {
+    ".": "./src/index.ts"
+  },
+  "scripts": {
+    "typecheck": "tsc -b"
+  }
+}

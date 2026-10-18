@@ -27,20 +27,19 @@
  */
 
 import cors from 'cors';
-import dotenv from 'dotenv';
 import express, {
   type NextFunction,
   type Request,
   type Response,
 } from 'express';
-import { fileURLToPath } from 'node:url';
-import path from 'node:path';
 
-// Load server/.env first, then fall back to repo-root .env so existing
-// local setups keep working without copying files around.
-const here = path.dirname(fileURLToPath(import.meta.url));
-dotenv.config({ path: path.resolve(here, '../.env') });
-dotenv.config({ path: path.resolve(here, '../../.env') });
+// Load + validate the SINGLE root .env before any handler module runs
+// (path anchored to this file — independent of the caller's cwd).
+// Import order matters: ./env executes its loader at import time, ahead
+// of the api/* handlers below.
+import { loadRootEnv, validateEnvOrExit } from './env.ts';
+
+loadRootEnv();
 
 // Canonical handlers — the single implementation (also used by Vercel).
 import adminHandler from '../../api/admin.ts';
@@ -139,6 +138,7 @@ export function createApp(): express.Express {
 
 const PORT = Number(process.env.PORT || '5000');
 if (process.env.NODE_ENV !== 'test') {
+  validateEnvOrExit();
   createApp().listen(PORT, () => {
     console.info(`[stockly-server] listening on http://localhost:${PORT}`);
   });

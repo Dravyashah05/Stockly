@@ -1,0 +1,43 @@
+{
+  "name": "@stockly/mobile",
+  "private": true,
+  "version": "1.0.0",
+  "type": "module",
+  "description": "Stockly mobile app (React + TypeScript + Vite, packaged for Android with Capacitor).",
+  "scripts": {
+    "dev": "vite",
+    "build": "tsc -b && vite build",
+    "preview": "vite preview",
+    "typecheck": "tsc -b",
+    "lint": "oxlint"
+  },
+  "dependencies": {
+    "@capacitor/app": "^8.0.0",
+    "@capacitor/core": "^8.0.0",
+    "@capacitor/haptics": "^8.0.0",
+    "@capacitor/keyboard": "^8.0.0",
+    "@capacitor/network": "^8.0.0",
+    "@capacitor/splash-screen": "^8.0.0",
+    "@capacitor/status-bar": "^8.0.0",
+    "@stockly/shared-client": "*",
+    "@stockly/shared-types": "*",
+    "@stockly/shared-validation": "*",
+    "@stockly/ui": "*",
+    "html5-qrcode": "^2.3.8",
+    "lucide-react": "^0.554.0",
+    "react": "^19.2.8",
+    "react-dom": "^19.2.8",
+    "react-qr-code": "^2.2.0"
+  },
+  "devDependencies": {
+    "@capacitor/android": "^8.0.0",
+    "@tailwindcss/vite": "^4.1.14",
+    "@types/node": "^24.13.3",
+    "@types/react": "^19.2.18",
+    "@types/react-dom": "^19.2.7",
+    "@vitejs/plugin-react": "^6.1.1",
+    "tailwindcss": "^4.1.14",
+    "typescript": "~5.9.3",
+    "vite": "^8.3.0"
+  }
+}

@@ -7,28 +7,21 @@ yarn-error.log*
 pnpm-debug.log*
 lerna-debug.log*
 
+# Dependencies + build output
 node_modules
 dist
-app/dist
-admin/dist
-server/dist
-mobile/dist-app
-dist-web
-dist-ssr
 *.local
+
+# Local environment (ONE root .env — never committed; .example is safe)
 .env
 .env.*
 !.env.example
-!app/.env.example
-!admin/.env.example
-!server/.env.example
-app/.env
-admin/.env
-server/.env
-mobile/android/local.properties
-mobile/android/.gradle
-mobile/android/app/build
-mobile/android/build
+
+# Android (native project lives in apps/mobile/android)
+apps/mobile/android/local.properties
+apps/mobile/android/.gradle
+apps/mobile/android/app/build
+apps/mobile/android/build
 
 # Editor directories and files
 .vscode/*

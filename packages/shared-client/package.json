@@ -1,0 +1,30 @@
+{
+  "name": "@stockly/shared-client",
+  "private": true,
+  "version": "1.0.0",
+  "type": "module",
+  "description": "Browser data layer shared by the mobile app and the website: API client, inventory store, auth/device/profile sessions, release metadata.",
+  "exports": {
+    ".": "./src/index.ts",
+    "./api": "./src/api.ts",
+    "./store": "./src/store.tsx",
+    "./config": "./src/config.ts",
+    "./auth": "./src/auth.ts",
+    "./devices": "./src/devices.ts",
+    "./users": "./src/users.ts",
+    "./connection": "./src/connection.ts",
+    "./releases": "./src/releases.ts",
+    "./admin-api": "./src/admin-api.ts"
+  },
+  "scripts": {
+    "typecheck": "tsc -b"
+  },
+  "dependencies": {
+    "@stockly/shared-types": "*",
+    "@stockly/shared-validation": "*"
+  },
+  "peerDependencies": {
+    "react": "^19",
+    "react-dom": "^19"
+  }
+}

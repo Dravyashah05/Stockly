@@ -1,0 +1,33 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <link rel="icon" type="image/svg+xml" href="/icons.svg" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
+    <meta name="description" content="Stockly — inventory management that makes stock tracking simple, fast, and effortless. Know your stock. Move with clarity." />
+    <meta name="theme-color" content="#F7F7F2" media="(prefers-color-scheme: light)" />
+    <meta name="theme-color" content="#111210" media="(prefers-color-scheme: dark)" />
+    <meta property="og:title" content="Stockly — Know your stock. Move with clarity." />
+    <meta property="og:description" content="Your inventory. Under control. Stockly for Android with Google Sheets sync." />
+    <meta property="og:type" content="website" />
+    <meta name="twitter:card" content="summary" />
+    <title>Stockly — Know your stock. Move with clarity.</title>
+    <script>
+      (() => {
+        try {
+          const saved = localStorage.getItem('stockly.theme');
+          const dark = saved === 'dark' || (saved !== 'light' && matchMedia('(prefers-color-scheme: dark)').matches);
+          document.documentElement.classList.toggle('dark', dark);
+          document.documentElement.style.colorScheme = dark ? 'dark' : 'light';
+          document.querySelectorAll('meta[name="theme-color"]').forEach((meta) => {
+            meta.setAttribute('content', dark ? '#111210' : '#F7F7F2');
+          });
+        } catch { /* Theme is applied again by the app once it starts. */ }
+      })();
+    </script>
+  </head>
+  <body>
+    <div id="root"></div>
+    <script type="module" src="/src/main.tsx"></script>
+  </body>
+</html>

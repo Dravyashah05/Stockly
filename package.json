@@ -3,50 +3,32 @@
   "private": true,
   "version": "1.0.0",
   "type": "module",
-  "description": "Stockly - Mobile stock management for small business",
+  "description": "Stockly - inventory management platform: Android app, responsive website, one shared backend.",
+  "workspaces": [
+    "apps/*",
+    "packages/*",
+    "server"
+  ],
   "scripts": {
-    "dev": "vite",
-    "dev:app": "vite --open app.html",
-    "dev:user": "npm --prefix app run dev",
-    "dev:admin": "npm --prefix admin run dev",
-    "dev:server": "npm --prefix server run dev",
-    "build": "tsc -b && vite build",
-    "build:app": "tsc -b && vite build --config vite.config.app.ts && node scripts/finalize-app-bundle.mjs",
-    "build:web": "tsc -b && vite build --config vite.config.web.ts",
-    "build:user": "npm --prefix app run build",
-    "build:admin": "npm --prefix admin run build",
-    "lint": "oxlint",
+    "dev": "node scripts/dev.mjs",
+    "dev:website": "npm run dev --workspace @stockly/website",
+    "dev:mobile": "npm run dev --workspace @stockly/mobile",
+    "dev:server": "npm run dev --workspace @stockly/server",
+    "build": "npm run build:website && npm run build:mobile",
+    "build:website": "npm run build --workspace @stockly/website",
+    "build:mobile": "npm run build --workspace @stockly/mobile",
+    "typecheck": "tsc -b && npm run typecheck --workspace @stockly/server",
     "test": "node --experimental-strip-types --test tests/api-response.test.ts tests/releases.test.ts tests/user-registry.test.ts tests/admin-auth.test.ts tests/device-link.test.ts tests/auth.test.ts",
-    "preview": "vite preview",
+    "lint": "oxlint",
+    "preview": "npm run preview --workspace @stockly/website",
     "cap:sync": "cap sync android",
     "cap:open": "cap open android",
-    "android:build": "npm run build:app && npm run cap:sync"
-  },
-  "dependencies": {
-    "@capacitor/android": "^8.0.0",
-    "@capacitor/app": "^8.0.0",
-    "@capacitor/core": "^8.0.0",
-    "@capacitor/haptics": "^8.0.0",
-    "@capacitor/keyboard": "^8.0.0",
-    "@capacitor/network": "^8.0.0",
-    "@capacitor/splash-screen": "^8.0.0",
-    "@capacitor/status-bar": "^8.0.0",
-    "html5-qrcode": "^2.3.8",
-    "lucide-react": "^0.554.0",
-    "react": "^19.2.8",
-    "react-dom": "^19.2.8",
-    "react-qr-code": "^2.2.0"
+    "android:build": "npm run build:mobile && npm run cap:sync && node scripts/build-apk.mjs"
   },
   "devDependencies": {
     "@capacitor/cli": "^8.0.0",
-    "@tailwindcss/vite": "^4.1.14",
     "@types/node": "^24.13.3",
-    "@types/react": "^19.2.18",
-    "@types/react-dom": "^19.2.7",
-    "@vitejs/plugin-react": "^6.1.1",
     "oxlint": "^1.81.0",
-    "tailwindcss": "^4.1.14",
-    "typescript": "~5.9.3",
-    "vite": "^8.3.0"
+    "typescript": "~5.9.3"
   }
 }

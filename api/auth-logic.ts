@@ -40,38 +40,29 @@ export interface AuthSession {
 
 export const AUTH_SESSION_TTL_MS = 30 * 24 * 3600 * 1000;
 
-const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-const USER_ID_RE = /^[A-Za-z0-9_-]{8,64}$/;
+/* Account-field rules live in @stockly/shared-validation — one rule set
+ * shared with both frontends. The historical export names below are kept
+ * so every caller and test observes the exact same implementation. */
+import {
+  isValidEmail,
+  isValidUserId,
+  normalizeEmail,
+  validateDisplayName,
+  validatePassword,
+} from '@stockly/shared-validation';
 
-export function normalizeAuthEmail(email: unknown): string {
-  return String(email ?? '').trim().toLowerCase();
-}
+// Local aliases keep the historical names this module's logic calls.
+const isValidAuthEmail = isValidEmail;
+const isValidAuthUserId = isValidUserId;
+const normalizeAuthEmail = normalizeEmail;
 
-export function isValidAuthEmail(email: unknown): boolean {
-  const e = normalizeAuthEmail(email);
-  return e.length > 0 && e.length <= 254 && EMAIL_RE.test(e);
-}
-
-export function isValidAuthUserId(id: unknown): boolean {
-  return typeof id === 'string' && USER_ID_RE.test(id.trim());
-}
-
-export function validateDisplayName(name: unknown): string {
-  const n = String(name ?? '').trim().replace(/\s+/g, ' ');
-  if (!n) throw new Error('Enter your name.');
-  if (n.length > 80) throw new Error('Name is too long (max 80 characters).');
-  return n;
-}
-
-export function validatePassword(password: unknown): string {
-  const p = String(password ?? '');
-  if (p.length < 8) throw new Error('Password must be at least 8 characters.');
-  if (p.length > 256) throw new Error('Password is too long (max 256 characters).');
-  if (!/[A-Za-z]/.test(p) || !/[0-9]/.test(p)) {
-    throw new Error('Password must include both letters and numbers.');
-  }
-  return p;
-}
+export {
+  isValidAuthEmail,
+  isValidAuthUserId,
+  normalizeAuthEmail,
+  validateDisplayName,
+  validatePassword,
+};
 
 /* ------------------------- password hashing (scrypt) ------------------------- */
 

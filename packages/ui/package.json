@@ -1,0 +1,20 @@
+{
+  "name": "@stockly/ui",
+  "private": true,
+  "version": "1.0.0",
+  "type": "module",
+  "description": "Stockly Liquid Glass design system: tokens plus reusable surface, control, overlay, and state components shared by the mobile app and the website.",
+  "exports": {
+    ".": "./src/index.ts",
+    "./styles.css": "./src/styles.css",
+    "./tokens.css": "./src/tokens.css",
+    "./brand.css": "./src/brand.css"
+  },
+  "scripts": {
+    "typecheck": "tsc -b"
+  },
+  "peerDependencies": {
+    "react": "^19",
+    "react-dom": "^19"
+  }
+}

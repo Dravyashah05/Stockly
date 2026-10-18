@@ -1,0 +1,15 @@
+{
+  "name": "@stockly/shared-types",
+  "private": true,
+  "version": "1.0.0",
+  "type": "module",
+  "description": "Stockly domain types and API response envelope shared by both frontends and the backend.",
+  "exports": {
+    ".": "./src/index.ts",
+    "./types": "./src/types.ts",
+    "./api-response": "./src/api-response.ts"
+  },
+  "scripts": {
+    "typecheck": "tsc -b"
+  }
+}

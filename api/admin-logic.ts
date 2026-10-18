@@ -64,23 +64,15 @@ export interface AdminSession {
   exp: number;
 }
 
-const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-const USER_ID_RE = /^[A-Za-z0-9_-]{8,64}$/;
 const ADMIN_ID_RE = /^[A-Za-z0-9_-]{8,64}$/;
 const SETTING_KEY_RE = /^[A-Za-z0-9_.-]{1,64}$/;
 
-export function normalizeEmail(email: unknown): string {
-  return String(email ?? '').trim().toLowerCase();
-}
+/* Account-field rules live in @stockly/shared-validation — one rule set
+ * shared with both frontends and the auth handler. Historical names are
+ * re-exported so every caller and test keeps working unchanged. */
+import { isValidEmail, isValidUserId, normalizeEmail } from '@stockly/shared-validation';
 
-export function isValidEmail(email: unknown): boolean {
-  const e = normalizeEmail(email);
-  return e.length > 0 && e.length <= 254 && EMAIL_RE.test(e);
-}
-
-export function isValidUserId(id: unknown): boolean {
-  return typeof id === 'string' && USER_ID_RE.test(id.trim());
-}
+export { isValidEmail, isValidUserId, normalizeEmail };
 
 export function isValidAdminId(id: unknown): boolean {
   return typeof id === 'string' && ADMIN_ID_RE.test(id.trim());
