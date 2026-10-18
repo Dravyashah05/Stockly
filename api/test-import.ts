@@ -14,15 +14,20 @@ interface Res {
 
 export default async function handler(req: Req, res: Res): Promise<void> {
   res.setHeader('Cache-Control', 'no-store');
-  const results: Record<string, string> = {
+  const fs = await import('node:fs');
+  const path = await import('node:path');
+  const results: Record<string, unknown> = {
     nodeVersion: process.version,
+    taskFiles: fs.readdirSync('/var/task'),
+    apiFiles: fs.existsSync('/var/task/api') ? fs.readdirSync('/var/task/api') : 'NOT_FOUND',
   };
 
   try {
-    await import('./auth-logic.ts');
-    results.authLogic = 'OK';
+    // @ts-ignore
+    await import('./auth-logic.js');
+    results.authLogicJs = 'OK';
   } catch (e: unknown) {
-    results.authLogic = e instanceof Error ? (e.stack || e.message) : String(e);
+    results.authLogicJs = e instanceof Error ? (e.stack || e.message) : String(e);
   }
 
   try {
