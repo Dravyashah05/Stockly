@@ -15,7 +15,7 @@
     "dev:mobile": "npm run dev --workspace @stockly/mobile",
     "dev:server": "npm run dev --workspace @stockly/server",
     "build": "npm run build:packages && npm run build:website && npm run build:mobile",
-    "build:packages": "npm run build --workspace @stockly/shared-validation && node scripts/build-api-helpers.mjs",
+    "build:packages": "npm run build --workspace @stockly/shared-validation",
     "build:website": "npm run build:packages && npm run build --workspace @stockly/website",
     "build:mobile": "npm run build:packages && npm run build --workspace @stockly/mobile",
     "typecheck": "tsc -b && npm run typecheck --workspace @stockly/server",

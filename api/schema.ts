@@ -24,7 +24,7 @@ export interface SchemaResult {
   existing: string[];
 }
 
-import { adminScriptConfigured, scriptCall } from './apps-script-client.js';
+import { adminScriptConfigured, scriptCall } from './apps-script-client.ts';
 
 // Per-instance cache: one setup call per 10 minutes, not per request.
 // Serverless instances are ephemeral; the guard only avoids repeat work
