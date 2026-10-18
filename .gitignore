@@ -10,6 +10,7 @@ lerna-debug.log*
 # Dependencies + build output
 node_modules
 dist
+!packages/shared-validation/dist
 *.local
 
 # Local environment (ONE root .env — never committed; .example is safe)

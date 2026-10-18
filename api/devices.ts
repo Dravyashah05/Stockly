@@ -1,5 +1,5 @@
-import { ensureSchemaCached } from './schema.ts';
-import { adminScriptConfigured, scriptAppendRow, scriptReadTab, scriptUpdateRowById } from './apps-script-client.ts';
+import { ensureSchemaCached } from './schema.js';
+import { adminScriptConfigured, scriptAppendRow, scriptReadTab, scriptUpdateRowById } from './apps-script-client.js';
 /* Stockly device-linking API (Vercel serverless, server-side only).
  *
  * WhatsApp-Web-style Stockly-to-Stockly linking (no WhatsApp integration).
@@ -21,7 +21,7 @@ import { adminScriptConfigured, scriptAppendRow, scriptReadTab, scriptUpdateRowB
  */
 
 import { createHmac, timingSafeEqual } from 'node:crypto';
-import { ADMIN_TABS, buildLogEntry, isValidEmail, newId } from './admin-logic.ts';
+import { ADMIN_TABS, buildLogEntry, isValidEmail, newId } from './admin-logic.js';
 import {
   CODE_LINK_TTL_MS,
   DEVICE_SESSION_TTL_MS,
@@ -50,8 +50,8 @@ import {
   type DeviceSession,
   type LinkMethod,
   type LinkedDevice,
-} from './device-logic.ts';
-import { verifyAuthSession } from './auth-logic.ts';
+} from './device-logic.js';
+import { verifyAuthSession } from './auth-logic.js';
 
 type QueryValue = string | string[] | undefined;
 

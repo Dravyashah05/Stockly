@@ -1,4 +1,4 @@
-import { ensureSchemaCached } from './schema.ts';
+import { ensureSchemaCached } from './schema.js';
 /* Stockly user-sheet gateway (Vercel serverless, server-side only).
  *
  * Every user connects their OWN spreadsheet; the verified association
@@ -18,9 +18,9 @@ import { ensureSchemaCached } from './schema.ts';
  * DEVICE_SESSION_SECRET for device checks.
  */
 
-import { adminScriptConfigured, scriptAppendRow, scriptReadTab, scriptUpdateRowById } from './apps-script-client.ts';
-import { parseSheetInput, verifyAuthSession } from './auth-logic.ts';
-import { verifyDeviceSessionFormat } from './device-logic.ts';
+import { adminScriptConfigured, scriptAppendRow, scriptReadTab, scriptUpdateRowById } from './apps-script-client.js';
+import { parseSheetInput, verifyAuthSession } from './auth-logic.js';
+import { verifyDeviceSessionFormat } from './device-logic.js';
 
 export const USER_SHEETS_HEADERS = ['userId', 'spreadsheetId', 'execUrl', 'status', 'verifiedAt', 'updatedAt'] as const;
 export const REQUIRED_TABS = ['Products', 'Categories', 'StockTransactions', 'Settings', 'Users'] as const;

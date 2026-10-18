@@ -1,4 +1,4 @@
-import { ensureSchemaCached } from './schema.ts';
+import { ensureSchemaCached } from './schema.js';
 /* Stockly private-admin API (Vercel serverless, server-side only).
  *
  * Storage goes through the bound Apps Script project
@@ -24,7 +24,7 @@ import { ensureSchemaCached } from './schema.ts';
  *   AppSettings key,value,updatedAt
  */
 
-import { adminScriptConfigured, scriptAppendRow, scriptReadTab, scriptUpdateRowById } from './apps-script-client.ts';
+import { adminScriptConfigured, scriptAppendRow, scriptReadTab, scriptUpdateRowById } from './apps-script-client.js';
 import {
   ADMIN_TABS,
   buildLogEntry,
@@ -50,7 +50,7 @@ import {
   type AdminStore,
   type AdminUser,
   type RegistryUser,
-} from './admin-logic.ts';
+} from './admin-logic.js';
 
 type QueryValue = string | string[] | undefined;
 
