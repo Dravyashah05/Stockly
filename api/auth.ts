@@ -1,5 +1,4 @@
-import { ensureSchemaCached } from './schema.js';
-import { applyApiCors } from './cors.js';
+import { ensureSchemaCached } from './schema.ts';
 /* Stockly account-auth API (Vercel serverless, server-side only).
  *
  * Email/password sign-in, verified HERE. Passwords are hashed with scrypt
@@ -11,7 +10,7 @@ import { applyApiCors } from './cors.js';
  *   AUTH_SESSION_SECRET   HMAC secret for auth session tokens.
  */
 
-import { adminScriptConfigured, scriptAppendRow, scriptReadTab, scriptUpdateRowById } from './apps-script-client.js';
+import { adminScriptConfigured, scriptAppendRow, scriptReadTab, scriptUpdateRowById } from './apps-script-client.ts';
 import {
   AUTH_SESSION_TTL_MS,
   AUTH_TABS,
@@ -29,9 +28,9 @@ import {
   verifyPassword,
   type AuthStore,
   type AuthUser,
-} from './auth-logic.js';
-import { hashEqual, sha256hex } from './device-logic.js';
-import { mergeRegistryUser } from './admin-logic.js';
+} from './auth-logic.ts';
+import { hashEqual, sha256hex, verifyDeviceSessionFormat } from './device-logic.ts';
+import { mergeRegistryUser } from './admin-logic.ts';
 
 type QueryValue = string | string[] | undefined;
 
@@ -216,18 +215,13 @@ function publicUser(u: AuthUser, accountStatus: string): Record<string, unknown>
   return { userId: u.userId, email: u.email, name: u.name, providers: u.providers, accountStatus };
 }
 
-/** Fire-and-forget bookkeeping (last-login stamps, audit rows): the response
- *  never carries their results, so awaiting them only burns extra Apps Script
- *  round-trips on the sign-in critical path. Never rejects. On ephemeral
- *  serverless instances a frozen background write is simply retried next
- *  login — lastLoginAt/audit rows are best-effort by design. */
-function bg(work: Promise<unknown>): void {
-  work.catch(() => undefined);
-}
-
 export default async function handler(req: AuthReq, res: AuthRes): Promise<void> {
   res.setHeader('Cache-Control', 'no-store');
-  applyApiCors(req, res);
+  // Native Android WebViews call the deployed backend cross-origin:
+  // allow preflight + Authorization/device headers (no cookies used).
+  res.setHeader('Access-Control-Allow-Origin', '*');
+  res.setHeader('Access-Control-Allow-Methods', 'GET, POST, OPTIONS');
+  res.setHeader('Access-Control-Allow-Headers', 'Content-Type, Authorization, X-Device-Session');
   if (req.method === 'OPTIONS') {
     res.status(200).json({ success: true });
     return;
@@ -299,11 +293,8 @@ export default async function handler(req: AuthReq, res: AuthRes): Promise<void>
         updatedAt: now,
       };
       await store.create(user);
-      // Registry + audit persist in the background: the response below
-      // carries only session + status (verified above), already correct
-      // without waiting for these writes.
-      bg(touchRegistry({ userId: user.userId, name, email }, true));
-      bg(auditLog({ adminId: `user:${user.userId}`, action: 'auth.register', targetUserId: user.userId, newValue: 'password' }));
+      await touchRegistry({ userId: user.userId, name, email }, true);
+      await auditLog({ adminId: `user:${user.userId}`, action: 'auth.register', targetUserId: user.userId, newValue: 'password' });
       console.info('[stockly-auth] password registration');
       res.status(200).json({ success: true, data: { session: mint(user.userId), user: publicUser(user, 'active') } });
       return;
@@ -332,10 +323,8 @@ export default async function handler(req: AuthReq, res: AuthRes): Promise<void>
         });
         return;
       }
-      // lastLoginAt + audit persist in the background: the response below
-      // carries only session + status (verified above).
-      bg(touchRegistry({ userId: user.userId, name: user.name, email: user.email }, true));
-      bg(auditLog({ adminId: `user:${user.userId}`, action: 'auth.login', targetUserId: user.userId, newValue: 'password' }));
+      await touchRegistry({ userId: user.userId, name: user.name, email: user.email }, true);
+      await auditLog({ adminId: `user:${user.userId}`, action: 'auth.login', targetUserId: user.userId, newValue: 'password' });
       res.status(200).json({ success: true, data: { session: mint(user.userId), user: publicUser(user, accountStatus) } });
       return;
     }
@@ -357,12 +346,12 @@ export default async function handler(req: AuthReq, res: AuthRes): Promise<void>
         res.status(401).json({ success: false, error: 'Sign-in required.' });
         return;
       }
-      // Both reads key off the verified session — run them together.
-      const [user, reg] = await Promise.all([store.findById(session.userId), readRegistryEntry(session.userId)]);
+      const user = await store.findById(session.userId);
       if (!user) {
         res.status(401).json({ success: false, error: 'Account not found.' });
         return;
       }
+      const reg = await readRegistryEntry(user.userId);
       const accountStatus = reg?.accountStatus ?? 'active';
       res.status(200).json({
         success: true,
@@ -406,29 +395,34 @@ export default async function handler(req: AuthReq, res: AuthRes): Promise<void>
         return;
       }
       const userId = row.userId ?? '';
-      // Both reads key off the approved link — run them together.
-      const [user, reg] = await Promise.all([
-        isValidAuthUserId(userId) ? store.findById(userId) : Promise.resolve(null),
-        readRegistryEntry(userId),
-      ]);
+      const user = isValidAuthUserId(userId) ? await store.findById(userId) : null;
       if (!user) {
         res.status(404).json({ success: false, error: 'Account not found.' });
         return;
       }
+      const reg = await readRegistryEntry(userId);
       const accountStatus = reg?.accountStatus ?? 'active';
       if (accountStatus !== 'active') {
         res.status(403).json({ success: false, error: 'This account is not active. Contact the owner.' });
         return;
       }
-      bg(auditLog({ adminId: `user:${userId}`, action: 'auth.linkAdopt', targetUserId: userId, newValue: deviceId }));
+      await auditLog({ adminId: `user:${userId}`, action: 'auth.linkAdopt', targetUserId: userId, newValue: deviceId });
       res.status(200).json({ success: true, data: { session: mint(userId), user: publicUser(user, accountStatus) } });
       return;
     }
 
-    // NOTE: a previous 'checkDevice' action was removed here — it verified
-    // only token format and reported revoked devices as OK, which is worse
-    // than nothing. Device trust is decided by devices.ts (requireDeviceSession
-    // + live revocation re-check on every call), not by a format probe.
+    // Devices-route bridge: validate a device session belongs to this user.
+    // (Used by enrollPrimary hardening; devices.ts remains authoritative.)
+    if (action === 'checkDevice') {
+      const session = verifyAuthSession(bearerToken(req), authSecret);
+      if (!session) {
+        res.status(401).json({ success: false, error: 'Sign-in required.' });
+        return;
+      }
+      const ds = verifyDeviceSessionFormat(String(body.deviceSession ?? ''), process.env.DEVICE_SESSION_SECRET || '');
+      res.status(200).json({ success: true, data: { deviceOk: !!ds && ds.userId === session.userId } });
+      return;
+    }
 
     res.status(400).json({ success: false, error: `Unknown action: ${action}` });
     return;

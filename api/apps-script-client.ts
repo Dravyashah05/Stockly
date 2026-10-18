@@ -7,8 +7,6 @@
  * or the token — it only talks to the /api/* routes.
  */
 
-import { isUpstreamTimeout, upstreamSignal } from './upstream.js';
-
 function scriptUrl(): string {
   return (process.env.ADMIN_SCRIPT_URL || '').trim();
 }
@@ -25,10 +23,6 @@ function httpError(message: string, status: number): Error & { status?: number }
   return Object.assign(new Error(message), { status });
 }
 
-function timeoutError(): Error & { status?: number } {
-  return httpError('Admin spreadsheet request timed out. Google may be slow — retry, and verify the last operation before resubmitting.', 502);
-}
-
 /** Raw call to the admin script. Responses are { success, data | error }. */
 export async function scriptCall<T>(action: string, payload: Record<string, unknown> = {}): Promise<T> {
   const url = scriptUrl();
@@ -43,10 +37,8 @@ export async function scriptCall<T>(action: string, payload: Record<string, unkn
       headers: { 'Content-Type': 'text/plain;charset=utf-8' },
       body: JSON.stringify({ token, action, ...payload }),
       redirect: 'follow',
-      signal: upstreamSignal(),
     });
-  } catch (e) {
-    if (isUpstreamTimeout(e)) throw timeoutError();
+  } catch {
     throw httpError('Admin spreadsheet request failed.', 502);
   }
   let json: { success?: boolean; data?: unknown; error?: unknown };

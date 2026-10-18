@@ -89,23 +89,6 @@ function safeBackendError(message: unknown): string {
 /** Interpret a response without ever returning or logging its raw body. */
 export function interpretApiResponse(meta: ApiResponseMeta, text: string): ApiResponseResult {
   if (meta.status === 401 || meta.status === 403) {
-    /* Our own gateway answers 401/403 with a JSON envelope carrying the real
-     * reason (expired session, suspended account, unlinked device). Trust it
-     * over the deployment text below — that text is only for actual Google
-     * access pages (HTML bodies, e.g. a mis-deployed /exec URL). */
-    try {
-      const parsed: unknown = JSON.parse(text);
-      if (record(parsed) && parsed.success === false) {
-        return {
-          ok: false,
-          message: safeBackendError(parsed.error),
-          status: meta.status || undefined,
-          unknownOutcome: false,
-        };
-      }
-    } catch {
-      /* not our envelope — fall through to the deployment text */
-    }
     return failed(
       'Google denied access to the Apps Script Web App. Deploy it to execute as you, set access to Anyone, and use its deployed /exec URL.',
       meta,

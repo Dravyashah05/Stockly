@@ -195,6 +195,12 @@ function gatewayHeaders(): Record<string, string> {
   return headers;
 }
 
+/** Identity fields are injected server-side by the gateway; payloads pass
+ *  through unchanged. */
+function withUser<T extends Record<string, unknown>>(payload: T): T {
+  return payload;
+}
+
 import type {
   Category,
   DashboardStats,
@@ -210,17 +216,17 @@ export const api = {
   listProducts: () => apiGet<Product[]>('listProducts'),
   getProduct: (id: string) => apiGet<Product>('getProduct', { id }),
   createProduct: (p: Record<string, unknown>) =>
-    apiPost<Product>('createProduct', p, { dedupe: false }),
+    apiPost<Product>('createProduct', withUser(p), { dedupe: false }),
   updateProduct: (id: string, p: Record<string, unknown>) =>
-    apiPost<Product>('updateProduct', { id, ...p }, { dedupe: false }),
-  deleteProduct: (id: string) => apiPost<{ deleted: string }>('deleteProduct', { id }, { dedupe: false }),
+    apiPost<Product>('updateProduct', withUser({ id, ...p }), { dedupe: false }),
+  deleteProduct: (id: string) => apiPost<{ deleted: string }>('deleteProduct', withUser({ id }), { dedupe: false }),
 
   listCategories: () => apiGet<Category[]>('listCategories'),
-  createCategory: (name: string) => apiPost<Category>('createCategory', { name }, { dedupe: false }),
+  createCategory: (name: string) => apiPost<Category>('createCategory', withUser({ name }), { dedupe: false }),
   updateCategory: (id: string, name: string) =>
-    apiPost<Category>('updateCategory', { id, name }, { dedupe: false }),
+    apiPost<Category>('updateCategory', withUser({ id, name }), { dedupe: false }),
   deleteCategory: (id: string) =>
-    apiPost<{ deleted: string; cleared: number }>('deleteCategory', { id }, { dedupe: false }),
+    apiPost<{ deleted: string; cleared: number }>('deleteCategory', withUser({ id }), { dedupe: false }),
 
   stockIn: (args: {
     productId: string;
@@ -228,7 +234,7 @@ export const api = {
     price?: number;
     note?: string;
     idempotencyKey: string;
-  }) => apiPost<{ product: Product; transaction: StockTransaction }>('stockIn', args),
+  }) => apiPost<{ product: Product; transaction: StockTransaction }>('stockIn', withUser(args)),
 
   stockOut: (args: {
     productId: string;
@@ -236,7 +242,7 @@ export const api = {
     reason: string;
     note?: string;
     idempotencyKey: string;
-  }) => apiPost<{ product: Product; transaction: StockTransaction }>('stockOut', args),
+  }) => apiPost<{ product: Product; transaction: StockTransaction }>('stockOut', withUser(args)),
 
   listTransactions: (limit = 200) => apiGet<StockTransaction[]>('listTransactions', { limit: String(limit) }),
   dashboard: () => apiGet<DashboardStats>('dashboard'),

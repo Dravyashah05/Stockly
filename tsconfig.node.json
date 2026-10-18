@@ -19,9 +19,5 @@
     "erasableSyntaxOnly": true,
     "noFallthroughCasesInSwitch": true
   },
-<<<<<<< HEAD
-  "include": ["capacitor.config.ts", "scripts/vite.stockly-proxy.ts"]
-=======
-  "include": ["vite.config.ts", "vite.config.web.ts", "vite.stockly-proxy.ts"]
->>>>>>> bc90ae3b25b8be70ddda745a7984f0a2ba4ae22d
+  "include": ["scripts/vite.stockly-proxy.ts"]
 }

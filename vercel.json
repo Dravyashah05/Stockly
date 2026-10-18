@@ -6,6 +6,10 @@
     {
       "source": "/__stockly_api",
       "destination": "/api/stockly"
+    },
+    {
+      "source": "/app-store",
+      "destination": "/store.html"
     }
   ]
 }

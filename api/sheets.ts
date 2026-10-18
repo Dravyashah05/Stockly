@@ -1,5 +1,4 @@
-import { ensureSchemaCached } from './schema.js';
-import { applyApiCors } from './cors.js';
+import { ensureSchemaCached } from './schema.ts';
 /* Stockly user-sheet gateway (Vercel serverless, server-side only).
  *
  * Every user connects their OWN spreadsheet; the verified association
@@ -19,10 +18,9 @@ import { applyApiCors } from './cors.js';
  * DEVICE_SESSION_SECRET for device checks.
  */
 
-import { adminScriptConfigured, scriptAppendRow, scriptReadTab, scriptUpdateRowById } from './apps-script-client.js';
-import { isUpstreamTimeout, upstreamSignal } from './upstream.js';
-import { parseSheetInput, verifyAuthSession } from './auth-logic.js';
-import { verifyDeviceSessionFormat } from './device-logic.js';
+import { adminScriptConfigured, scriptAppendRow, scriptReadTab, scriptUpdateRowById } from './apps-script-client.ts';
+import { parseSheetInput, verifyAuthSession } from './auth-logic.ts';
+import { verifyDeviceSessionFormat } from './device-logic.ts';
 
 export const USER_SHEETS_HEADERS = ['userId', 'spreadsheetId', 'execUrl', 'status', 'verifiedAt', 'updatedAt'] as const;
 export const REQUIRED_TABS = ['Products', 'Categories', 'StockTransactions', 'Settings', 'Users'] as const;
@@ -146,15 +144,7 @@ function validExecTarget(raw: string): URL {
 async function upstreamGet(target: URL, params: Record<string, string>): Promise<unknown> {
   const u = new URL(target.toString());
   for (const [k, v] of Object.entries(params)) u.searchParams.set(k, v);
-  let res: Response;
-  try {
-    res = await fetch(u, { method: 'GET', redirect: 'follow', signal: upstreamSignal() });
-  } catch (e) {
-    if (isUpstreamTimeout(e)) {
-      throw httpError('The connected Apps Script timed out. Google may be slow — retry, and verify the last operation before resubmitting.', 502);
-    }
-    throw httpError('Could not reach that Apps Script deployment. Check the URL and deployment access (Anyone).', 502);
-  }
+  const res = await fetch(u, { method: 'GET', redirect: 'follow' });
   const text = await res.text();
   try {
     return JSON.parse(text) as unknown;
@@ -164,21 +154,12 @@ async function upstreamGet(target: URL, params: Record<string, string>): Promise
 }
 
 async function upstreamPost(target: URL, payload: Record<string, unknown>): Promise<unknown> {
-  let res: Response;
-  try {
-    res = await fetch(target.toString(), {
-      method: 'POST',
-      headers: { 'Content-Type': 'text/plain;charset=utf-8' },
-      body: JSON.stringify(payload),
-      redirect: 'follow',
-      signal: upstreamSignal(),
-    });
-  } catch (e) {
-    if (isUpstreamTimeout(e)) {
-      throw httpError('The connected Apps Script timed out. Google may be slow — retry, and verify the last operation before resubmitting.', 502);
-    }
-    throw httpError('Could not reach that Apps Script deployment. Check the URL and deployment access (Anyone).', 502);
-  }
+  const res = await fetch(target.toString(), {
+    method: 'POST',
+    headers: { 'Content-Type': 'text/plain;charset=utf-8' },
+    body: JSON.stringify(payload),
+    redirect: 'follow',
+  });
   const text = await res.text();
   try {
     return JSON.parse(text) as unknown;
@@ -237,30 +218,24 @@ async function verifyExecUrl(execUrl: string): Promise<{ target: URL; desc: Desc
   return { target, desc };
 }
 
-/** Central authorization: session + account + connection + device.
- *  The three registry reads key off the verified session and are
- *  independent — run them together. This runs on EVERY proxied inventory
- *  call, so serial reads here multiply Apps Script latency directly. */
+/** Central authorization: session + account + connection + device. */
 async function authorize(
   req: SheetsReq,
 ): Promise<{ userId: string; conn: SheetConnection; deviceId: string | null; deviceSession: string | null }> {
   const authSecret = process.env.AUTH_SESSION_SECRET || '';
   const session = verifyAuthSession(bearerToken(req), authSecret);
   if (!session) throw httpError('Sign-in required.', 401);
-  const [accountStatus, found, deviceIds] = await Promise.all([
-    readAccountStatus(session.userId),
-    findConnection(session.userId),
-    listUserDeviceIds(session.userId),
-  ]);
+  const accountStatus = await readAccountStatus(session.userId);
   if (accountStatus !== 'active') {
     throw httpError(accountStatus === 'suspended' ? 'This account is suspended. Contact the owner.' : 'This account is not active. Contact the owner.', 403);
   }
-  const { conn } = found;
+  const { conn } = await findConnection(session.userId);
   if (!conn || conn.status !== 'verified' || !conn.execUrl) {
     const e = httpError('No verified sheet connection. Connect your Google Sheet first.', 403);
     (e as { reason?: string }).reason = 'sheet-not-connected';
     throw e;
   }
+  const deviceIds = await listUserDeviceIds(session.userId);
   let deviceId: string | null = null;
   let deviceSession: string | null = null;
   if (deviceIds.length > 0) {
@@ -309,7 +284,11 @@ const ALLOWED_PROXY_ACTIONS = new Set([
 
 export default async function handler(req: SheetsReq, res: SheetsRes): Promise<void> {
   res.setHeader('Cache-Control', 'no-store');
-  applyApiCors(req, res);
+  // Native Android WebViews call the deployed backend cross-origin:
+  // allow preflight + Authorization/device headers (no cookies used).
+  res.setHeader('Access-Control-Allow-Origin', '*');
+  res.setHeader('Access-Control-Allow-Methods', 'GET, POST, OPTIONS');
+  res.setHeader('Access-Control-Allow-Headers', 'Content-Type, Authorization, X-Device-Session');
   if (req.method === 'OPTIONS') {
     res.status(200).json({ success: true });
     return;
@@ -341,13 +320,12 @@ export default async function handler(req: SheetsReq, res: SheetsRes): Promise<v
         res.status(401).json({ success: false, error: 'Sign-in required.' });
         return;
       }
-      // Both reads key off the verified session — run them together.
-      const [accountStatus, found] = await Promise.all([readAccountStatus(session.userId), findConnection(session.userId)]);
+      const accountStatus = await readAccountStatus(session.userId);
       if (accountStatus !== 'active') {
         res.status(403).json({ success: false, error: 'This account is not active. Contact the owner.', reason: 'suspended' });
         return;
       }
-      const { conn } = found;
+      const { conn } = await findConnection(session.userId);
       if (!conn) {
         res.status(200).json({ success: true, data: { connected: false, status: null } });
         return;

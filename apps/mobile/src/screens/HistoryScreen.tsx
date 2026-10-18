@@ -1,15 +1,9 @@
 import { memo, useCallback, useDeferredValue, useEffect, useMemo, useState } from 'react';
 import { createPortal } from 'react-dom';
 import { ArrowDownToLine, ArrowLeft, ArrowUpFromLine, History as HistoryIcon } from 'lucide-react';
-<<<<<<<< HEAD:apps/mobile/src/screens/HistoryScreen.tsx
 import { formatMoney } from '@stockly/shared-client/config';
 import { useStore } from '@stockly/shared-client/store';
 import type { StockTransaction } from '@stockly/shared-types';
-========
-import { formatMoney } from '../../shared/config';
-import { useStore } from '../../shared/store';
-import type { StockTransaction } from '../../shared/types';
->>>>>>>> bc90ae3b25b8be70ddda745a7984f0a2ba4ae22d:mobile-app/src/app/screens/HistoryScreen.tsx
 import { EmptyState, ErrorState, Header, SearchBar, Segmented, SkeletonRow, StockBadge, useDismissable } from '../components/ui';
 
 /** Rendered rows per page — full history stays server-side, screen pages locally. */
@@ -97,7 +91,7 @@ export default function HistoryScreen() {
             />
           </div>
           {q || type !== 'ALL' ? (
-            <button type="button" onClick={() => { setQ(''); setType('ALL'); }} className="press flex min-h-11 shrink-0 items-center gap-1 rounded-[var(--radius-icon)] bg-(--destructive)/10 px-3 text-[length:var(--fs-footnote)] font-bold text-(--destructive-ink)">
+            <button type="button" onClick={() => { setQ(''); setType('ALL'); }} className="press flex min-h-11 shrink-0 items-center gap-1 rounded-xl bg-rose-500/10 px-3 text-[12px] font-bold text-rose-600 dark:text-rose-400">
               <span aria-hidden="true">×</span> Clear
             </button>
           ) : null}
@@ -124,11 +118,11 @@ export default function HistoryScreen() {
               hint={q || type !== 'ALL' ? 'Try a different search or clear the filter.' : 'Stock In and Stock Out entries will appear here.'}
             />
             {q || type !== 'ALL' ? (
-              <button type="button" onClick={() => { setQ(''); setType('ALL'); }} className="press mx-auto mt-1 flex min-h-11 items-center rounded-[var(--radius-icon)] bg-(--primary) px-4 text-sm font-bold text-(--primary-foreground)">Clear filters</button>
+              <button type="button" onClick={() => { setQ(''); setType('ALL'); }} className="press mx-auto mt-1 flex min-h-11 items-center rounded-xl bg-(--primary) px-4 text-sm font-bold text-(--primary-foreground)">Clear filters</button>
             ) : null}
           </div>
         ) : (
-          <div className="glass sheet-scroll min-h-0 flex-1 overflow-y-auto rounded-[calc(var(--radius-card) - 4px)] px-1.5 pt-1 pb-4">
+          <div className="glass sheet-scroll min-h-0 flex-1 overflow-y-auto rounded-[26px] px-1.5 pt-1 pb-4">
             <div className="history-table-head"><span>Date</span><span>Product</span><span>Type</span><span className="text-right">Quantity</span><span className="text-right">Price</span><span>Details</span></div>
             <div className="divide-y divide-(--stroke-dim)">
               {rows.map(({ t, when }) => (
@@ -139,7 +133,7 @@ export default function HistoryScreen() {
               <button
                 type="button"
                 onClick={showMore}
-                className="press mt-1 flex min-h-[48px] w-full items-center justify-center rounded-[var(--radius-control)] bg-(--accent-soft) text-[length:var(--fs-subhead)] font-semibold text-(--accent)"
+                className="press mt-1 flex min-h-[48px] w-full items-center justify-center rounded-2xl bg-(--accent-soft) text-[14px] font-bold text-(--accent)"
               >
                 Show more ({list.length - visible} remaining)
               </button>
@@ -148,7 +142,7 @@ export default function HistoryScreen() {
                 type="button"
                 disabled={txLoadingMore}
                 onClick={loadOlder}
-                className="press mt-1 flex min-h-[48px] w-full items-center justify-center rounded-[var(--radius-control)] bg-(--accent-soft) text-[length:var(--fs-subhead)] font-semibold text-(--accent) disabled:opacity-50"
+                className="press mt-1 flex min-h-[48px] w-full items-center justify-center rounded-2xl bg-(--accent-soft) text-[14px] font-bold text-(--accent) disabled:opacity-50"
               >
                 {txLoadingMore ? 'Loading…' : 'Load older history'}
               </button>
@@ -180,19 +174,19 @@ const TxRow = memo(function TxRow({
     <button
       type="button"
       onClick={() => onOpen(t.id)}
-      className="history-row press cv-row block w-full px-2.5 py-3 text-left transition-colors hover:bg-(--accent-soft)/50"
+      className="history-row press cv-row block w-full rounded-[20px] px-2.5 py-2.5 text-left hover:bg-(--accent-soft)/50"
     >
       <div className="history-row-main flex items-center gap-2.5">
         <span className="history-type"><StockBadge kind={t.type} />{pending ? (
-          <span className="history-pending rounded-full bg-(--accent-soft) px-2 py-0.5 text-[length:var(--fs-caption)] font-semibold text-(--accent)">
+          <span className="history-pending rounded-full bg-(--accent-soft) px-2 py-0.5 text-[10.5px] font-extrabold text-(--accent)">
             Saving…
           </span>
         ) : null}</span>
-        <p className="history-product min-w-0 flex-1 truncate text-[length:var(--fs-subhead)] font-medium text-(--ink)">{t.productName}</p>
+        <p className="history-product min-w-0 flex-1 truncate text-[14px] font-semibold text-(--ink)">{t.productName}</p>
         <span
-          className={`history-quantity tnum text-[length:var(--fs-headline)] font-semibold ${
- t.type === 'IN' ? 'text-(--success-ink)' : 'text-(--destructive-ink)'
- }`}
+          className={`history-quantity tnum text-[15px] font-bold ${
+            t.type === 'IN' ? 'text-emerald-600 dark:text-emerald-300' : 'text-rose-600 dark:text-rose-300'
+          }`}
         >
           {t.type === 'IN' ? '+' : '−'}
           {t.quantity}
@@ -212,8 +206,8 @@ const TxRow = memo(function TxRow({
 function DetailRow({ label, value }: { label: string; value: string }) {
   return (
     <div className="flex items-start justify-between gap-3 py-4">
-      <span className="shrink-0 text-[length:var(--fs-caption)] font-semibold uppercase tracking-[0.06em] text-(--ink-3)">{label}</span>
-      <span className="min-w-0 flex-1 break-words text-right text-[length:var(--fs-subhead)] font-medium text-(--ink)">{value}</span>
+      <span className="shrink-0 text-[12px] font-bold uppercase tracking-wider text-(--ink-2)">{label}</span>
+      <span className="min-w-0 flex-1 break-words text-right text-[14px] font-semibold text-(--ink)">{value}</span>
     </div>
   );
 }
@@ -277,7 +271,7 @@ function TxDetailPage({ t, onClose, onSelect }: { t: StockTransaction; onClose: 
             className="glass-strong press flex h-11 w-11 items-center justify-center rounded-full text-(--ink) lg:w-auto lg:gap-1.5 lg:px-4"
           >
             <ArrowLeft size={20} />
-            <span className="hidden text-[length:var(--fs-subhead)] font-semibold lg:inline">Back</span>
+            <span className="hidden text-[14px] font-bold lg:inline">Back</span>
           </button>
           <StockBadge kind={t.type} />
         </div>
@@ -285,38 +279,38 @@ function TxDetailPage({ t, onClose, onSelect }: { t: StockTransaction; onClose: 
         <div className="px-4 pt-3 lg:grid lg:grid-cols-2 lg:items-start lg:gap-5 lg:px-0 lg:pt-6">
           {/* Hero: type-tinted card with status icon, quantity, product */}
           <div
-            className={`rounded-[calc(var(--radius-card) - 4px)] border p-6 text-center lg:p-8 ${
- isIn ? 'border-(--success)/25 bg-(--success)/[0.07]' : 'border-(--destructive)/25 bg-(--destructive)/[0.07]'
- }`}
+            className={`rounded-[26px] border p-6 text-center lg:p-8 ${
+              isIn ? 'border-emerald-500/25 bg-emerald-500/[0.07]' : 'border-rose-500/25 bg-rose-500/[0.07]'
+            }`}
           >
             <span
-              className={`mx-auto flex h-14 w-14 items-center justify-center rounded-[var(--radius-control)] text-white lg:h-16 lg:w-16 ${
- isIn ? 'bg-[var(--success-ink)]' : 'bg-[var(--destructive)]'
- }`}
+              className={`mx-auto flex h-14 w-14 items-center justify-center rounded-2xl text-white lg:h-16 lg:w-16 ${
+                isIn ? 'bg-[#1E7B3C]' : 'bg-[#C2332D]'
+              }`}
             >
               {isIn ? <ArrowDownToLine size={24} /> : <ArrowUpFromLine size={24} />}
             </span>
             <p
-              className={`tnum mt-3 text-[length:var(--fs-large-title)] font-bold leading-none tracking-[-0.04em] ${
- isIn ? 'text-(--success-ink)' : 'text-(--destructive-ink)'
- }`}
+              className={`tnum mt-3 text-[52px] font-extrabold leading-none tracking-tight lg:text-[60px] ${
+                isIn ? 'text-emerald-600 dark:text-emerald-300' : 'text-rose-600 dark:text-rose-300'
+              }`}
             >
               {isIn ? '+' : '−'}
               {t.quantity}
             </p>
-            <p className="mx-auto mt-2 max-w-[32ch] break-words text-[length:var(--fs-headline)] font-semibold leading-snug text-(--ink)">{t.productName}</p>
+            <p className="mx-auto mt-2 max-w-[32ch] break-words text-[17px] font-bold leading-snug text-(--ink)">{t.productName}</p>
             {liveStock != null ? (
-              <p className="tnum mt-1 text-[length:var(--fs-footnote)] font-medium text-(--ink-2)">{liveStock} in stock now</p>
+              <p className="tnum mt-1 text-[12.5px] font-semibold text-(--ink-2)">{liveStock} in stock now</p>
             ) : null}
             {pending ? (
-              <span className="mt-2.5 inline-block rounded-full bg-(--accent-soft) px-2.5 py-1 text-[length:var(--fs-caption)] font-semibold text-(--accent)">
+              <span className="mt-2.5 inline-block rounded-full bg-(--accent-soft) px-2.5 py-1 text-[11px] font-extrabold text-(--accent)">
                 Saving…
               </span>
             ) : null}
           </div>
 
           {/* Facts */}
-          <div className="glass mt-3 divide-y divide-(--stroke-dim) rounded-[calc(var(--radius-card) - 4px)] px-4 py-1 lg:mt-0">
+          <div className="glass mt-3 divide-y divide-(--stroke-dim) rounded-[26px] px-4 py-1 lg:mt-0">
             <DetailRow label="Date" value={whenFull} />
             {t.reason ? <DetailRow label="Reason" value={t.reason} /> : null}
             {t.note ? <DetailRow label="Note" value={t.note} /> : null}
@@ -330,11 +324,11 @@ function TxDetailPage({ t, onClose, onSelect }: { t: StockTransaction; onClose: 
           {/* Product info — live product record, if it still exists */}
           {product ? (
             <div className="mt-3 lg:col-span-2 lg:mt-0">
-              <p className="mb-2 flex items-center gap-2 px-1 text-[length:var(--fs-caption)] font-semibold uppercase tracking-[0.06em] text-(--ink-3)">
-                
+              <p className="mb-2 flex items-center gap-2 px-1 text-[13px] font-extrabold uppercase tracking-wider text-(--ink-2)">
+                <span aria-hidden="true" className="h-3 w-1 rounded-full bg-[#C7FF4D]" />
                 Product info
               </p>
-              <div className="glass divide-y divide-(--stroke-dim) rounded-[calc(var(--radius-card) - 4px)] px-4 py-1">
+              <div className="glass divide-y divide-(--stroke-dim) rounded-[26px] px-4 py-1">
                 <DetailRow label="Product" value={product.name} />
                 {(product.sku || '').trim() ? <DetailRow label="SKU" value={product.sku.trim()} /> : null}
                 {productCategory ? <DetailRow label="Category" value={productCategory} /> : null}
@@ -348,32 +342,32 @@ function TxDetailPage({ t, onClose, onSelect }: { t: StockTransaction; onClose: 
           {/* Same product, recent first — tap to jump between entries */}
           {related.length > 0 ? (
             <div className="mt-3 lg:col-span-2 lg:mt-0">
-              <p className="mb-2 flex items-center gap-2 px-1 text-[length:var(--fs-caption)] font-semibold uppercase tracking-[0.06em] text-(--ink-3)">
-                
+              <p className="mb-2 flex items-center gap-2 px-1 text-[13px] font-extrabold uppercase tracking-wider text-(--ink-2)">
+                <span aria-hidden="true" className="h-3 w-1 rounded-full bg-[#C7FF4D]" />
                 More for this product
               </p>
-              <div className="glass divide-y divide-(--stroke-dim) rounded-[calc(var(--radius-card) - 4px)] px-1.5 py-1">
+              <div className="glass divide-y divide-(--stroke-dim) rounded-[26px] px-1.5 py-1">
                 {related.map(({ x, when }) => (
                   <button
                     key={x.id}
                     type="button"
                     onClick={() => onSelect(x.id)}
-                    className="press cv-row flex w-full items-center gap-2.5 px-2.5 py-3 text-left transition-colors hover:bg-(--accent-soft)/50"
+                    className="press cv-row flex w-full items-center gap-2.5 rounded-[20px] px-2.5 py-3 text-left hover:bg-(--accent-soft)/50"
                   >
                     <StockBadge kind={x.type} />
                     <span className="min-w-0 flex-1">
-                      <span className="block truncate text-[length:var(--fs-subhead)] font-medium text-(--ink)">
+                      <span className="block truncate text-[14px] font-semibold text-(--ink)">
                         {x.reason || (x.type === 'IN' ? 'Stock in' : 'Stock out')}
                       </span>
-                      <span className="block truncate text-[length:var(--fs-caption)] font-normal text-(--ink-2)">{when}</span>
+                      <span className="block truncate text-[11.5px] font-medium text-(--ink-2)">{when}</span>
                       {x.note ? (
-                        <span className="mt-0.5 block truncate text-[length:var(--fs-footnote)] text-(--ink-2)">{x.note}</span>
+                        <span className="mt-0.5 block truncate text-[12.5px] text-(--ink-2)">{x.note}</span>
                       ) : null}
                     </span>
                     <span
-                      className={`tnum shrink-0 rounded-full px-2.5 py-1 text-[length:var(--fs-subhead)] font-semibold ${
- x.type === 'IN' ? 'bg-(--success)/12 text-(--success-ink)' : 'bg-(--destructive)/12 text-(--destructive-ink)'
- }`}
+                      className={`tnum shrink-0 rounded-full px-2.5 py-1 text-[14px] font-extrabold ${
+                        x.type === 'IN' ? 'bg-emerald-500/12 text-emerald-600 dark:text-emerald-300' : 'bg-rose-500/12 text-rose-600 dark:text-rose-300'
+                      }`}
                     >
                       {x.type === 'IN' ? '+' : '−'}
                       {x.quantity}

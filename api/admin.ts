@@ -1,5 +1,4 @@
-import { ensureSchemaCached } from './schema.js';
-import { applyApiCors } from './cors.js';
+import { ensureSchemaCached } from './schema.ts';
 /* Stockly private-admin API (Vercel serverless, server-side only).
  *
  * Storage goes through the bound Apps Script project
@@ -25,8 +24,7 @@ import { applyApiCors } from './cors.js';
  *   AppSettings key,value,updatedAt
  */
 
-import { adminScriptConfigured, scriptAppendRow, scriptReadTab, scriptUpdateRowById } from './apps-script-client.js';
-import { RateLimiter } from './device-logic.js';
+import { adminScriptConfigured, scriptAppendRow, scriptReadTab, scriptUpdateRowById } from './apps-script-client.ts';
 import {
   ADMIN_TABS,
   buildLogEntry,
@@ -52,7 +50,7 @@ import {
   type AdminStore,
   type AdminUser,
   type RegistryUser,
-} from './admin-logic.js';
+} from './admin-logic.ts';
 
 type QueryValue = string | string[] | undefined;
 
@@ -92,16 +90,6 @@ function bearerToken(req: AdminReq): string | null {
   const match = /^Bearer\s+(.+)$/i.exec(value.trim());
   return match ? match[1].trim() : null;
 }
-
-function clientIp(req: AdminReq): string {
-  const raw = req.headers?.['x-forwarded-for'] ?? req.headers?.['X-Forwarded-For'];
-  const value = Array.isArray(raw) ? raw[0] : raw;
-  return ((value ?? '').split(',')[0] ?? '').trim() || 'unknown';
-}
-
-// The setup key is the sole login factor: throttle guessing like the user
-// login path (10/min/IP, in-memory per instance, best-effort on serverless).
-const adminAuthLimiter = new RateLimiter(10, 60_000);
 
 function setupHelp(): Record<string, string[]> {
   return {
@@ -307,7 +295,11 @@ async function audit(
 
 export default async function handler(req: AdminReq, res: AdminRes): Promise<void> {
   res.setHeader('Cache-Control', 'no-store');
-  applyApiCors(req, res);
+  // Native Android WebViews call the deployed backend cross-origin:
+  // allow preflight + Authorization/device headers (no cookies used).
+  res.setHeader('Access-Control-Allow-Origin', '*');
+  res.setHeader('Access-Control-Allow-Methods', 'GET, POST, OPTIONS');
+  res.setHeader('Access-Control-Allow-Headers', 'Content-Type, Authorization, X-Device-Session');
   if (req.method === 'OPTIONS') {
     res.status(200).json({ success: true });
     return;
@@ -350,10 +342,6 @@ export default async function handler(req: AdminReq, res: AdminRes): Promise<voi
       const sessionSecret = (process.env.ADMIN_SESSION_SECRET || '').trim();
       if (!setupKey || !sessionSecret) {
         res.status(501).json({ success: false, error: 'Admin setup is not configured on the server.', ...setupHelp() });
-        return;
-      }
-      if (!adminAuthLimiter.take(`bootstrap:${clientIp(req)}`)) {
-        res.status(429).json({ success: false, error: 'Too many attempts. Wait a minute and try again.' });
         return;
       }
       if (!secretsEqual(String(body.setupKey ?? ''), setupKey)) {
@@ -403,10 +391,6 @@ export default async function handler(req: AdminReq, res: AdminRes): Promise<voi
         res.status(501).json({ success: false, error: 'Admin login is not configured on the server.' });
         return;
       }
-      if (!adminAuthLimiter.take(`adminLogin:${clientIp(req)}`)) {
-        res.status(429).json({ success: false, error: 'Too many attempts. Wait a minute and try again.' });
-        return;
-      }
       if (!secretsEqual(String(body.setupKey ?? ''), setupKey)) {
         res.status(401).json({ success: false, error: 'Invalid credentials.' });
         return;
@@ -454,10 +438,7 @@ export default async function handler(req: AdminReq, res: AdminRes): Promise<voi
       const now = new Date().toISOString();
       const existing = await store.getRegistry(input.userId);
       const { record, created } = mergeRegistryUser(existing, input, now);
-      // Write directly: the tab was just read above, so upsertRegistry's
-      // internal re-read would be a redundant round-trip for the same data.
-      if (!existing) await scriptAppendRow('UserRegistry', registryRow(record));
-      else await scriptUpdateRowById('UserRegistry', input.userId, registryRow(record));
+      await store.upsertRegistry(record);
       if (created) {
         await audit(store, {
           adminId: 'system-sync',
@@ -536,39 +517,20 @@ export default async function handler(req: AdminReq, res: AdminRes): Promise<voi
           offset: typeof body.offset === 'number' ? body.offset : 0,
         });
         // Enrich with auth methods + sheet connection (best-effort; the
-        // core list must never fail because of enrichment). Both tabs are
-        // read ONCE for the whole page — per-user reads here cost a full
-        // Apps Script round-trip each (100 users = 200 calls before).
-        let providersByUser = new Map<string, string[]>();
-        let sheetByUser = new Map<string, { status: string; verifiedAt: string }>();
-        try {
-          const [authRows, sheetRows] = await Promise.all([scriptReadTab('UserAuth'), scriptReadTab('UserSheets')]);
-          for (const r of authRows) {
-            if (!r.userId) continue;
-            providersByUser.set(
-              r.userId,
-              String(r.providers ?? '')
-                .split(',')
-                .map((p) => p.trim())
-                .filter((p) => p === 'password' || p === 'google'),
-            );
-          }
-          for (const r of sheetRows) {
-            if (!r.userId) continue;
-            sheetByUser.set(r.userId, { status: r.status ?? '', verifiedAt: r.verifiedAt ?? '' });
-          }
-        } catch {
-          /* enrichment unavailable — core list still served below */
-        }
-        const enriched = users.map((u) => {
-          const sheet = sheetByUser.get(u.userId);
-          return {
-            ...u,
-            providers: providersByUser.get(u.userId) ?? [],
-            sheetStatus: sheet?.status ?? null,
-            sheetVerifiedAt: sheet?.verifiedAt ?? null,
-          };
-        });
+        // core list must never fail because of enrichment).
+        const enriched = await Promise.all(
+          users.map(async (u) => {
+            try {
+              const [providers, sheet] = await Promise.all([
+                store.getAuthProviders(u.userId),
+                store.getSheetInfo(u.userId),
+              ]);
+              return { ...u, providers, sheetStatus: sheet?.status ?? null, sheetVerifiedAt: sheet?.verifiedAt ?? null };
+            } catch {
+              return { ...u, providers: [], sheetStatus: null, sheetVerifiedAt: null };
+            }
+          }),
+        );
         res.status(200).json({ success: true, data: { users: enriched, total, stats } });
         return;
       }
@@ -605,12 +567,13 @@ export default async function handler(req: AdminReq, res: AdminRes): Promise<voi
           return;
         }
         const logId = logIdFor(body.idempotencyKey, newId('log'));
-        // Independent reads — one batch instead of two round-trips.
-        const [seen, user] = await Promise.all([store.findLog(logId), store.getRegistry(userId)]);
+        const seen = await store.findLog(logId);
         if (seen && body.idempotencyKey) {
+          const user = await store.getRegistry(userId);
           res.status(200).json({ success: true, data: { user, replayed: true } });
           return;
         }
+        const user = await store.getRegistry(userId);
         if (!user) {
           res.status(404).json({ success: false, error: 'User not found.' });
           return;
@@ -650,18 +613,6 @@ export default async function handler(req: AdminReq, res: AdminRes): Promise<voi
         let created = 0;
         let updated = 0;
         let skipped = 0;
-        // Read the tab once up front: per-item getRegistry would cost a
-        // full Apps Script round-trip per row (200 items = 200 calls).
-        // Writes stay sequential — Apps Script serializes them under a
-        // lock anyway, so parallel writes only add contention.
-        let snapshot: RegistryUser[];
-        try {
-          snapshot = await store.listRegistry();
-        } catch {
-          res.status(502).json({ success: false, error: 'Could not read the user registry.' });
-          return;
-        }
-        const byId = new Map(snapshot.map((u) => [u.userId, u]));
         for (const item of list) {
           try {
             const input = validateRegistryInput({
@@ -671,10 +622,9 @@ export default async function handler(req: AdminReq, res: AdminRes): Promise<voi
               registeredAt: (item as Record<string, unknown>).registeredAt,
               lastLoginAt: (item as Record<string, unknown>).lastLoginAt,
             });
-            const merged = mergeRegistryUser(byId.get(input.userId) ?? null, input, now);
-            if (merged.created) await scriptAppendRow('UserRegistry', registryRow(merged.record));
-            else await scriptUpdateRowById('UserRegistry', input.userId, registryRow(merged.record));
-            byId.set(input.userId, merged.record);
+            const existing = await store.getRegistry(input.userId);
+            const merged = mergeRegistryUser(existing, input, now);
+            await store.upsertRegistry(merged.record);
             if (merged.created) created += 1;
             else updated += 1;
           } catch {

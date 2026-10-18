@@ -3,7 +3,6 @@
   "private": true,
   "version": "1.0.0",
   "type": "module",
-<<<<<<< HEAD
   "description": "Stockly - inventory management platform: Android app, responsive website, one shared backend.",
   "workspaces": [
     "apps/*",
@@ -25,43 +24,6 @@
     "cap:sync": "cap sync android",
     "cap:open": "cap open android",
     "android:build": "npm run build:mobile && npm run cap:sync && node scripts/build-apk.mjs"
-=======
-  "description": "Stockly - Android inventory management for small business",
-  "scripts": {
-    "dev": "npm run dev:mobile",
-    "dev:app": "npm run dev:mobile",
-    "dev:mobile": "npm --prefix mobile-app run dev",
-    "dev:user": "npm --prefix mobile-app run dev",
-    "dev:admin": "npm --prefix admin run dev",
-    "dev:server": "npm --prefix server run dev",
-    "dev:all": "node scripts/dev-all.mjs",
-    "build": "npm run build:mobile",
-    "build:app": "npm --prefix mobile-app run build",
-    "build:mobile": "npm --prefix mobile-app run build",
-    "build:user": "npm --prefix mobile-app run build",
-    "build:admin": "npm --prefix admin run build",
-    "lint": "oxlint",
-    "test": "node --experimental-strip-types --test tests/api-response.test.ts tests/releases.test.ts tests/user-registry.test.ts tests/admin-auth.test.ts tests/device-link.test.ts tests/auth.test.ts tests/server.test.ts",
-    "preview": "npm --prefix mobile-app run preview",
-    "cap:sync": "npm --prefix mobile-app run cap:sync",
-    "cap:open": "npm --prefix mobile-app run cap:open",
-    "android:build": "npm --prefix mobile-app run android:build"
-  },
-  "dependencies": {
-    "@capacitor/android": "^8.0.0",
-    "@capacitor/app": "^8.0.0",
-    "@capacitor/core": "^8.0.0",
-    "@capacitor/haptics": "^8.0.0",
-    "@capacitor/keyboard": "^8.0.0",
-    "@capacitor/network": "^8.0.0",
-    "@capacitor/splash-screen": "^8.0.0",
-    "@capacitor/status-bar": "^8.0.0",
-    "html5-qrcode": "^2.3.8",
-    "lucide-react": "^0.554.0",
-    "react": "^19.2.8",
-    "react-dom": "^19.2.8",
-    "react-qr-code": "^2.2.0"
->>>>>>> bc90ae3b25b8be70ddda745a7984f0a2ba4ae22d
   },
   "devDependencies": {
     "@capacitor/cli": "^8.0.0",

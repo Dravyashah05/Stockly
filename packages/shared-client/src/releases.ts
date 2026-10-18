@@ -1,7 +1,7 @@
 /* Published-release client (GitHub Releases as source of truth).
  *
- * The installed Android app reads the live release state straight from the
- * GitHub Releases
+ * No committed metadata files: the website, the store page, and the in-app
+ * updater all read the live release state straight from the GitHub Releases
  * API, cached briefly. Nothing here logs URLs, tokens, or checksums.
  */
 
@@ -166,8 +166,9 @@ export async function fetchLatestRelease(opts?: { noCache?: boolean }): Promise<
       return cached.info;
     }
   }
-  // Static metadata is available in browser preview without rate limits or
-  // extra requests. Native builds always check the network for fresh releases.
+  // Static metadata shipped with the website: updated on every publish, no
+  // rate limits, no extra requests. Skipped on native builds, whose bundled
+  // copy would be stale by design — installed apps always check the network.
   if (!isNativeRuntime()) {
     try {
       const ctrl = new AbortController();

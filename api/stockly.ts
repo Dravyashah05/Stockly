@@ -1,7 +1,3 @@
-import { applyApiCors } from './cors.js';
-import { isUpstreamTimeout, upstreamSignal } from './upstream.js';
-import { RateLimiter } from './device-logic.js';
-
 /* Vercel serverless proxy for the Stockly Apps Script backend.
  *
  * Browsers cannot call Apps Script directly (its ContentService redirect
@@ -18,7 +14,6 @@ type QueryValue = string | string[] | undefined;
 
 interface ProxyReq {
   method?: string;
-  headers?: Record<string, string | string[] | undefined>;
   query: Record<string, QueryValue>;
   body?: unknown;
 }
@@ -34,22 +29,7 @@ function first(v: QueryValue): string | undefined {
   return Array.isArray(v) ? v[0] : (v ?? undefined);
 }
 
-function clientIp(req: ProxyReq): string {
-  const raw = req.headers?.['x-forwarded-for'] ?? req.headers?.['X-Forwarded-For'];
-  const value = Array.isArray(raw) ? raw[0] : raw;
-  return ((value ?? '').split(',')[0] ?? '').trim() || 'unknown';
-}
-
-// Open forwarder by design (legacy direct-exec clients): throttle abuse
-// without breaking normal use (60/min/IP, in-memory per instance).
-const proxyLimiter = new RateLimiter(60, 60_000);
-
 export default async function handler(req: ProxyReq, res: ProxyRes): Promise<void> {
-  applyApiCors(req, res);
-  if (req.method === 'OPTIONS') {
-    res.status(200).json({ success: true });
-    return;
-  }
   if (req.method !== 'GET' && req.method !== 'POST') {
     res.status(405).json({ success: false, error: 'Method not allowed.' });
     return;
@@ -57,10 +37,6 @@ export default async function handler(req: ProxyReq, res: ProxyRes): Promise<voi
   // Liveness probe the client uses to detect this route (no target needed).
   if (first(req.query.probe) === '1' && !first(req.query.target)) {
     res.status(200).json({ success: true, proxy: 'stockly' });
-    return;
-  }
-  if (!proxyLimiter.take(`proxy:${clientIp(req)}`)) {
-    res.status(429).json({ success: false, error: 'Too many requests. Wait a minute and try again.' });
     return;
   }
   try {
@@ -89,7 +65,7 @@ export default async function handler(req: ProxyReq, res: ProxyRes): Promise<voi
         if (key !== 'target' && key !== 'probe' && v !== undefined) target.searchParams.set(key, v);
       }
     }
-    const init: RequestInit = { method: req.method, redirect: 'follow', signal: upstreamSignal() };
+    const init: RequestInit = { method: req.method, redirect: 'follow' };
     if (req.method === 'POST') {
       // Vercel hands text/plain bodies to us as a string; stay correct if a
       // runtime ever gives parsed JSON or raw bytes instead of corrupting it.
@@ -118,11 +94,6 @@ export default async function handler(req: ProxyReq, res: ProxyRes): Promise<voi
     res.send(text);
   } catch (error) {
     const kind = error instanceof Error ? error.name : 'Error';
-    if (isUpstreamTimeout(error)) {
-      console.error(`[stockly-proxy] upstream request timed out (${kind})`);
-      res.status(502).json({ success: false, error: 'Apps Script upstream request timed out. Retry, and verify the last operation before resubmitting.' });
-      return;
-    }
     console.error(`[stockly-proxy] upstream request failed (${kind})`);
     res.status(502).json({ success: false, error: 'Apps Script upstream request failed.' });
   }

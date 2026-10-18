@@ -17,13 +17,8 @@ import {
   type AdminLogEntry,
   type RegistryUser,
   type UserStats,
-<<<<<<<< HEAD:apps/mobile/src/screens/AdminScreen.tsx
 } from '@stockly/shared-client/admin-api';
 import { devicesApi, DevicesApiError, type DeviceInfo } from '@stockly/shared-client/devices';
-========
-} from '../../shared/admin-api';
-import { devicesApi, DevicesApiError, type DeviceInfo } from '../../shared/devices';
->>>>>>>> bc90ae3b25b8be70ddda745a7984f0a2ba4ae22d:mobile-app/src/app/screens/AdminScreen.tsx
 import { Confirm, EmptyState, Field, SearchBar, Segmented, inputCls } from '../components/ui';
 
 type Section = 'users' | 'devices' | 'roles' | 'settings' | 'logs';
@@ -107,7 +102,7 @@ function Gate({ onAuthed }: { onAuthed: () => void }) {
           <input value={setupKey} onChange={(e) => setSetupKey(e.target.value)} type="password" autoComplete="off" placeholder="From Vercel env ADMIN_SETUP_KEY" className={inputCls} />
         </Field>
         {error ? <p role="alert" className="text-[12.5px] font-semibold text-rose-600 dark:text-rose-300">{error}</p> : null}
-        <button type="submit" disabled={busy} className="press min-h-[52px] w-full rounded-2xl bg-(--primary) text-[15px] font-extrabold text-white disabled:opacity-50 dark:bg-(--primary) dark:text-[#151515]">
+        <button type="submit" disabled={busy} className="press min-h-[52px] w-full rounded-2xl bg-[#151515] text-[15px] font-extrabold text-white disabled:opacity-50 dark:bg-[#C7FF4D] dark:text-[#151515]">
           {busy ? 'Checking…' : mode === 'bootstrap' ? 'Create owner' : 'Sign in'}
         </button>
       </form>
@@ -359,7 +354,7 @@ function SettingsSection({ notify }: { notify: (t: string, k?: 'success' | 'erro
         <Field label="Value">
           <input value={value} onChange={(e) => setValue(e.target.value)} placeholder="Value" className={inputCls} />
         </Field>
-        <button type="button" onClick={() => void save()} disabled={busy || !key.trim()} className="press min-h-[48px] w-full rounded-2xl bg-(--primary) text-[14px] font-extrabold text-white disabled:opacity-50 dark:bg-(--primary) dark:text-[#151515]">
+        <button type="button" onClick={() => void save()} disabled={busy || !key.trim()} className="press min-h-[48px] w-full rounded-2xl bg-[#151515] text-[14px] font-extrabold text-white disabled:opacity-50 dark:bg-[#C7FF4D] dark:text-[#151515]">
           {busy ? 'Saving…' : 'Save setting'}
         </button>
       </div>
@@ -442,7 +437,7 @@ function DevicesSection({ notify }: { notify: (t: string, k?: 'success' | 'error
         <Field label="Look up devices by user ID">
           <input value={userId} onChange={(e) => setUserId(e.target.value)} placeholder="usr_…" autoCapitalize="off" autoCorrect="off" className={inputCls} />
         </Field>
-        <button type="submit" disabled={busy || !userId.trim()} className="press min-h-[48px] w-full rounded-2xl bg-(--primary) text-[14px] font-extrabold text-white disabled:opacity-50 dark:bg-(--primary) dark:text-[#151515]">
+        <button type="submit" disabled={busy || !userId.trim()} className="press min-h-[48px] w-full rounded-2xl bg-[#151515] text-[14px] font-extrabold text-white disabled:opacity-50 dark:bg-[#C7FF4D] dark:text-[#151515]">
           {busy ? 'Loading…' : 'Look up devices'}
         </button>
       </form>
@@ -544,7 +539,7 @@ export default function AdminScreen({ onBack, notify }: { onBack: () => void; no
                 key={s}
                 type="button"
                 onClick={() => setSection(s)}
-                className={`press shrink-0 rounded-xl px-3 py-2 text-[12.5px] font-extrabold capitalize ${section === s ? 'bg-(--primary) text-white dark:bg-(--primary) dark:text-[#151515]' : 'bg-(--glass-soft) text-(--ink-2)'}`}
+                className={`press shrink-0 rounded-xl px-3 py-2 text-[12.5px] font-extrabold capitalize ${section === s ? 'bg-[#151515] text-white dark:bg-[#C7FF4D] dark:text-[#151515]' : 'bg-(--glass-soft) text-(--ink-2)'}`}
               >
                 {s}
               </button>

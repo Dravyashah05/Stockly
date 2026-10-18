@@ -5,11 +5,7 @@
  * create every tab it needs with the exact headers below, leaving
  * existing tabs/rows untouched (never overwrites). The browser never
  * touches this. See apps-script/Admin.gs (source of truth on the
-<<<<<<< HEAD
  * Google side) and README.md.
-=======
- * Google side).
->>>>>>> bc90ae3b25b8be70ddda745a7984f0a2ba4ae22d
  */
 
 export const SCHEMA_TABS: Record<string, readonly string[]> = {
@@ -28,7 +24,7 @@ export interface SchemaResult {
   existing: string[];
 }
 
-import { adminScriptConfigured, scriptCall } from './apps-script-client.js';
+import { adminScriptConfigured, scriptCall } from './apps-script-client.ts';
 
 // Per-instance cache: one setup call per 10 minutes, not per request.
 // Serverless instances are ephemeral; the guard only avoids repeat work
