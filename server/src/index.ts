@@ -45,6 +45,7 @@ loadRootEnv();
 import adminHandler from '../../api/admin.ts';
 import authHandler from '../../api/auth.ts';
 import devicesHandler from '../../api/devices.ts';
+import healthHandler from '../../api/health.ts';
 import sheetsHandler from '../../api/sheets.ts';
 import stocklyHandler from '../../api/stockly.ts';
 
@@ -108,13 +109,11 @@ export function createApp(): express.Express {
   const admin = adapt(adminHandler as ApiHandler);
   const devices = adapt(devicesHandler as ApiHandler);
   const sheets = adapt(sheetsHandler as ApiHandler);
+  const health = adapt(healthHandler as ApiHandler);
   const stockly = adapt(stocklyHandler as unknown as ApiHandler);
 
-  app.get('/api/health', (_req, res) => {
-    res.json({ success: true, data: { ok: true, time: new Date().toISOString(), version: '1.0.0' } });
-  });
-
   // Canonical routes (identical paths to the Vercel deployment).
+  app.all('/api/health', health);
   app.all('/api/auth', auth);
   app.all('/api/admin', admin);
   app.all('/api/devices', devices);
