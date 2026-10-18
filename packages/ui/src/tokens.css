@@ -1,0 +1,339 @@
+/* =============================================================================
+ * Stockly "Liquid Glass" — design tokens
+ * -----------------------------------------------------------------------------
+ * Plain CSS custom properties. No framework required.
+ *
+ * Structure:
+ *   1. Brand primitives under --st-*   (shared with brand.css)
+ *   2. Semantic aliases                (the legacy vocabulary the apps already
+ *                                        use: bg-(--ink), text-(--ink-2), …)
+ *   3. Liquid Glass layer tokens       (--glass-blur, --surface-*, --shadow-*…)
+ *
+ * Theming — how the dark theme is switched on (all three mechanisms are
+ * supported; the selector list is deliberate, see below):
+ *
+ *   A. `.dark` on <html> … … … … … … THE mechanism the apps use today:
+ *      apps/mobile/index.html:18   document.documentElement.classList.toggle('dark', dark)
+ *      apps/website/index.html:20  document.documentElement.classList.toggle('dark', dark)
+ *      packages/shared-client/src/store.tsx:280 (runtime effect) and :303
+ *      (system-mode listener). Also matches `data-theme="dark"` for consumers
+ *      that prefer an attribute.
+ *
+ *   B. `@media (prefers-color-scheme: dark)` … system fallback for roots that
+ *      carry NO explicit theme signal. The naive pattern
+ *      `:root:not(.light, [data-theme="light"])` is *wrong* for these apps:
+ *      choosing "Light" on a dark OS simply REMOVES `.dark` (never adds
+ *      `.light`), so the media query would override the user's choice. Both
+ *      apps therefore also set `style="color-scheme: light|dark"` on <html>
+ *      synchronously in their head script (apps/{mobile,website}/index.html:19 and :21) and
+ *      again from the store (store.tsx:281). Excluding roots that already
+ *      resolved an inline `color-scheme` keeps the fallback race-free:
+ *      it only applies before JS runs / when no theme script exists at all.
+ *
+ *   C. `.light` / `[data-theme="light"]` — explicit light always wins over B.
+ *
+ * All values below are re-declared identically in the media fallback, so the
+ * file stays valid without JavaScript and without a build step.
+ * ========================================================================== */
+
+/* The shared brand palette stays the single brand source for both apps that
+   already `@import "@stockly/ui/brand.css"` themselves. */
+@import "./brand.css";
+
+/* ==========================================================================
+ * 1. Default theme: LIGHT
+ * ======================================================================== */
+:root {
+  color-scheme: light;
+
+  /* -- Brand primitives (mirrors brand.css — same values, kept here so this
+       file is self-describing and standalone-safe) ----------------------- */
+  --st-bg: #f7f7f2;
+  --st-ink: #151515;
+  --st-grey: #eaeae4;
+  --st-line: #d9d9d0;
+  --st-lime: #c7ff4d;
+  --st-dark: #111210;
+  --st-white: #ffffff;
+
+  /* -- Primitive radii --------------------------------------------------- */
+  --st-radius-sm: 10px;
+  --st-radius-md: 12px;
+  --st-radius-lg: 18px;
+  --st-radius-xl: 28px;
+  --st-radius-pill: 999px;
+
+  /* -- Primitive stacking order ----------------------------------------- */
+  --st-z-nav: 30;
+  --st-z-scrim: 60;
+  --st-z-overlay: 60;
+  --st-z-menu: 70;
+  --st-z-toast: 90;
+
+  /* -- Typography -------------------------------------------------------- */
+  --font-sans: "Inter", ui-sans-serif, system-ui, -apple-system, "Segoe UI",
+    Roboto, sans-serif;
+  --font-size-xs: 0.75rem;
+  --font-size-sm: 0.875rem;
+  --font-size-base: 1rem;
+  --font-size-lg: 1.125rem;
+  --font-size-title: 1.375rem;
+  --font-size-display: 2rem;
+  --font-weight-body: 450;
+  --font-weight-label: 650;
+  --font-weight-heading: 800;
+
+  /* -- Spacing (4px scale) ---------------------------------------------- */
+  --space-1: 0.25rem;
+  --space-2: 0.5rem;
+  --space-3: 0.75rem;
+  --space-4: 1rem;
+  --space-5: 1.25rem;
+  --space-6: 1.5rem;
+  --space-7: 1.75rem;
+  --space-8: 2rem;
+  --space-9: 2.25rem;
+  --space-10: 2.5rem;
+  --space-11: 2.75rem;
+  --space-12: 3rem;
+  --space-13: 3.25rem;
+  --space-14: 3.5rem;
+  --space-15: 3.75rem;
+  --space-16: 4rem;
+
+  /* -- Motion ------------------------------------------------------------ */
+  --motion-fast: 140ms;
+  --motion-standard: 220ms;
+  --motion-slow: 340ms;
+  --duration-fast: 140ms;
+  --duration-standard: 220ms;
+  --duration-slow: 340ms;
+  --ease-spring: cubic-bezier(0.32, 0.9, 0.35, 1);
+  --ease-out: cubic-bezier(0.16, 1, 0.3, 1);
+
+  /* ======================================================================
+   * Legacy semantic aliases — same meaning as the tokens the apps ship in
+   * apps/mobile/src/index.css:12 so Tailwind arbitrary values such as
+   * `bg-(--bg)`, `text-(--ink)`, `border-(--stroke)` keep working.
+   * ==================================================================== */
+  --bg: var(--st-bg);
+  --bg-elev: #ffffff;
+  --ink: var(--st-ink);
+  --ink-2: #5f5f58;
+  --ink-3: #8e8e86;
+
+  /* Glass surfaces are genuinely translucent now (Liquid Glass); each value
+     sits close to the old solid colour over --bg so layouts do not shift. */
+  --glass: rgba(255, 255, 255, 0.78);
+  --glass-strong: rgba(255, 255, 255, 0.94);
+  --glass-soft: rgba(234, 234, 228, 0.72);
+
+  --stroke: var(--st-line);
+  --stroke-dim: rgba(21, 21, 21, 0.1);
+
+  --accent: #151515;
+  --accent-soft: color-mix(in srgb, var(--st-lime) 24%, transparent);
+  --accent-ink: #151515;
+  --brand-lime: var(--st-lime);
+
+  --primary: #151515;
+  --primary-foreground: #ffffff;
+
+  --success: #1e7b3c;
+  --warning: #9a5b00;
+  --destructive: #c2332d;
+
+  --input: #ffffff;
+  --field: #ffffff;
+  --ring: #151515;
+  --control-border: var(--stroke);
+  --focus-ring: 0 0 0 3px var(--accent-soft);
+
+  --card-shadow: 0 1px 2px rgba(21, 21, 21, 0.04);
+  --nav-shadow: 0 8px 24px -16px rgba(21, 21, 21, 0.24);
+  --shadow-popover: 0 18px 48px -24px rgba(21, 21, 21, 0.28);
+  --glow-a: rgba(199, 255, 77, 0.14);
+  --glow-b: rgba(21, 21, 21, 0.05);
+
+  --icon-sm: 16px;
+  --icon-md: 20px;
+  --icon-lg: 24px;
+
+  --radius-card: var(--st-radius-lg);
+  --radius-row: var(--st-radius-md);
+  --radius-control: var(--st-radius-sm);
+  --radius-sm: var(--st-radius-sm);
+  --radius-md: var(--st-radius-md);
+  --radius-lg: var(--st-radius-lg);
+  --radius-xl: var(--st-radius-xl);
+  --radius-pill: var(--st-radius-pill);
+
+  --input-height: 48px;
+  --button-height: 44px;
+  --dialog-mobile-max: 86dvh;
+  --breakpoint-tablet: 768px;
+  --breakpoint-desktop: 1024px;
+  /* Minimum touch target (WCAG / iOS HIG) */
+  --touch-min: 44px;
+
+  /* ======================================================================
+   * Liquid Glass layer tokens
+   * ==================================================================== */
+  --glass-blur: 16px;
+  --glass-blur-heavy: 40px;
+  --glass-saturate: 160%;
+  /* Inset top light edge — the specular line that reads as a glass lip. */
+  --glass-highlight: inset 0 1px 0 rgba(255, 255, 255, 0.85);
+  --glass-gradient: linear-gradient(
+    158deg,
+    rgba(255, 255, 255, 0.55),
+    rgba(255, 255, 255, 0.16) 46%,
+    rgba(255, 255, 255, 0.4)
+  );
+  --glass-tint: rgba(255, 255, 255, 0.42);
+
+  --surface-1: var(--glass);
+  --surface-2: var(--glass-strong);
+  --surface-3: rgba(255, 255, 255, 0.97);
+  /* Opaque stand-ins used where backdrop-filter is unsupported. */
+  --surface-solid: #ffffff;
+  --surface-soft-solid: var(--st-grey);
+
+  --shadow-1: 0 1px 2px rgba(21, 21, 21, 0.06);
+  --shadow-2: 0 8px 24px -12px rgba(21, 21, 21, 0.18);
+  --shadow-3: 0 24px 64px -24px rgba(21, 21, 21, 0.32);
+}
+
+/* ==========================================================================
+ * 2. DARK theme — switchable via `.dark` (apps) or `[data-theme="dark"]`
+ *    (see the file header for why this comes before the media fallback).
+ * ======================================================================== */
+:root:where(.dark, [data-theme="dark"]) {
+  color-scheme: dark;
+
+  --bg: var(--st-dark);
+  --bg-elev: #1c1d1a;
+  --ink: #f4f4ec;
+  --ink-2: #a9a9a1;
+  --ink-3: #6c6c66;
+
+  --glass: rgba(28, 29, 26, 0.74);
+  --glass-strong: rgba(28, 29, 26, 0.9);
+  --glass-soft: rgba(255, 255, 255, 0.06);
+
+  --stroke: rgba(255, 255, 255, 0.13);
+  --stroke-dim: rgba(255, 255, 255, 0.09);
+
+  --accent: var(--st-lime);
+  --accent-soft: color-mix(in srgb, var(--st-lime) 13%, transparent);
+  --accent-ink: var(--st-ink);
+  --primary: var(--st-lime);
+  --primary-foreground: var(--st-ink);
+
+  --success: #77d99a;
+  --warning: #f1c36b;
+  --destructive: #ff8a82;
+
+  --input: rgba(255, 255, 255, 0.06);
+  --field: rgba(255, 255, 255, 0.06);
+  --ring: var(--st-lime);
+  --control-border: var(--stroke);
+  --focus-ring: 0 0 0 3px var(--accent-soft);
+
+  --card-shadow: 0 1px 2px rgba(0, 0, 0, 0.14);
+  --nav-shadow: 0 8px 24px -16px rgba(0, 0, 0, 0.65);
+  --shadow-popover: 0 18px 48px -24px rgba(0, 0, 0, 0.72);
+  --glow-a: rgba(199, 255, 77, 0.07);
+  --glow-b: rgba(0, 0, 0, 0);
+
+  --glass-highlight: inset 0 1px 0 rgba(255, 255, 255, 0.16);
+  --glass-gradient: linear-gradient(
+    158deg,
+    rgba(255, 255, 255, 0.1),
+    rgba(255, 255, 255, 0.02) 46%,
+    rgba(255, 255, 255, 0.06)
+  );
+  --glass-tint: rgba(255, 255, 255, 0.05);
+
+  --surface-1: var(--glass);
+  --surface-2: var(--glass-strong);
+  --surface-3: rgba(34, 35, 31, 0.97);
+  --surface-solid: #1c1d1a;
+  --surface-soft-solid: #24251f;
+
+  --shadow-1: 0 1px 2px rgba(0, 0, 0, 0.36);
+  --shadow-2: 0 8px 24px -12px rgba(0, 0, 0, 0.6);
+  --shadow-3: 0 24px 64px -24px rgba(0, 0, 0, 0.75);
+}
+
+/* ==========================================================================
+ * 3. DARK theme — system fallback (no theme script / no explicit choice).
+ *
+ *    The `:not(…)` guards are what makes this safe next to mechanisms 2 and
+ *    A documented in the header:
+ *      - `.light` / `[data-theme="light"]`  → an explicit light choice always
+ *        wins over the OS preference.
+ *      - `[style*="color-scheme"]`          → the Stockly head script and the
+ *        store resolve `colorScheme` synchronously (index.html:19 / :21,
+ *        store.tsx:281), so once the app has decided, this fallback steps
+ *        aside and never fights the `.dark`-class mechanism.
+ * ======================================================================== */
+@media (prefers-color-scheme: dark) {
+  :root:not(.light, [data-theme="light"], [style*="color-scheme"]) {
+    color-scheme: dark;
+
+    --bg: var(--st-dark);
+    --bg-elev: #1c1d1a;
+    --ink: #f4f4ec;
+    --ink-2: #a9a9a1;
+    --ink-3: #6c6c66;
+
+    --glass: rgba(28, 29, 26, 0.74);
+    --glass-strong: rgba(28, 29, 26, 0.9);
+    --glass-soft: rgba(255, 255, 255, 0.06);
+
+    --stroke: rgba(255, 255, 255, 0.13);
+    --stroke-dim: rgba(255, 255, 255, 0.09);
+
+    --accent: var(--st-lime);
+    --accent-soft: color-mix(in srgb, var(--st-lime) 13%, transparent);
+    --accent-ink: var(--st-ink);
+    --primary: var(--st-lime);
+    --primary-foreground: var(--st-ink);
+
+    --success: #77d99a;
+    --warning: #f1c36b;
+    --destructive: #ff8a82;
+
+    --input: rgba(255, 255, 255, 0.06);
+    --field: rgba(255, 255, 255, 0.06);
+    --ring: var(--st-lime);
+    --control-border: var(--stroke);
+    --focus-ring: 0 0 0 3px var(--accent-soft);
+
+    --card-shadow: 0 1px 2px rgba(0, 0, 0, 0.14);
+    --nav-shadow: 0 8px 24px -16px rgba(0, 0, 0, 0.65);
+    --shadow-popover: 0 18px 48px -24px rgba(0, 0, 0, 0.72);
+    --glow-a: rgba(199, 255, 77, 0.07);
+    --glow-b: rgba(0, 0, 0, 0);
+
+    --glass-highlight: inset 0 1px 0 rgba(255, 255, 255, 0.16);
+    --glass-gradient: linear-gradient(
+      158deg,
+      rgba(255, 255, 255, 0.1),
+      rgba(255, 255, 255, 0.02) 46%,
+      rgba(255, 255, 255, 0.06)
+    );
+    --glass-tint: rgba(255, 255, 255, 0.05);
+
+    --surface-1: var(--glass);
+    --surface-2: var(--glass-strong);
+    --surface-3: rgba(34, 35, 31, 0.97);
+    --surface-solid: #1c1d1a;
+    --surface-soft-solid: #24251f;
+
+    --shadow-1: 0 1px 2px rgba(0, 0, 0, 0.36);
+    --shadow-2: 0 8px 24px -12px rgba(0, 0, 0, 0.6);
+    --shadow-3: 0 24px 64px -24px rgba(0, 0, 0, 0.75);
+  }
+}

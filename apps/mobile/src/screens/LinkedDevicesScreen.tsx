@@ -127,7 +127,7 @@ function ManageDevices({
       } else if (res === 'link-required') {
         notify('This account already has devices — link from an approved device instead.', 'error');
       } else {
-        notify('Device service is not configured yet. See docs/device-linking.md.', 'error');
+        notify('Device service is not configured yet. See README.md.', 'error');
       }
     } finally {
       setBusy(false);

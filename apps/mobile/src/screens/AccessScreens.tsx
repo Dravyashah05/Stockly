@@ -76,7 +76,10 @@ export function SheetSetupScreen({
 
   return (
     <div className="app-page-viewport mx-auto max-w-md pb-10">
-      <div className="mx-auto max-w-md space-y-5 px-4 pt-8">
+      <div
+        className="mx-auto max-w-md space-y-5 px-4"
+        style={{ paddingTop: 'calc(env(safe-area-inset-top, 0px) + 1.5rem)' }}
+      >
         <div className="relative overflow-hidden rounded-[28px] bg-[#111210] p-5 text-white">
           <div aria-hidden="true" className="pointer-events-none absolute -right-20 -top-24 h-64 w-64 rounded-full bg-white/[0.07] blur-3xl" />
           <div className="relative flex items-center gap-3.5">

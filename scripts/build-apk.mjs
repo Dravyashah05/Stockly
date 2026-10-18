@@ -37,7 +37,7 @@ console.log(`[android] cd apps/mobile/android && ${isWin ? 'gradlew.bat' : './gr
 const result = spawnSync(isWin ? gradlew : 'sh', isWin ? [task, '--console=plain'] : [gradlew, task, '--console=plain'], {
   cwd: androidDir,
   stdio: 'inherit',
-  shell: false,
+  shell: isWin,
   env: process.env,
 });
 

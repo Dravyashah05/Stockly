@@ -59,7 +59,7 @@ export default function StoreSite() {
           </div>
           <div className="flex items-center gap-2.5">
             <a
-              href="app.html"
+              href="#/app"
               className="hidden text-[12px] font-extrabold uppercase tracking-[0.14em] transition-colors hover:text-neutral-500 md:inline-block"
             >
               Open app
@@ -94,7 +94,7 @@ export default function StoreSite() {
         </nav>
         {menu ? (
           <div className="border-t border-[#D9D9D0] bg-[#F7F7F2] px-5 pb-5 pt-2 md:hidden">
-            {[...NAV, { label: 'Open app', href: 'app.html' }, { label: 'Download app', href: '#store' }].map((n) => (
+            {[...NAV, { label: 'Open app', href: '#/app' }, { label: 'Download app', href: '#store' }].map((n) => (
               <a
                 key={n.href + n.label}
                 href={n.href}
@@ -123,8 +123,11 @@ export default function StoreSite() {
             Your inventory. Under control.
           </p>
           <div className="st-enter mt-8 flex flex-wrap gap-3" style={{ animationDelay: '0.24s' }}>
-            <a href="#product" className="rounded-full bg-[#151515] px-7 py-3.5 text-[13px] font-extrabold uppercase tracking-[0.14em] text-white transition-transform hover:scale-[1.03] active:scale-95">
-              Explore Stockly
+            <a href="#/app" className="rounded-full bg-[#151515] px-7 py-3.5 text-[13px] font-extrabold uppercase tracking-[0.14em] text-white transition-transform hover:scale-[1.03] active:scale-95 shadow-md">
+              Launch Web App
+            </a>
+            <a href="#store" className="rounded-full bg-[#C7FF4D] px-7 py-3.5 text-[13px] font-extrabold uppercase tracking-[0.14em] text-[#151515] transition-transform hover:scale-[1.03] active:scale-95">
+              Download APK
             </a>
             <a href="#how" className="rounded-full border border-[#151515] px-7 py-3.5 text-[13px] font-extrabold uppercase tracking-[0.14em] transition-colors hover:bg-[#151515] hover:text-white">
               See how it works

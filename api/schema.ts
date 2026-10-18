@@ -5,7 +5,7 @@
  * create every tab it needs with the exact headers below, leaving
  * existing tabs/rows untouched (never overwrites). The browser never
  * touches this. See apps-script/Admin.gs (source of truth on the
- * Google side) and docs/admin-setup.md.
+ * Google side) and README.md.
  */
 
 export const SCHEMA_TABS: Record<string, readonly string[]> = {

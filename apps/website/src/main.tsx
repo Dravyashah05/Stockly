@@ -1,17 +1,55 @@
-import { StrictMode } from 'react';
+import { StrictMode, useEffect, useState } from 'react';
 import { createRoot } from 'react-dom/client';
+import '@stockly/ui/styles.css';
 import './site/site.css';
 import StoreSite from './site/StoreSite';
+import WebApp from './web/WebApp';
+import AdminScreen from './admin/AdminScreen';
 
-/* Website entry — one bundle, hash routes:
- *   #/        marketing landing (StoreSite)
- *   #/app     the web inventory application (dashboard, products, …)
- *   #/admin   owner console
- * `store.html` stays a dedicated page (download + install guide).
- * Hash routing works on static hosts without server rewrites. */
+/* Website entry — single bundle with client-side hash routing:
+ *   #/        Marketing landing page (StoreSite)
+ *   #/app     The dedicated Web Inventory Application (dashboard, products, history, devices, settings)
+ *   #/admin   Owner / Administrator Console
+ *   store.html Dedicated App Store APK download and installation page
+ */
+
+function WebsiteRouter() {
+  const [hash, setHash] = useState(() => window.location.hash);
+
+  useEffect(() => {
+    const handleHash = () => setHash(window.location.hash);
+    window.addEventListener('hashchange', handleHash);
+    return () => window.removeEventListener('hashchange', handleHash);
+  }, []);
+
+  if (hash.startsWith('#/admin')) {
+    return (
+      <AdminScreen
+        onBack={() => {
+          window.location.hash = '#/app';
+        }}
+        notify={(msg) => {
+          console.info(`[admin] ${msg}`);
+        }}
+      />
+    );
+  }
+
+  if (hash.startsWith('#/app')) {
+    return (
+      <WebApp
+        onNavigateAdmin={() => {
+          window.location.hash = '#/admin';
+        }}
+      />
+    );
+  }
+
+  return <StoreSite />;
+}
 
 createRoot(document.getElementById('root')!).render(
   <StrictMode>
-    <StoreSite />
+    <WebsiteRouter />
   </StrictMode>,
 );

@@ -295,9 +295,9 @@ const createLimiter = new RateLimiter(30, 60_000);
 function setupHelp(): Record<string, string[]> {
   return {
     steps: [
-      'Tabs are created automatically in the PRIVATE admin spreadsheet on first contact (see docs/admin-setup.md).',
+      'Tabs are created automatically in the PRIVATE admin spreadsheet on first contact (see README.md).',
       'Set ADMIN_SCRIPT_URL, ADMIN_SCRIPT_TOKEN and DEVICE_SESSION_SECRET in Vercel environment variables and redeploy.',
-      'For inventory-path revocation checks, run setDeviceSecrets(...) once in the user-sheet Apps Script (see docs/device-linking.md).',
+      'For inventory-path revocation checks, run setDeviceSecrets(...) once in the user-sheet Apps Script (see README.md).',
     ],
   };
 }

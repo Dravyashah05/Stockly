@@ -10,6 +10,12 @@
     "./tokens.css": "./src/tokens.css",
     "./brand.css": "./src/brand.css"
   },
+  "files": [
+    "src"
+  ],
+  "sideEffects": [
+    "**/*.css"
+  ],
   "scripts": {
     "typecheck": "tsc -b"
   },

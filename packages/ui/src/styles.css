@@ -1,0 +1,1545 @@
+/* =============================================================================
+ * Stockly "Liquid Glass" — component stylesheet
+ * -----------------------------------------------------------------------------
+ * Plain CSS, `.stk-` prefixed, zero framework dependencies. Import once:
+ *
+ *   import '@stockly/ui/styles.css';
+ *
+ * Contents (section comments match the numbered blocks below):
+ *   1. A11y helpers (screen-reader text, focus ring, press feedback)
+ *   2. Glass surfaces (blur + fallback)
+ *   3. GlassCard
+ *   4. GlassButton / IconButton
+ *   5. FloatingTabBar
+ *   6. GlassTextField / GlassSearch
+ *   7. Segmented
+ *   8. StatusBadge
+ *   9. EmptyState / LoadingState / ErrorState
+ *  10. GlassBottomSheet / GlassDialog (portalled overlays)
+ *  11. GlassMenu
+ *  12. Toaster
+ *  13. Motion (keyframes)
+ *  14. Media queries: reduced motion, forced colours, touch/safe-area
+ * ========================================================================== */
+@import "./tokens.css";
+
+/* ==========================================================================
+ * 1. A11y helpers
+ * ======================================================================== */
+
+/* Visually hidden but announced by screen readers. */
+.stk-sr-only {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip-path: inset(50%);
+  white-space: nowrap;
+  border: 0;
+}
+
+/* Shared, always-visible keyboard focus ring (exported as `stkFocusRing`). */
+.stk-focus-ring:focus-visible,
+:where(
+    .stk-btn,
+    .stk-icon-btn,
+    .stk-tab,
+    .stk-seg__btn,
+    .stk-menu__item,
+    .stk-field__control,
+    .stk-field__clear,
+    .stk-search__cancel,
+    .stk-toast,
+    .stk-scrim
+  ):focus-visible {
+  outline: 2px solid var(--ring);
+  outline-offset: 2px;
+}
+
+.stk-scrim:focus-visible {
+  outline-offset: -4px;
+}
+
+/* Disabled controls read as disabled everywhere. */
+.stk-btn:disabled,
+.stk-icon-btn:disabled,
+.stk-tab[aria-disabled="true"],
+.stk-seg__btn:disabled,
+.stk-menu__item:disabled,
+.stk-menu__item[aria-disabled="true"] {
+  cursor: not-allowed;
+}
+
+/* Tap feedback — no 300ms delay, no double-tap zoom. */
+.stk-btn,
+.stk-icon-btn,
+.stk-tab,
+.stk-seg__btn,
+.stk-menu__item {
+  touch-action: manipulation;
+}
+
+/* Exported utility: subtle press-scale. */
+.stk-press {
+  transition:
+    transform var(--motion-fast) ease,
+    background-color var(--motion-fast) ease;
+}
+.stk-press:active {
+  transform: scale(0.97);
+}
+
+/* Exported utility: contained internal scroller (thin, themed scrollbar). */
+.stk-scroll {
+  overscroll-behavior: contain;
+  -webkit-overflow-scrolling: touch;
+  scrollbar-width: thin;
+  scrollbar-color: color-mix(in srgb, var(--ink-3) 55%, transparent) transparent;
+}
+.stk-scroll::-webkit-scrollbar {
+  width: 6px;
+}
+.stk-scroll::-webkit-scrollbar-thumb {
+  background: color-mix(in srgb, var(--ink-3) 55%, transparent);
+  border-radius: var(--st-radius-pill);
+}
+
+/* ==========================================================================
+ * 2. Glass surfaces
+ * ======================================================================== */
+.stk-glass {
+  position: relative;
+  color: var(--ink);
+  background-color: var(--surface-1);
+  background-image: none;
+  border: 1px solid var(--stroke);
+  border-radius: var(--stk-radius, var(--radius-card));
+  box-shadow:
+    var(--card-shadow),
+    var(--glass-highlight);
+  -webkit-backdrop-filter: blur(var(--glass-blur)) saturate(var(--glass-saturate));
+  backdrop-filter: blur(var(--glass-blur)) saturate(var(--glass-saturate));
+  /* Keep scroll on the compositor: this layer never repaints content. */
+  contain: layout style;
+}
+
+.stk-glass--regular {
+  background-color: var(--glass);
+  background-image: var(--glass-gradient);
+}
+
+.stk-glass--strong {
+  background-color: var(--glass-strong);
+  background-image: var(--glass-gradient);
+  box-shadow:
+    var(--nav-shadow),
+    var(--glass-highlight);
+  -webkit-backdrop-filter: blur(var(--glass-blur-heavy)) saturate(var(--glass-saturate));
+  backdrop-filter: blur(var(--glass-blur-heavy)) saturate(var(--glass-saturate));
+}
+
+.stk-glass--soft {
+  background-color: var(--glass-soft);
+  background-image: none;
+  border-color: var(--stroke-dim);
+  box-shadow: var(--glass-highlight);
+  -webkit-backdrop-filter: blur(calc(var(--glass-blur) / 2)) saturate(var(--glass-saturate));
+  backdrop-filter: blur(calc(var(--glass-blur) / 2)) saturate(var(--glass-saturate));
+}
+
+.stk-glass--interactive {
+  cursor: pointer;
+  transition:
+    transform var(--motion-fast) var(--ease-out),
+    box-shadow var(--motion-fast) ease,
+    background-color var(--motion-fast) ease,
+    border-color var(--motion-fast) ease;
+}
+.stk-glass--interactive:hover {
+  border-color: color-mix(in srgb, var(--accent) 24%, var(--stroke));
+  box-shadow:
+    var(--shadow-1),
+    var(--glass-highlight);
+}
+.stk-glass--interactive:active {
+  transform: scale(0.985);
+}
+
+/* No backdrop-filter? Fall back to opaque, still-correct surfaces. */
+@supports not ((backdrop-filter: blur(1px)) or (-webkit-backdrop-filter: blur(1px))) {
+  .stk-glass,
+  .stk-glass--regular,
+  .stk-glass--strong {
+    background-color: var(--surface-solid);
+    background-image: none;
+    -webkit-backdrop-filter: none;
+    backdrop-filter: none;
+  }
+  .stk-glass--soft {
+    background-color: var(--surface-soft-solid);
+    background-image: none;
+    -webkit-backdrop-filter: none;
+    backdrop-filter: none;
+  }
+}
+
+/* ==========================================================================
+ * 3. GlassCard
+ * ======================================================================== */
+.stk-card {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+  padding: var(--space-5);
+}
+.stk-card__head {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+}
+.stk-card__title {
+  margin: 0;
+  color: var(--ink);
+  font-size: var(--font-size-lg);
+  font-weight: var(--font-weight-heading);
+  letter-spacing: -0.015em;
+  line-height: 1.25;
+}
+.stk-card__desc {
+  margin: 0;
+  color: var(--ink-2);
+  font-size: var(--font-size-sm);
+  font-weight: var(--font-weight-body);
+  line-height: 1.5;
+}
+.stk-card__body {
+  min-width: 0;
+}
+.stk-card__footer {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-3);
+  padding-top: var(--space-3);
+  border-top: 1px solid var(--stroke-dim);
+}
+
+/* ==========================================================================
+ * 4. GlassButton / IconButton
+ * ======================================================================== */
+.stk-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: var(--space-2);
+  min-height: var(--touch-min);
+  padding: 0 var(--space-4);
+  border: 1px solid transparent;
+  border-radius: var(--radius-md);
+  font-family: inherit;
+  font-size: var(--font-size-base);
+  font-weight: var(--font-weight-label);
+  line-height: 1.2;
+  text-align: center;
+  text-decoration: none;
+  cursor: pointer;
+  user-select: none;
+  -webkit-user-select: none;
+  transition:
+    transform var(--motion-fast) var(--ease-out),
+    background-color var(--motion-fast) ease,
+    border-color var(--motion-fast) ease,
+    color var(--motion-fast) ease,
+    box-shadow var(--motion-fast) ease,
+    opacity var(--motion-fast) ease;
+}
+.stk-btn:active:not(:disabled) {
+  transform: scale(0.97);
+}
+.stk-btn:disabled {
+  opacity: 0.5;
+  transform: none;
+}
+
+.stk-btn--sm {
+  min-height: var(--touch-min);
+  padding: 0 var(--space-3);
+  font-size: var(--font-size-sm);
+}
+.stk-btn--md {
+  min-height: var(--input-height);
+}
+.stk-btn--lg {
+  min-height: 56px;
+  padding: 0 var(--space-6);
+  font-size: var(--font-size-lg);
+}
+.stk-btn--block {
+  display: flex;
+  width: 100%;
+}
+
+.stk-btn--primary {
+  background-color: var(--primary);
+  color: var(--primary-foreground);
+  box-shadow: var(--shadow-1);
+}
+.stk-btn--primary:hover:not(:disabled) {
+  background-color: color-mix(in srgb, var(--primary) 88%, var(--ink));
+}
+
+.stk-btn--secondary {
+  background-color: var(--glass-soft);
+  border-color: var(--stroke-dim);
+  color: var(--ink);
+}
+.stk-btn--secondary:hover:not(:disabled) {
+  background-color: color-mix(in srgb, var(--glass-soft) 70%, var(--accent-soft));
+  border-color: var(--stroke);
+}
+
+.stk-btn--ghost {
+  background-color: transparent;
+  color: var(--ink-2);
+}
+.stk-btn--ghost:hover:not(:disabled) {
+  background-color: var(--accent-soft);
+  color: var(--ink);
+}
+
+.stk-btn--destructive {
+  background-color: var(--destructive);
+  color: #ffffff;
+  box-shadow: var(--shadow-1);
+}
+.stk-btn--destructive:hover:not(:disabled) {
+  background-color: color-mix(in srgb, var(--destructive) 88%, #000000);
+}
+
+.stk-btn__icon {
+  display: grid;
+  flex-shrink: 0;
+  place-items: center;
+  font-size: var(--icon-md);
+}
+.stk-btn__label {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.stk-btn.is-loading {
+  cursor: progress;
+}
+
+/* Spinner — a single ring in the current text colour. */
+.stk-spinner {
+  display: inline-block;
+  flex-shrink: 0;
+  width: 1em;
+  height: 1em;
+  border: 2px solid currentColor;
+  border-radius: 50%;
+  border-top-color: transparent;
+  animation: stk-spin 0.7s linear infinite;
+}
+.stk-spinner--lg {
+  width: 1.75em;
+  height: 1.75em;
+  border-width: 3px;
+}
+/* Standalone rotating icon (retry buttons, inline refreshers). */
+.stk-spin {
+  animation: stk-spin 0.7s linear infinite;
+}
+
+.stk-icon-btn {
+  display: inline-grid;
+  place-items: center;
+  min-width: var(--touch-min);
+  min-height: var(--touch-min);
+  padding: 0;
+  border: 1px solid transparent;
+  border-radius: var(--radius-pill);
+  background-color: transparent;
+  color: var(--ink-2);
+  font-family: inherit;
+  line-height: 1;
+  cursor: pointer;
+  transition:
+    transform var(--motion-fast) var(--ease-out),
+    background-color var(--motion-fast) ease,
+    color var(--motion-fast) ease,
+    border-color var(--motion-fast) ease;
+}
+.stk-icon-btn:active:not(:disabled) {
+  transform: scale(0.94);
+}
+.stk-icon-btn:disabled {
+  opacity: 0.5;
+  transform: none;
+}
+.stk-icon-btn--sm {
+  min-width: var(--touch-min);
+  min-height: var(--touch-min);
+}
+.stk-icon-btn--md {
+  min-width: 48px;
+  min-height: 48px;
+}
+.stk-icon-btn--lg {
+  min-width: 56px;
+  min-height: 56px;
+}
+.stk-icon-btn--solid {
+  background-color: var(--glass-soft);
+  border-color: var(--stroke-dim);
+  color: var(--ink);
+}
+.stk-icon-btn--solid:hover:not(:disabled) {
+  background-color: color-mix(in srgb, var(--glass-soft) 70%, var(--accent-soft));
+}
+.stk-icon-btn--ghost:hover:not(:disabled) {
+  background-color: var(--accent-soft);
+  color: var(--ink);
+}
+.stk-icon-btn--onSurface {
+  background-color: var(--glass-soft);
+  border-color: var(--stroke-dim);
+}
+.stk-icon-btn--circular {
+  border-radius: var(--st-radius-pill);
+}
+
+/* ==========================================================================
+ * 5. FloatingTabBar
+ * ======================================================================== */
+.stk-tabbar {
+  position: fixed;
+  right: 0;
+  bottom: calc(0.9rem + env(safe-area-inset-bottom, 0px));
+  left: 0;
+  z-index: var(--st-z-nav);
+  display: flex;
+  justify-content: center;
+  padding-inline: var(--space-4);
+  pointer-events: none;
+}
+.stk-tabbar__capsule {
+  position: relative;
+  display: grid;
+  grid-auto-flow: column;
+  grid-auto-columns: minmax(0, 1fr);
+  gap: 2px;
+  width: min(100%, 448px);
+  padding: 6px;
+  border-radius: var(--st-radius-xl);
+  pointer-events: auto;
+}
+.stk-tab {
+  position: relative;
+  z-index: 1;
+  display: flex;
+  min-width: var(--touch-min);
+  min-height: 56px;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 3px;
+  padding: 4px 2px;
+  border: 0;
+  border-radius: calc(var(--st-radius-xl) - 8px);
+  background: transparent;
+  color: var(--ink-3);
+  font-family: inherit;
+  font-size: 10.5px;
+  font-weight: var(--font-weight-label);
+  letter-spacing: 0.01em;
+  cursor: pointer;
+  transition: color var(--motion-fast) ease;
+}
+.stk-tab[aria-disabled="true"] {
+  opacity: 0.45;
+}
+.stk-tab__pill {
+  position: absolute;
+  inset: 0;
+  z-index: -1;
+  border-radius: inherit;
+  background-color: var(--primary);
+  opacity: 0;
+  transform: scale(0.72);
+  transition:
+    transform var(--motion-standard) var(--ease-spring),
+    opacity var(--motion-fast) ease;
+}
+.stk-tab[aria-selected="true"] {
+  color: var(--primary-foreground);
+}
+.stk-tab[aria-selected="true"] .stk-tab__pill {
+  opacity: 1;
+  transform: scale(1);
+}
+.stk-tab__icon {
+  display: grid;
+  place-items: center;
+  font-size: var(--icon-md);
+}
+.stk-tab[aria-selected="true"] .stk-tab__icon {
+  animation: stk-pop-in var(--motion-standard) var(--ease-spring);
+}
+.stk-tab__label {
+  max-width: 100%;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.stk-tabbar__badge {
+  position: absolute;
+  top: 4px;
+  left: 50%;
+  min-width: 16px;
+  height: 16px;
+  padding: 0 4px;
+  border-radius: var(--st-radius-pill);
+  background-color: var(--destructive);
+  color: #ffffff;
+  font-size: 9.5px;
+  font-weight: var(--font-weight-heading);
+  line-height: 16px;
+  text-align: center;
+  transform: translateX(4px);
+}
+
+/* ==========================================================================
+ * 6. GlassTextField / GlassSearch
+ * ======================================================================== */
+.stk-field {
+  display: flex;
+  min-width: 0;
+  flex-direction: column;
+  gap: 6px;
+}
+.stk-field__label {
+  padding: 0;
+  color: var(--ink);
+  font-size: 13px;
+  font-weight: var(--font-weight-label);
+  line-height: 1.3;
+}
+.stk-field__box {
+  position: relative;
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  min-width: 0;
+  min-height: var(--input-height);
+  padding-inline: 12px;
+  background-color: var(--field);
+  border: 1px solid var(--control-border);
+  border-radius: var(--radius-control);
+  transition:
+    border-color var(--motion-fast) ease,
+    box-shadow var(--motion-fast) ease,
+    background-color var(--motion-fast) ease;
+}
+.stk-field__box:hover {
+  border-color: color-mix(in srgb, var(--ink-3) 60%, var(--control-border));
+}
+.stk-field__box:focus-within {
+  border-color: var(--accent);
+  box-shadow: var(--focus-ring);
+}
+.stk-field--sm .stk-field__box {
+  min-height: var(--touch-min);
+}
+.stk-field--md .stk-field__box {
+  min-height: var(--input-height);
+}
+.stk-field--lg .stk-field__box {
+  min-height: 56px;
+}
+.stk-field--invalid .stk-field__box {
+  border-color: var(--destructive);
+}
+.stk-field--invalid .stk-field__box:focus-within {
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--destructive) 22%, transparent);
+}
+.stk-field__control {
+  flex: 1 1 auto;
+  min-width: 0;
+  padding: 10px 0;
+  border: 0;
+  background: transparent;
+  color: var(--ink);
+  /* 16px prevents iOS auto-zoom on focus. */
+  font-family: inherit;
+  font-size: 16px;
+  font-weight: var(--font-weight-body);
+  line-height: 1.4;
+  outline: none;
+  appearance: none;
+  -webkit-appearance: none;
+}
+.stk-field__control::placeholder {
+  color: var(--ink-3);
+}
+.stk-field__control:disabled {
+  opacity: 0.55;
+  cursor: not-allowed;
+}
+.stk-field__control:focus-visible {
+  outline: none; /* the box ring is the visible focus indicator */
+}
+.stk-field__icon {
+  display: grid;
+  flex-shrink: 0;
+  place-items: center;
+  color: var(--ink-3);
+  pointer-events: none;
+}
+.stk-field__affix {
+  display: flex;
+  flex-shrink: 0;
+  align-items: center;
+  gap: 2px;
+}
+/* Small visual button, 44×44 hit area via the pseudo-element expansion. */
+.stk-field__clear {
+  position: relative;
+  display: grid;
+  width: 28px;
+  height: 28px;
+  place-items: center;
+  padding: 0;
+  border: 0;
+  border-radius: var(--st-radius-pill);
+  background: color-mix(in srgb, var(--ink-3) 18%, transparent);
+  color: var(--ink-2);
+  cursor: pointer;
+  transition:
+    background-color var(--motion-fast) ease,
+    color var(--motion-fast) ease;
+}
+.stk-field__clear::after {
+  content: "";
+  position: absolute;
+  inset: -8px;
+}
+.stk-field__clear:hover {
+  background: color-mix(in srgb, var(--destructive) 22%, transparent);
+  color: var(--destructive);
+}
+.stk-field__hint {
+  margin: 0;
+  color: var(--ink-2);
+  font-size: 12px;
+  line-height: 1.4;
+}
+.stk-field__error {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin: 0;
+  color: var(--destructive);
+  font-size: 12.5px;
+  font-weight: var(--font-weight-label);
+  line-height: 1.4;
+}
+
+.stk-search {
+  display: flex;
+  min-width: 0;
+  align-items: center;
+  gap: var(--space-2);
+}
+.stk-search .stk-field {
+  flex: 1 1 auto;
+}
+.stk-search__cancel {
+  flex-shrink: 0;
+  min-height: var(--touch-min);
+  padding: 0 var(--space-2);
+  border: 0;
+  background: transparent;
+  color: var(--accent);
+  font-family: inherit;
+  font-size: var(--font-size-sm);
+  font-weight: var(--font-weight-label);
+  cursor: pointer;
+  white-space: nowrap;
+}
+.stk-search__cancel:hover {
+  text-decoration: underline;
+}
+
+/* ==========================================================================
+ * 7. Segmented
+ * ======================================================================== */
+.stk-seg {
+  display: inline-flex;
+  gap: 4px;
+  max-width: 100%;
+  padding: 4px;
+  background-color: var(--glass-soft);
+  border: 1px solid var(--stroke-dim);
+  border-radius: var(--radius-lg);
+}
+.stk-seg--block {
+  display: flex;
+  width: 100%;
+}
+.stk-seg__btn {
+  flex: 1 1 auto;
+  min-width: 0;
+  min-height: var(--touch-min);
+  padding: 0 var(--space-3);
+  border: 1px solid transparent;
+  border-radius: var(--radius-control);
+  background: transparent;
+  color: var(--ink-2);
+  font-family: inherit;
+  font-size: 13px;
+  font-weight: var(--font-weight-heading);
+  cursor: pointer;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  transition:
+    background-color var(--motion-fast) ease,
+    color var(--motion-fast) ease,
+    border-color var(--motion-fast) ease,
+    transform var(--motion-fast) var(--ease-out);
+}
+.stk-seg__btn:hover:not(:disabled):not([aria-pressed="true"]) {
+  color: var(--ink);
+}
+.stk-seg__btn:active:not(:disabled) {
+  transform: scale(0.97);
+}
+.stk-seg__btn[aria-pressed="true"] {
+  background-color: var(--accent-soft);
+  border-color: color-mix(in srgb, var(--accent) 18%, transparent);
+  color: var(--accent);
+}
+.stk-seg__btn:disabled {
+  opacity: 0.5;
+}
+.stk-seg--lg .stk-seg__btn {
+  font-size: var(--font-size-base);
+}
+
+/* ==========================================================================
+ * 8. StatusBadge
+ * ======================================================================== */
+.stk-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  max-width: 100%;
+  padding: 5px 10px;
+  border: 1px solid transparent;
+  border-radius: var(--st-radius-pill);
+  font-size: 11px;
+  font-weight: var(--font-weight-label);
+  line-height: 1.25;
+  letter-spacing: 0.02em;
+  white-space: nowrap;
+}
+.stk-badge--sm {
+  padding: 3px 8px;
+  font-size: 10.5px;
+}
+.stk-badge--lg {
+  padding: 7px 14px;
+  font-size: var(--font-size-sm);
+}
+.stk-badge__dot {
+  width: 6px;
+  height: 6px;
+  flex-shrink: 0;
+  border-radius: 50%;
+  background-color: currentColor;
+}
+.stk-badge__icon {
+  display: grid;
+  flex-shrink: 0;
+  place-items: center;
+  font-size: 12px;
+}
+
+.stk-badge--success {
+  background-color: color-mix(in srgb, var(--success) 12%, transparent);
+  border-color: color-mix(in srgb, var(--success) 20%, transparent);
+  color: var(--success);
+}
+.stk-badge--warning {
+  background-color: color-mix(in srgb, var(--warning) 14%, transparent);
+  border-color: color-mix(in srgb, var(--warning) 22%, transparent);
+  color: var(--warning);
+}
+.stk-badge--danger {
+  background-color: color-mix(in srgb, var(--destructive) 13%, transparent);
+  border-color: color-mix(in srgb, var(--destructive) 22%, transparent);
+  color: var(--destructive);
+}
+.stk-badge--info {
+  background-color: color-mix(in srgb, var(--accent) 12%, transparent);
+  border-color: color-mix(in srgb, var(--accent) 18%, transparent);
+  color: var(--accent);
+}
+.stk-badge--neutral {
+  background-color: color-mix(in srgb, var(--ink-3) 14%, transparent);
+  border-color: color-mix(in srgb, var(--ink-3) 22%, transparent);
+  color: var(--ink-2);
+}
+
+/* ==========================================================================
+ * 9. EmptyState / LoadingState / ErrorState
+ * ======================================================================== */
+.stk-empty {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: var(--space-2);
+  padding: 40px var(--space-6);
+  text-align: center;
+}
+.stk-empty__icon {
+  display: grid;
+  width: 56px;
+  height: 56px;
+  margin-bottom: var(--space-1);
+  place-items: center;
+  border-radius: var(--radius-lg);
+  background-color: var(--glass-soft);
+  color: var(--ink-2);
+  font-size: var(--icon-lg);
+}
+.stk-empty__title {
+  margin: 0;
+  color: var(--ink);
+  font-size: var(--font-size-base);
+  font-weight: var(--font-weight-label);
+}
+.stk-empty__hint {
+  max-width: 34ch;
+  margin: 0;
+  color: var(--ink-2);
+  font-size: var(--font-size-sm);
+  line-height: 1.55;
+}
+.stk-empty__action {
+  display: flex;
+  margin-top: var(--space-3);
+}
+
+.stk-error {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+  padding: var(--space-4);
+  background-color: color-mix(in srgb, var(--destructive) 6%, var(--surface-1));
+  border-color: color-mix(in srgb, var(--destructive) 25%, var(--stroke));
+}
+.stk-error__text {
+  margin: 0;
+  color: var(--destructive);
+  font-size: 13.5px;
+  font-weight: var(--font-weight-body);
+  line-height: 1.6;
+}
+.stk-error--warning {
+  background-color: color-mix(in srgb, var(--warning) 7%, var(--surface-1));
+  border-color: color-mix(in srgb, var(--warning) 28%, var(--stroke));
+}
+.stk-error--warning .stk-error__text {
+  color: var(--warning);
+}
+.stk-error__retry {
+  align-self: stretch;
+}
+
+.stk-loading {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: var(--space-3);
+  color: var(--ink-2);
+}
+.stk-loading--block {
+  padding: var(--space-8) var(--space-4);
+}
+.stk-loading__label {
+  font-size: var(--font-size-sm);
+  font-weight: var(--font-weight-label);
+}
+.stk-loading--skeleton {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+}
+.stk-loading--overlay {
+  position: relative;
+  min-height: 120px;
+}
+.stk-loading__veil {
+  position: absolute;
+  inset: 0;
+  z-index: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: var(--space-3);
+  border-radius: inherit;
+  background-color: color-mix(in srgb, var(--surface-2) 62%, transparent);
+  -webkit-backdrop-filter: blur(3px);
+  backdrop-filter: blur(3px);
+  color: var(--ink-2);
+}
+
+.stk-skeleton {
+  height: 76px;
+  border: 1px solid var(--stroke-dim);
+  border-radius: var(--radius-card);
+  background-image: linear-gradient(
+    90deg,
+    var(--glass-soft) 25%,
+    var(--stroke-dim) 50%,
+    var(--glass-soft) 75%
+  );
+  background-size: 800px 100%;
+  background-repeat: no-repeat;
+  animation: stk-shimmer 1.4s linear infinite;
+  will-change: background-position;
+}
+
+/* ==========================================================================
+ * 10. GlassBottomSheet / GlassDialog
+ * ======================================================================== */
+.stk-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: var(--st-z-overlay);
+}
+.stk-scrim {
+  position: absolute;
+  inset: 0;
+  z-index: 0;
+  display: block;
+  width: 100%;
+  height: 100%;
+  margin: 0;
+  padding: 0;
+  border: 0;
+  background-color: rgba(9, 9, 8, 0.45);
+  cursor: pointer;
+  animation: stk-fade-in var(--duration-fast) ease-out;
+}
+
+/* -- Bottom sheet ---------------------------------------------------------- */
+.stk-sheet-position {
+  position: absolute;
+  right: 0;
+  bottom: 0;
+  left: 0;
+  z-index: 1;
+  display: flex;
+  justify-content: center;
+  width: 100%;
+  max-width: 448px;
+  margin-inline: auto;
+  pointer-events: none;
+}
+.stk-sheet {
+  position: relative;
+  display: flex;
+  width: 100%;
+  max-height: 86vh;
+  /* dvh second: `vh` above is the fallback for engines without `dvh`. */
+  max-height: 86dvh;
+  flex-direction: column;
+  overflow: hidden;
+  border-bottom: 0;
+  border-radius: var(--st-radius-xl) var(--st-radius-xl) 0 0;
+  pointer-events: auto;
+  /* fill-mode none keeps inline transforms usable (drag-to-dismiss). */
+  animation: stk-sheet-up var(--duration-standard) var(--ease-spring);
+  will-change: transform, opacity;
+}
+.stk-sheet__grab {
+  flex-shrink: 0;
+  padding: 10px var(--space-5) var(--space-2);
+  cursor: grab;
+  touch-action: none;
+  user-select: none;
+  -webkit-user-select: none;
+}
+.stk-sheet__grab:active {
+  cursor: grabbing;
+}
+.stk-sheet__handle {
+  width: 40px;
+  height: 6px;
+  margin: 0 auto var(--space-2);
+  border-radius: var(--st-radius-pill);
+  background-color: color-mix(in srgb, var(--ink-3) 45%, transparent);
+  transition:
+    width var(--motion-standard) var(--ease-spring),
+    background-color var(--motion-fast) ease;
+}
+.stk-sheet__grab:active .stk-sheet__handle {
+  width: 64px;
+  background-color: var(--accent);
+}
+.stk-sheet__head {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+}
+.stk-sheet__titles {
+  min-width: 0;
+  flex: 1 1 auto;
+}
+.stk-sheet__title {
+  margin: 0;
+  overflow: hidden;
+  color: var(--ink);
+  font-size: 16px;
+  font-weight: 700;
+  letter-spacing: -0.01em;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.stk-sheet__subtitle {
+  margin: 2px 0 0;
+  overflow: hidden;
+  color: var(--ink-2);
+  font-size: 12.5px;
+  font-weight: var(--font-weight-body);
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.stk-sheet__body {
+  flex: 1 1 auto;
+  min-height: 0;
+  padding: var(--space-1) var(--space-5) var(--space-6);
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  -webkit-overflow-scrolling: touch;
+  scrollbar-width: thin;
+  scrollbar-color: color-mix(in srgb, var(--ink-3) 55%, transparent) transparent;
+}
+.stk-sheet__body:last-child {
+  /* No footer: the scroll body reaches the physical bottom edge. */
+  padding-bottom: calc(var(--space-6) + env(safe-area-inset-bottom, 0px));
+}
+.stk-sheet__footer {
+  display: flex;
+  flex-shrink: 0;
+  align-items: center;
+  gap: var(--space-3);
+  padding: var(--space-3) var(--space-5) calc(var(--space-3) + env(safe-area-inset-bottom, 0px));
+  border-top: 1px solid var(--stroke-dim);
+}
+
+/* -- Centred dialog -------------------------------------------------------- */
+.stk-dialog-position {
+  position: absolute;
+  inset: 0;
+  z-index: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: var(--space-5);
+  pointer-events: none;
+}
+.stk-dialog {
+  position: relative;
+  display: flex;
+  width: min(var(--stk-dialog-w, 448px), 100%);
+  max-height: 86vh;
+  /* dvh second: `vh` above is the fallback for engines without `dvh`. */
+  max-height: 86dvh;
+  flex-direction: column;
+  overflow: hidden;
+  border-radius: calc(var(--st-radius-xl) - 4px);
+  pointer-events: auto;
+  animation: stk-pop-in var(--duration-standard) var(--ease-spring);
+  will-change: transform, opacity;
+}
+.stk-dialog--sm {
+  --stk-dialog-w: 360px;
+}
+.stk-dialog--md {
+  --stk-dialog-w: 448px;
+}
+.stk-dialog--lg {
+  --stk-dialog-w: 720px;
+}
+.stk-dialog__head {
+  display: flex;
+  align-items: flex-start;
+  gap: var(--space-3);
+  padding: var(--space-5) var(--space-5) 0;
+}
+.stk-dialog__titles {
+  min-width: 0;
+  flex: 1 1 auto;
+}
+.stk-dialog__title {
+  margin: 0;
+  color: var(--ink);
+  font-size: var(--font-size-title);
+  font-weight: var(--font-weight-heading);
+  letter-spacing: -0.02em;
+  line-height: 1.2;
+}
+.stk-dialog__desc {
+  margin: var(--space-2) 0 0;
+  color: var(--ink-2);
+  font-size: var(--font-size-sm);
+  line-height: 1.6;
+}
+.stk-dialog__body {
+  min-height: 0;
+  padding: var(--space-4) var(--space-5);
+  overflow-y: auto;
+  overscroll-behavior: contain;
+}
+.stk-dialog__footer {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+  gap: var(--space-3);
+  padding: 0 var(--space-5) var(--space-5);
+}
+.stk-dialog__footer .stk-btn--block {
+  flex: 1 1 160px;
+}
+
+/* ==========================================================================
+ * 11. GlassMenu
+ * ======================================================================== */
+.stk-menu {
+  position: fixed;
+  top: 0;
+  left: 0;
+  z-index: var(--st-z-menu);
+  min-width: 200px;
+  max-width: min(340px, calc(100vw - 16px));
+  max-height: min(70vh, 520px);
+  padding: 6px;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  border-radius: var(--radius-lg);
+  animation: stk-menu-in var(--duration-fast) var(--ease-spring);
+}
+.stk-menu__group {
+  display: flex;
+  flex-direction: column;
+}
+.stk-menu__group-label {
+  padding: 8px 10px 4px;
+  color: var(--ink-3);
+  font-size: 10.5px;
+  font-weight: var(--font-weight-heading);
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+}
+.stk-menu__sep {
+  height: 1px;
+  margin: 6px 4px;
+  border: 0;
+  background-color: var(--stroke-dim);
+}
+.stk-menu__item {
+  display: flex;
+  width: 100%;
+  min-width: 0;
+  min-height: var(--touch-min);
+  align-items: center;
+  gap: 10px;
+  padding: 8px 10px;
+  border: 0;
+  border-radius: var(--radius-control);
+  background: transparent;
+  color: var(--ink);
+  font-family: inherit;
+  font-size: 14px;
+  font-weight: var(--font-weight-body);
+  text-align: left;
+  cursor: pointer;
+  transition:
+    background-color var(--motion-fast) ease,
+    color var(--motion-fast) ease;
+}
+.stk-menu__item:hover:not(:disabled):not([aria-disabled="true"]),
+.stk-menu__item:focus {
+  background-color: var(--accent-soft);
+  color: var(--accent-ink);
+}
+.stk-menu__item:focus-visible {
+  outline: 2px solid var(--ring);
+  outline-offset: -2px;
+}
+.stk-menu__item:disabled,
+.stk-menu__item[aria-disabled="true"] {
+  opacity: 0.45;
+}
+.stk-menu__item--destructive {
+  color: var(--destructive);
+}
+.stk-menu__item--destructive:hover:not(:disabled),
+.stk-menu__item--destructive:focus {
+  background-color: color-mix(in srgb, var(--destructive) 14%, transparent);
+  color: var(--destructive);
+}
+.stk-menu__icon {
+  display: grid;
+  flex-shrink: 0;
+  place-items: center;
+  color: var(--ink-2);
+  font-size: var(--icon-md);
+}
+.stk-menu__item--destructive .stk-menu__icon {
+  color: inherit;
+}
+.stk-menu__label {
+  min-width: 0;
+  flex: 1 1 auto;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.stk-menu__hint {
+  flex-shrink: 0;
+  color: var(--ink-3);
+  font-size: 12px;
+}
+.stk-menu__check {
+  display: grid;
+  flex-shrink: 0;
+  place-items: center;
+  color: var(--accent);
+  font-size: var(--icon-sm);
+}
+.stk-menu__item--destructive .stk-menu__check {
+  color: inherit;
+}
+
+/* ==========================================================================
+ * 12. Toaster
+ * ======================================================================== */
+.stk-toaster {
+  position: fixed;
+  right: 0;
+  bottom: calc(1.75rem + env(safe-area-inset-bottom, 0px));
+  left: 0;
+  z-index: var(--st-z-toast);
+  display: flex;
+  width: 100%;
+  max-width: 448px;
+  margin-inline: auto;
+  padding-inline: var(--space-5);
+  flex-direction: column;
+  align-items: center;
+  gap: var(--space-2);
+  pointer-events: none;
+}
+.stk-toaster--lifted {
+  bottom: calc(6rem + env(safe-area-inset-bottom, 0px));
+}
+.stk-toast {
+  display: flex;
+  width: 100%;
+  align-items: center;
+  gap: var(--space-2);
+  border-radius: var(--radius-lg);
+  color: var(--ink);
+  font-family: inherit;
+  font-size: 13.5px;
+  font-weight: var(--font-weight-body);
+  line-height: 1.45;
+  text-align: left;
+  overflow: hidden;
+  pointer-events: auto;
+  animation: stk-toast-in var(--duration-standard) var(--ease-spring);
+  will-change: transform, opacity;
+}
+.stk-toast__main {
+  display: flex;
+  flex: 1 1 auto;
+  min-width: 0;
+  align-items: flex-start;
+  gap: var(--space-3);
+  padding: var(--space-3) var(--space-4);
+  border: 0;
+  border-radius: inherit;
+  background: transparent;
+  color: inherit;
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+  transition: background-color var(--motion-fast) ease;
+}
+.stk-toast__main:hover {
+  background-color: color-mix(in srgb, var(--accent-soft) 45%, transparent);
+}
+.stk-toast__action {
+  flex-shrink: 0;
+  padding-right: var(--space-3);
+}
+.stk-toast__icon {
+  display: grid;
+  flex-shrink: 0;
+  place-items: center;
+  font-size: var(--icon-md);
+}
+.stk-toast--success .stk-toast__icon {
+  color: var(--success);
+}
+.stk-toast--error .stk-toast__icon,
+.stk-toast--danger .stk-toast__icon {
+  color: var(--destructive);
+}
+.stk-toast--warning .stk-toast__icon {
+  color: var(--warning);
+}
+.stk-toast--info .stk-toast__icon,
+.stk-toast--neutral .stk-toast__icon {
+  color: var(--accent);
+}
+.stk-toast__body {
+  display: flex;
+  min-width: 0;
+  flex: 1 1 auto;
+  flex-direction: column;
+  gap: 2px;
+}
+.stk-toast__text {
+  overflow-wrap: anywhere;
+}
+.stk-toast__desc {
+  color: var(--ink-2);
+  font-size: 12.5px;
+}
+.stk-toast__action {
+  align-self: flex-start;
+  min-height: 32px;
+  margin-top: 4px;
+}
+
+/* Desktop: pin to the bottom-right instead of centring (see section 14). */
+
+/* ==========================================================================
+ * 13. Motion (keyframes)
+ * ======================================================================== */
+@keyframes stk-spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+@keyframes stk-fade-in {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+@keyframes stk-sheet-up {
+  from {
+    transform: translateY(28px) scale(0.99);
+    opacity: 0;
+  }
+  to {
+    transform: translateY(0) scale(1);
+    opacity: 1;
+  }
+}
+@keyframes stk-pop-in {
+  from {
+    transform: scale(0.92);
+    opacity: 0;
+  }
+  to {
+    transform: scale(1);
+    opacity: 1;
+  }
+}
+@keyframes stk-menu-in {
+  from {
+    transform: translateY(-4px) scale(0.98);
+    opacity: 0;
+  }
+  to {
+    transform: translateY(0) scale(1);
+    opacity: 1;
+  }
+}
+@keyframes stk-toast-in {
+  from {
+    transform: translateY(12px) scale(0.97);
+    opacity: 0;
+  }
+  to {
+    transform: translateY(0) scale(1);
+    opacity: 1;
+  }
+}
+@keyframes stk-shimmer {
+  from {
+    background-position: -400px 0;
+  }
+  to {
+    background-position: 400px 0;
+  }
+}
+
+/* ==========================================================================
+ * 14. Media queries
+ * ======================================================================== */
+
+/* -- Desktop: toasts lift to the corner; opt-in chrome disappears --------- */
+@media (min-width: 1024px) {
+  .stk-toaster {
+    right: var(--space-6);
+    bottom: var(--space-6);
+    left: auto;
+    width: min(380px, calc(100vw - 48px));
+    margin-inline: 0;
+    padding-inline: 0;
+    align-items: stretch;
+  }
+  .stk-toaster--lifted {
+    bottom: 6rem;
+  }
+  .stk-tabbar[data-hide-on-desktop] {
+    display: none;
+  }
+}
+
+/* -- Reduced motion: everything becomes instantaneous -------------------- */
+@media (prefers-reduced-motion: reduce) {
+  .stk-glass,
+  .stk-glass--interactive,
+  .stk-btn,
+  .stk-icon-btn,
+  .stk-press,
+  .stk-tab,
+  .stk-tab__pill,
+  .stk-tab__icon,
+  .stk-seg__btn,
+  .stk-menu__item,
+  .stk-field__box,
+  .stk-sheet,
+  .stk-sheet__handle,
+  .stk-dialog,
+  .stk-menu,
+  .stk-scrim,
+  .stk-toast,
+  .stk-spin,
+  .stk-skeleton {
+    animation: none !important;
+    transition: none !important;
+  }
+  .stk-spinner {
+    animation: none !important;
+    border-top-color: currentColor;
+    opacity: 0.7;
+  }
+  .stk-sheet,
+  .stk-dialog,
+  .stk-menu,
+  .stk-toast {
+    transform: none !important;
+    opacity: 1 !important;
+  }
+  .stk-press:active,
+  .stk-btn:active:not(:disabled),
+  .stk-icon-btn:active:not(:disabled),
+  .stk-seg__btn:active:not(:disabled) {
+    transform: none;
+  }
+}
+
+/* -- Forced colours: system colours keep every control legible ------------ */
+@media (forced-colors: active) {
+  .stk-glass,
+  .stk-card,
+  .stk-sheet,
+  .stk-dialog,
+  .stk-menu,
+  .stk-toast,
+  .stk-tabbar__capsule,
+  .stk-seg,
+  .stk-badge,
+  .stk-empty,
+  .stk-skeleton {
+    border: 1px solid CanvasText;
+    background-color: Canvas;
+    background-image: none;
+    box-shadow: none;
+    -webkit-backdrop-filter: none;
+    backdrop-filter: none;
+  }
+  .stk-btn,
+  .stk-icon-btn,
+  .stk-tab,
+  .stk-seg__btn,
+  .stk-menu__item,
+  .stk-field__box,
+  .stk-field__clear,
+  .stk-search__cancel {
+    border: 1px solid ButtonText;
+    background-color: ButtonFace;
+    color: ButtonText;
+    box-shadow: none;
+    -webkit-backdrop-filter: none;
+    backdrop-filter: none;
+  }
+  .stk-btn--primary,
+  .stk-btn--destructive,
+  .stk-seg__btn[aria-pressed="true"],
+  .stk-tab[aria-selected="true"] {
+    background-color: Highlight;
+    color: HighlightText;
+    border-color: Highlight;
+  }
+  .stk-tab[aria-selected="true"] .stk-tab__pill {
+    background-color: Highlight;
+  }
+  .stk-scrim {
+    background-color: Canvas;
+    opacity: 0.85;
+  }
+  .stk-field__control,
+  .stk-menu__item,
+  .stk-btn,
+  .stk-icon-btn,
+  .stk-tab,
+  .stk-seg__btn,
+  .stk-toast {
+    color: CanvasText;
+  }
+  .stk-focus-ring:focus-visible,
+  :where(
+      .stk-btn,
+      .stk-icon-btn,
+      .stk-tab,
+      .stk-seg__btn,
+      .stk-menu__item,
+      .stk-field__control,
+      .stk-field__clear,
+      .stk-search__cancel,
+      .stk-toast,
+      .stk-scrim
+    ):focus-visible {
+    outline: 2px solid Highlight;
+    outline-offset: 2px;
+  }
+}

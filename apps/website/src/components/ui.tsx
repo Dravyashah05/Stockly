@@ -40,17 +40,7 @@ function notifyOverlayChange() {
 function installBackListener() {
   if (backListenerInstalled) return;
   backListenerInstalled = true;
-  (async () => {
-    try {
-      const { App } = await import('@capacitor/app');
-      await App.addListener('backButton', () => {
-        const top = dismissStack[dismissStack.length - 1];
-        if (top) top();
-      });
-    } catch {
-      /* web — Escape handler below covers browsers */
-    }
-  })();
+  /* web: Escape key handler in useDismissable handles dismissals */
 }
 
 /** Register an overlay's close handler for Escape + Android Back + scroll lock. */
@@ -362,18 +352,11 @@ export function Sheet({
     window.clearTimeout(handleTapTimer.current);
     setHandleTap(true);
     handleTapTimer.current = window.setTimeout(() => setHandleTap(false), 220);
-    void (async () => {
-      try {
-        const { Haptics, ImpactStyle } = await import('@capacitor/haptics');
-        await Haptics.impact({ style: ImpactStyle.Light });
-      } catch {
-        try {
-          navigator.vibrate?.(10);
-        } catch {
-          /* no haptics — ignore */
-        }
-      }
-    })();
+    try {
+      navigator.vibrate?.(10);
+    } catch {
+      /* no haptics — ignore */
+    }
   };
   const setPanelY = (dy: number, animate: boolean) => {
     const el = panelRef.current;
