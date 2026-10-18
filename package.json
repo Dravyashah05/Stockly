@@ -6,13 +6,21 @@
   "description": "Stockly - Mobile stock management for small business",
   "scripts": {
     "dev": "vite",
+    "dev:app": "vite --open app.html",
+    "dev:user": "npm --prefix app run dev",
+    "dev:admin": "npm --prefix admin run dev",
+    "dev:server": "npm --prefix server run dev",
     "build": "tsc -b && vite build",
+    "build:app": "tsc -b && vite build --config vite.config.app.ts && node scripts/finalize-app-bundle.mjs",
+    "build:web": "tsc -b && vite build --config vite.config.web.ts",
+    "build:user": "npm --prefix app run build",
+    "build:admin": "npm --prefix admin run build",
     "lint": "oxlint",
     "test": "node --experimental-strip-types --test tests/api-response.test.ts tests/releases.test.ts tests/user-registry.test.ts tests/admin-auth.test.ts tests/device-link.test.ts tests/auth.test.ts",
     "preview": "vite preview",
-    "cap:sync": "cap sync",
+    "cap:sync": "cap sync android",
     "cap:open": "cap open android",
-    "android:build": "npm run build && npx cap sync android"
+    "android:build": "npm run build:app && npm run cap:sync"
   },
   "dependencies": {
     "@capacitor/android": "^8.0.0",

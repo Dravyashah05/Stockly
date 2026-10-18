@@ -100,6 +100,9 @@ jobs:
       - name: Build website
         run: npm run build
 
+      - name: Build mobile app bundle
+        run: npm run build:app
+
       - name: Sync Capacitor assets
         run: npx cap sync android
 
@@ -144,7 +147,7 @@ jobs:
 
       - name: Build APK
         if: steps.versions.outputs.publish == 'true'
-        working-directory: android
+        working-directory: mobile/android
         env:
           ANDROID_KEYSTORE_BASE64: ${{ secrets.ANDROID_KEYSTORE_BASE64 }}
           ANDROID_KEY_ALIAS: ${{ secrets.ANDROID_KEY_ALIAS }}

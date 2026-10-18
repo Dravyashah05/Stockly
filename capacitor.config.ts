@@ -3,9 +3,13 @@ import type { CapacitorConfig } from '@capacitor/cli';
 const config: CapacitorConfig = {
   appId: 'com.stockly.inventory',
   appName: 'Stockly',
-  webDir: 'dist',
+  // App-only bundle built by `npm run build:app` (vite.config.app.ts).
+  // The native project lives in mobile/ (see mobile/README.md).
+  webDir: 'mobile/dist-app',
   backgroundColor: '#f7f7f2',
   android: {
+    // Custom native-project location (default would be ./android).
+    path: 'mobile/android',
     allowMixedContent: false,
     captureInput: true,
     webContentsDebuggingEnabled: false,

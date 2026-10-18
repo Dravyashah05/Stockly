@@ -8,6 +8,13 @@ syncs across multiple devices.
 **Stack:** React 19 + TypeScript + Vite + Tailwind CSS v4 + Capacitor 8
 (Android) + Lucide icons + Google Apps Script + Google Sheets.
 
+> **Layout:** this repo is split into two frontends and one shared
+> backend — see [`docs/STRUCTURE.md`](docs/STRUCTURE.md).
+> `app/` = user website + Android app (`:3001`),
+> `admin/` = owner-only console (`:3002`),
+> `server/` = the single shared backend (`:5000`, same `api/*`
+> implementation as the Vercel functions).
+
 ---
 
 ## 1. Run the app in a browser
@@ -71,21 +78,20 @@ Prerequisites: Android Studio + SDK installed (this machine already has the SDK
 at `%LOCALAPPDATA%\Android\Sdk`, incl. platform `android-36`).
 
 ```bash
-npm run build          # web assets → dist/
-npx cap sync android   # copy web assets + plugins into android/
+npm run android:build  # app bundle → mobile/dist-app + cap sync into mobile/android/
 ```
 
 Then either open in Android Studio:
 
 ```bash
-npx cap open android   # → Build → Build APK(s)
+npm run cap:open       # → Build → Build APK(s)
 ```
 
-or build from the command line (needs `android/local.properties` with
+or build from the command line (needs `mobile/android/local.properties` with
 `sdk.dir=<path-to-your-SDK>` — already created on this machine):
 
 ```bash
-cd android
+cd mobile/android
 .\gradlew.bat assembleDebug     # → app\build\outputs\apk\debug\app-debug.apk
 .\gradlew.bat assembleRelease   # release APK (configure signing first)
 ```
@@ -94,34 +100,24 @@ Install `app-debug.apk` on a phone (enable *Install unknown apps*) or
 `adb install -r app-debug.apk`.
 
 > A signed release build (upload to Play / share outside the device) additionally
-> needs a keystore wired into `android/app/build.gradle`. Debug APKs are signed
+> needs a keystore wired into `mobile/android/app/build.gradle`. Debug APKs are signed
 > with a debug key automatically.
 
 ## 4. Project layout
 
 ```
+mobile/                   native Android shell (Capacitor project root)
+  capacitor.config.ts     app name/ID, splash, status bar, keyboard (webDir: dist-app)
+  android/                native project (appId com.stockly.inventory)
+  dist-app/               app-only bundle (built by `npm run build:app`, gitignored)
 src/
-  main.tsx / App.tsx        shell, bottom tabs, back-button, splash hide
-  index.css                 Tailwind v4 + safe-area helpers + animations
-  lib/
-    config.ts               THE single API config (backend URL, currency, formats)
-    api.ts                  reusable GET/POST service, timeouts, de-duplication
-    types.ts                Product / Category / Transaction / Stats
-    store.tsx               global state, sync, mutations, toasts, theme, offline
-  components/
-    ui.tsx                  Header, BottomNav, Sheet, inputs, EmptyState, Toasts
-    ProductForm.tsx         add/edit product sheet with validation
-  screens/
-    HomeScreen.tsx          dashboard stats, value card, quick actions, alerts
-    ProductsScreen.tsx      search, sort, category/status filters, CRUD
-    StockSheet.tsx          Stock In / Stock Out transaction form
-    HistoryScreen.tsx       transaction list + filters
-    SettingsScreen.tsx      backend URL, theme, categories, sync, app settings
+  app/                    mobile app: App shell, screens/, components/ (entry: app.html)
+  web/                    website: landing + store pages (entries: index.html, store.html)
+  shared/                 code used by both: API clients, store, config, types
+api/                      Vercel serverless backend (admin/devices/sheets proxy)
 apps-script/
-  Code.gs                   complete backend: doGet/doPost/setupDatabase/
-                            setupDemoData/CRUD/stockIn/stockOut/dashboard
-android/                    Capacitor native project (appId com.stockly.inventory)
-capacitor.config.ts         app name/ID, splash, status bar, keyboard
+  Code.gs                 complete backend: doGet/doPost/setupDatabase/
+                          setupDemoData/CRUD/stockIn/stockOut/dashboard
 ```
 
 ## 5. App ID / names
@@ -134,7 +130,7 @@ capacitor.config.ts         app name/ID, splash, status bar, keyboard
 1. **Deploy `apps-script/Code.gs`** (section 2) and paste the `/exec` URL into
    Settings — the app has no data until this is done.
 2. **App icon:** the launcher currently uses Capacitor's default icon. Replace
-   `android/app/src/main/res/mipmap-*` + `assets/icon.png` (or run
+   `mobile/android/app/src/main/res/mipmap-*` + `assets/icon.png` (or run
    `npx capacitor-assets`) with your Stockly artwork.
 3. **Release signing:** create a keystore and add the four `ANDROID_*` secrets
    listed in section 7 (until then releases are debug-signed).
@@ -152,8 +148,8 @@ Release. Normal pushes stay green without publishing anything.
 | File | Field | Example |
 | ---- | ----- | ------- |
 | `package.json` | `version` | `1.1.0` |
-| `android/app/build.gradle` | `versionName` | `"1.1.0"` |
-| `android/app/build.gradle` | `versionCode` | `2` (always increase, never reset) |
+| `mobile/android/app/build.gradle` | `versionName` | `"1.1.0"` |
+| `mobile/android/app/build.gradle` | `versionCode` | `2` (always increase, never reset) |
 
 The workflow fails fast if the names differ or the tag already exists. Each
 release publishes `stockly-<version>.apk` + `SHA256SUMS.txt` + `release.json`
