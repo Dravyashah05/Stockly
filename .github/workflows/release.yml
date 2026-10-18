@@ -28,7 +28,8 @@
 # METADATA (no loops, no committed APKs)
 # - GitHub Releases are the source of truth. The workflow attaches
 #   `release.json` (machine-readable, see Phase 3 schema) + SHA256SUMS.txt.
-# - After publishing, the same file is committed to `public/release.json`
+# - After publishing, the same file is committed to
+#   `apps/website/public/release.json`
 #   so the website + updater read it same-origin (no API rate limits).
 #   That commit re-triggers this workflow once, but the tag then exists, so
 #   the re-run is validation-only and publishes nothing further.
@@ -92,19 +93,19 @@ jobs:
         run: npm run lint
 
       - name: Type-check
-        run: npx tsc -b
+        run: npm run typecheck
 
       - name: Tests
         run: npm test
 
       - name: Build website
-        run: npm run build
+        run: npm run build:website
 
       - name: Build mobile app bundle
-        run: npm run build:app
+        run: npm run build:mobile
 
       - name: Sync Capacitor assets
-        run: npx cap sync android
+        run: npm run cap:sync
 
       - name: Set up Java 21
         if: steps.versions.outputs.publish == 'true'
@@ -147,7 +148,7 @@ jobs:
 
       - name: Build APK
         if: steps.versions.outputs.publish == 'true'
-        working-directory: mobile/android
+        working-directory: apps/mobile/android
         env:
           ANDROID_KEYSTORE_BASE64: ${{ secrets.ANDROID_KEYSTORE_BASE64 }}
           ANDROID_KEY_ALIAS: ${{ secrets.ANDROID_KEY_ALIAS }}
@@ -244,11 +245,11 @@ jobs:
           # (no API rate limits); the Releases API stays as fallback. This
           # commit triggers one more validation-only run (the tag now exists),
           # which publishes nothing further — so the loop terminates here.
-          cp "$GITHUB_WORKSPACE/release.json" public/release.json
+          cp "$GITHUB_WORKSPACE/release.json" apps/website/public/release.json
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
           git pull --rebase origin main
-          git add public/release.json
+          git add apps/website/public/release.json
           git commit -m "Release metadata for ${{ steps.versions.outputs.tag }}"
           git push origin HEAD:main
 
