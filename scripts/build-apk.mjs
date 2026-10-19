@@ -32,6 +32,16 @@ if (!existsSync(gradlew)) {
 }
 
 const task = release ? 'assembleRelease' : 'assembleDebug';
+if (isWin) {
+  try {
+    spawnSync('attrib', ['-r', join(androidDir, 'app', 'build', 'intermediates', '*'), '/s', '/d'], {
+      stdio: 'ignore',
+      shell: true,
+    });
+  } catch {
+    /* ignore attribute clearance errors */
+  }
+}
 console.log(`[android] cd apps/mobile/android && ${isWin ? 'gradlew.bat' : './gradlew'} ${task}`);
 
 const result = spawnSync(isWin ? gradlew : 'sh', isWin ? [task, '--console=plain'] : [gradlew, task, '--console=plain'], {
