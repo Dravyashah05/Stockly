@@ -172,8 +172,8 @@ export const BottomNav = memo(function BottomNav({ tab, setTab }: { tab: TabKey;
   };
 
   return (
-    <nav className="bottom-navigation nav-bottom-offset fixed inset-x-0 z-30 px-4">
-      <div className="glass-strong relative mx-auto grid max-w-md grid-cols-4 gap-0.5 rounded-[28px] p-1.5">
+    <nav className="bottom-navigation nav-bottom-offset pointer-events-none fixed inset-x-0 z-30 px-4">
+      <div className="glass-nav pointer-events-auto relative mx-auto grid max-w-md grid-cols-4 gap-0.5 rounded-[28px] p-1.5">
         {/* Sliding active pill — solid ink (lime in dark mode). */}
         {pill ? (
           <span

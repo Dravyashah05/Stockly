@@ -192,7 +192,7 @@ export default function HomeScreen({
         }
       />
 
-      <div className="dashboard-content mx-auto max-w-md space-y-5 px-4 pt-4">
+      <div className="dashboard-content mx-auto max-w-md space-y-5 px-4 pt-4 pb-[calc(6rem+env(safe-area-inset-bottom,0px))]">
         {/* Greeting — modern editorial header with Add button */}
         <div className="dashboard-greeting px-1 pt-1">
           <span className="inline-flex items-center gap-1.5 rounded-full bg-[#151515] px-3 py-1 text-[11px] font-bold uppercase tracking-wider text-[#F7F7F2] dark:bg-[#C7FF4D] dark:text-[#151515]">

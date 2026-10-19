@@ -99,19 +99,19 @@ export default function HistoryScreen() {
       </div>
 
       {/* List card hugs its content when short; scrolls internally when long */}
-      <div className="history-results mx-auto flex min-h-0 w-full max-w-md flex-1 flex-col overflow-hidden px-4 pt-3">
+      <div className="history-results mx-auto flex min-h-0 w-full max-w-md flex-1 flex-col overflow-hidden px-4 pt-3 pb-0">
         {loading && transactions.length === 0 ? (
-          <div className="sheet-scroll space-y-2.5 overflow-y-auto">
+          <div className="sheet-scroll space-y-2.5 overflow-y-auto pb-[calc(6rem+env(safe-area-inset-bottom,0px))]">
             <SkeletonRow h={72} />
             <SkeletonRow h={72} />
             <SkeletonRow h={72} />
           </div>
         ) : error && transactions.length === 0 ? (
-          <div className="sheet-scroll overflow-y-auto">
+          <div className="sheet-scroll overflow-y-auto pb-[calc(6rem+env(safe-area-inset-bottom,0px))]">
             <ErrorState message={error} onRetry={() => void refresh()} retrying={refreshing} />
           </div>
         ) : list.length === 0 ? (
-          <div className="sheet-scroll overflow-y-auto">
+          <div className="sheet-scroll overflow-y-auto pb-[calc(6rem+env(safe-area-inset-bottom,0px))]">
             <EmptyState
               icon={<HistoryIcon size={22} />}
               title={q || type !== 'ALL' ? 'No matching transactions' : 'No transactions yet'}
@@ -122,7 +122,7 @@ export default function HistoryScreen() {
             ) : null}
           </div>
         ) : (
-          <div className="glass sheet-scroll min-h-0 flex-1 overflow-y-auto rounded-[26px] px-1.5 pt-1 pb-4">
+          <div className="glass sheet-scroll min-h-0 flex-1 overflow-y-auto rounded-[26px] px-1.5 pt-1 pb-[calc(6rem+env(safe-area-inset-bottom,0px))]">
             <div className="history-table-head"><span>Date</span><span>Product</span><span>Type</span><span className="text-right">Quantity</span><span className="text-right">Price</span><span>Details</span></div>
             <div className="divide-y divide-(--stroke-dim)">
               {rows.map(({ t, when }) => (

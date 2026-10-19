@@ -513,7 +513,7 @@ export default function AdminScreen({ onBack, notify }: { onBack: () => void; no
   }, []);
 
   return (
-    <div className="app-page-viewport mx-auto max-w-md pb-10">
+    <div className="app-page-viewport mx-auto max-w-md pb-[calc(6rem+env(safe-area-inset-bottom,0px))]">
       <div className="safe-top sticky top-0 z-20 border-b border-(--stroke-dim) bg-(--bg)/90 px-4 pb-3 pt-3 backdrop-blur">
         <div className="flex items-center gap-2">
           <button type="button" onClick={onBack} aria-label="Back to Settings" className="press flex h-10 w-10 items-center justify-center rounded-2xl bg-(--glass-soft) text-(--ink)">

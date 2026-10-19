@@ -54,7 +54,7 @@ export default function AuthScreen({ onAuthed }: { onAuthed: () => void }) {
     (mode === 'login' || name.trim().length > 0);
 
   return (
-    <div className="app-page-viewport mx-auto max-w-md pb-10">
+    <div className="app-page-viewport mx-auto max-w-md pb-[calc(6rem+env(safe-area-inset-bottom,0px))]">
       <div
         className="mx-auto max-w-md space-y-5 px-4"
         style={{ paddingTop: 'calc(env(safe-area-inset-top, 0px) + 1.5rem)' }}

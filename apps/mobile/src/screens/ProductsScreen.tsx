@@ -165,15 +165,15 @@ export default function ProductsScreen({
       </div>
 
       {/* List card hugs its content when short; scrolls internally when long */}
-      <div className="products-results mx-auto flex min-h-0 w-full max-w-md flex-1 flex-col overflow-hidden px-4 pt-3">
+      <div className="products-results mx-auto flex min-h-0 w-full max-w-md flex-1 flex-col overflow-hidden px-4 pt-3 pb-0">
         {loading && products.length === 0 ? (
-          <div className="sheet-scroll space-y-2.5 overflow-y-auto">
+          <div className="sheet-scroll space-y-2.5 overflow-y-auto pb-[calc(6rem+env(safe-area-inset-bottom,0px))]">
             <SkeletonRow h={84} />
             <SkeletonRow h={84} />
             <SkeletonRow h={84} />
           </div>
         ) : list.length === 0 ? (
-          <div className="sheet-scroll overflow-y-auto">
+          <div className="sheet-scroll overflow-y-auto pb-[calc(6rem+env(safe-area-inset-bottom,0px))]">
             <EmptyState
               icon={<Search size={22} />}
               title={filtersActive ? 'No products match' : 'No products yet'}
@@ -190,7 +190,7 @@ export default function ProductsScreen({
             ) : null}
           </div>
         ) : (
-          <div className="glass sheet-scroll min-h-0 flex-1 overflow-auto rounded-[26px] px-1.5 pt-1 pb-4">
+          <div className="glass sheet-scroll min-h-0 flex-1 overflow-auto rounded-[26px] px-1.5 pt-1 pb-[calc(6rem+env(safe-area-inset-bottom,0px))]">
             <div className="desktop-product-table">
               <div className="desktop-product-table-head" role="row">
                 <span role="columnheader">Product</span><span role="columnheader">SKU</span><span role="columnheader">Category</span><span role="columnheader" className="text-right">Stock</span><span role="columnheader" className="text-right">Minimum</span><span role="columnheader" className="text-right">Price</span><span role="columnheader">Status</span><span role="columnheader" aria-label="Actions" />

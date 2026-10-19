@@ -76,7 +76,7 @@ export function SheetSetupScreen({
   };
 
   return (
-    <div className="app-page-viewport mx-auto max-w-md pb-10">
+    <div className="app-page-viewport mx-auto max-w-md pb-[calc(6rem+env(safe-area-inset-bottom,0px))]">
       <div
         className="mx-auto max-w-md space-y-5 px-4"
         style={{ paddingTop: 'calc(env(safe-area-inset-top, 0px) + 1.5rem)' }}
@@ -212,7 +212,7 @@ function repairHint(e: unknown): string {
 
 export function RestrictedScreen({ status, onSignOut }: { status: string; onSignOut: () => void }) {
   return (
-    <div className="app-page-viewport mx-auto max-w-md pb-10">
+    <div className="app-page-viewport mx-auto max-w-md pb-[calc(6rem+env(safe-area-inset-bottom,0px))]">
       <div className="mx-auto max-w-md space-y-5 px-4 pt-16 text-center">
         <span className="mx-auto flex h-16 w-16 items-center justify-center rounded-[22px] bg-rose-500/12 text-rose-500">
           <ShieldAlert size={30} />
@@ -242,7 +242,7 @@ export function RestrictedScreen({ status, onSignOut }: { status: string; onSign
 
 export function AccessDeniedScreen({ onBack }: { onBack: () => void }) {
   return (
-    <div className="app-page-viewport mx-auto max-w-md pb-10">
+    <div className="app-page-viewport mx-auto max-w-md pb-[calc(6rem+env(safe-area-inset-bottom,0px))]">
       <div className="mx-auto max-w-md space-y-5 px-4 pt-16 text-center">
         <span className="mx-auto flex h-16 w-16 items-center justify-center rounded-[22px] bg-amber-500/12 text-amber-600 dark:text-amber-300">
           <ShieldAlert size={30} />
