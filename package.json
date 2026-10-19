@@ -24,7 +24,9 @@
     "preview": "npm run preview --workspace @stockly/website",
     "cap:sync": "cap sync android",
     "cap:open": "cap open android",
-    "android:build": "npm run build:mobile && npm run cap:sync && node scripts/build-apk.mjs"
+    "android:build": "npm run build:mobile && npm run cap:sync && node scripts/build-apk.mjs",
+    "android:install": "node scripts/install-apk.mjs",
+    "android:run": "npm run android:build && node scripts/install-apk.mjs"
   },
   "devDependencies": {
     "@capacitor/cli": "^8.0.0",
