@@ -173,7 +173,7 @@
   --dialog-mobile-max: 86dvh;
   --breakpoint-tablet: 768px;
   --breakpoint-desktop: 1024px;
-  /* Minimum touch target (WCAG / iOS HIG) */
+  /* Minimum touch target (WCAG 44px) */
   --touch-min: 44px;
 
   /* ======================================================================

@@ -85,7 +85,7 @@ body {
   animation: st-tour-bar 5s linear forwards;
 }
 
-/* ---------- Apple Liquid Glass Utilities ---------- */
+/* ---------- Liquid Glass Utilities ---------- */
 .glass-surface {
   background: rgba(255, 255, 255, 0.75);
   backdrop-filter: blur(24px) saturate(180%);

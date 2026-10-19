@@ -250,7 +250,7 @@ export default function SettingsScreen() {
       <Header title="Settings" subtitle={`Stockly v${APP_VERSION}`} />
 
       <div className="settings-content mx-auto max-w-md space-y-4 px-4 pt-3 pb-[calc(6rem+env(safe-area-inset-bottom,0px))]">
-        {/* App identity — Apple-style hero header */}
+        {/* App identity header */}
         <div className="relative overflow-hidden rounded-[24px] bg-gradient-to-br from-[#007AFF] to-[#0055D4] dark:from-[#0A84FF] dark:to-[#0055B8] p-5 text-white shadow-sm">
           <div className="relative flex items-center gap-3.5">
             <span className="flex h-14 w-14 shrink-0 items-center justify-center rounded-[18px] bg-white/20 text-white backdrop-blur-md">
@@ -487,7 +487,7 @@ export default function SettingsScreen() {
           </button>
         </section>
 
-        {/* Appearance — Apple iOS segmented style */}
+        {/* Appearance segmented style */}
         <section className="glass rounded-[20px] p-3.5">
           <div className="flex items-center gap-2.5 px-1 pb-2">
             <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-[10px] bg-(--field) text-(--ink-2)">

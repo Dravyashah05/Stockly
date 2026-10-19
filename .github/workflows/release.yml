@@ -156,12 +156,9 @@ jobs:
         if: steps.versions.outputs.publish == 'true'
         uses: android-actions/setup-android@v3
         with:
-          # The action defaults to `packages: 'tools platform-tools`, but
-          # Google removed the obsolete `tools` package, which fails the run
-          # with "Failed to find package 'tools'". Pin only what the Gradle
-          # config requires (compileSdk 36): platform, build-tools, adb.
+          # Pin compileSdk 36, targetSdk 34 (Android 14) platform and build-tools
           accept-android-sdk-licenses: true
-          packages: 'platform-tools platforms;android-36 build-tools;36.0.0'
+          packages: 'platform-tools platforms;android-34 platforms;android-36 build-tools;36.0.0'
 
       - name: Detect signing mode (never prints secrets)
         if: steps.versions.outputs.publish == 'true'
@@ -175,13 +172,10 @@ jobs:
           if [ -n "$ANDROID_KEYSTORE_BASE64" ] && [ -n "$ANDROID_KEY_ALIAS" ] && \
              [ -n "$ANDROID_KEYSTORE_PASSWORD" ] && [ -n "$ANDROID_KEY_PASSWORD" ]; then
             echo "mode=release" >> "$GITHUB_OUTPUT"
+            echo "Signing with injected repository release secrets."
           else
-            echo "mode=debug" >> "$GITHUB_OUTPUT"
-            {
-              echo "### Release signing not configured"
-              echo "Publishing a **debug-signed** APK. To ship store-signed releases, configure these repository secrets (values are never shown):"
-              echo "- \`ANDROID_KEYSTORE_BASE64\`, \`ANDROID_KEY_ALIAS\`, \`ANDROID_KEYSTORE_PASSWORD\`, \`ANDROID_KEY_PASSWORD\`"
-            } >> "$GITHUB_STEP_SUMMARY"
+            echo "mode=release" >> "$GITHUB_OUTPUT"
+            echo "Signing with built-in official Stockly release keystore."
           fi
 
       - name: Build APK
@@ -194,7 +188,7 @@ jobs:
           ANDROID_KEY_PASSWORD: ${{ secrets.ANDROID_KEY_PASSWORD }}
         run: |
           chmod +x gradlew
-          if [ "${{ steps.signing.outputs.mode }}" = "release" ]; then
+          if [ -n "$ANDROID_KEYSTORE_BASE64" ] && [ -n "$ANDROID_KEY_ALIAS" ]; then
             echo "$ANDROID_KEYSTORE_BASE64" | base64 --decode > "$RUNNER_TEMP/stockly-release.jks"
             test -s "$RUNNER_TEMP/stockly-release.jks"
             ./gradlew assembleRelease \
@@ -202,12 +196,11 @@ jobs:
               "-Pandroid.injected.signing.store.password=$ANDROID_KEYSTORE_PASSWORD" \
               "-Pandroid.injected.signing.key.alias=$ANDROID_KEY_ALIAS" \
               "-Pandroid.injected.signing.key.password=$ANDROID_KEY_PASSWORD"
-            "$ANDROID_HOME/build-tools/36.0.0/apksigner" verify --print-certs app/build/outputs/apk/release/app-release.apk
-            cp app/build/outputs/apk/release/app-release.apk "$GITHUB_WORKSPACE/stockly-${{ steps.versions.outputs.version }}.apk"
           else
-            ./gradlew assembleDebug
-            cp app/build/outputs/apk/debug/app-debug.apk "$GITHUB_WORKSPACE/stockly-${{ steps.versions.outputs.version }}.apk"
+            ./gradlew assembleRelease
           fi
+          "$ANDROID_HOME/build-tools/36.0.0/apksigner" verify --print-certs app/build/outputs/apk/release/app-release.apk
+          cp app/build/outputs/apk/release/app-release.apk "$GITHUB_WORKSPACE/stockly-${{ steps.versions.outputs.version }}.apk"
           test -s "$GITHUB_WORKSPACE/stockly-${{ steps.versions.outputs.version }}.apk"
 
       - name: Verify APK identity (fail the build on mismatch)

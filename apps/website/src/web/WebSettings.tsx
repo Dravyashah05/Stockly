@@ -113,7 +113,7 @@ export default function WebSettings({
         </p>
       </div>
 
-      {/* App Update & Release Card (Apple iOS style) */}
+      {/* App Update & Release Card */}
       <GlassCard tone="regular" radius="24px" className="p-6 space-y-4">
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-3">

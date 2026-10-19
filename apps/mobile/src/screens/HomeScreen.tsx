@@ -209,7 +209,7 @@ export default function HomeScreen({
       />
 
       <div className="dashboard-content mx-auto max-w-md space-y-4 px-4 pt-3 pb-[calc(6rem+env(safe-area-inset-bottom,0px))]">
-        {/* Greeting — Apple iOS style header with Add button */}
+        {/* Greeting — header with Add button */}
         <div className="dashboard-greeting px-1 pt-1">
           <span className="inline-flex items-center gap-1.5 rounded-full bg-(--field) px-3 py-1 text-[11px] font-semibold uppercase tracking-wider text-(--ink-2)">
             <span className={`h-1.5 w-1.5 rounded-full ${online ? 'bg-emerald-500' : 'bg-amber-500'}`} />
@@ -258,7 +258,7 @@ export default function HomeScreen({
           </button>
         ) : null}
 
-        {/* Stock In / Out — Apple Inset Action cards */}
+        {/* Stock In / Out — Inset Action cards */}
         <div className="dashboard-actions grid grid-cols-2 gap-2.5">
 
           {quickActions.map((a) => (

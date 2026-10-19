@@ -180,7 +180,7 @@ export const BottomNav = memo(function BottomNav({
   return (
     <nav className="bottom-navigation nav-bottom-offset pointer-events-none fixed inset-x-0 z-30 px-4">
       <div className="glass-nav pointer-events-auto relative mx-auto grid max-w-md grid-cols-4 gap-0.5 rounded-[28px] p-1.5">
-        {/* Apple iOS Liquid Glass active sliding pill */}
+        {/* Liquid Glass active sliding pill */}
         {pill ? (
           <span
             aria-hidden="true"

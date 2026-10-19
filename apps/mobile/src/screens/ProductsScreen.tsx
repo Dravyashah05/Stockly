@@ -115,7 +115,7 @@ export default function ProductsScreen({
             <Plus size={16} /> Add product
           </button>
         </div>
-        {/* Apple iOS Search bar */}
+        {/* Search bar */}
         <div className="products-search">
           <SearchBar value={q} onChange={setQ} placeholder="Search name, SKU…" />
         </div>

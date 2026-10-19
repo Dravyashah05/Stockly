@@ -136,7 +136,7 @@ const APP_SCREENSHOTS: ScreenshotSlide[] = [
   },
 ];
 
-/* Apple App Store Screenshot Showcase Component */
+/* App Screenshot Showcase Component */
 function AppStoreScreenshotShowcase() {
   const [activeIdx, setActiveIdx] = useState(0);
   const [isPaused, setIsPaused] = useState(false);
@@ -395,7 +395,7 @@ export default function StoreApp() {
       </header>
 
       <main className="mx-auto max-w-6xl px-5 sm:px-8 py-10 sm:py-16 space-y-16 sm:space-y-24">
-        {/* ---------------- Apple App Store Product Hero ---------------- */}
+        {/* ---------------- Product Hero ---------------- */}
         <section className="relative">
           <span aria-hidden="true" className="ambient-glow top-0 left-10 h-72 w-72 bg-[#C7FF4D]/30" />
           <span aria-hidden="true" className="ambient-glow bottom-0 right-10 h-64 w-64 bg-blue-500/20" />
@@ -422,7 +422,7 @@ export default function StoreApp() {
                 Stockly: Inventory & Stock
               </h1>
               <p className="text-base sm:text-lg font-semibold text-neutral-500 dark:text-neutral-400 mt-1">
-                Real-time Google Sheets Cloud Sync • Apple iOS Liquid Glass UI
+                Real-time Google Sheets Cloud Sync • Liquid Glass UI
               </p>
               <p className="text-[13px] font-medium text-neutral-400 mt-0.5">
                 DNS Studio • In-House Tooling • Self-Hosted & Private
@@ -571,7 +571,7 @@ export default function StoreApp() {
               </ul>
             ) : (
               <p className="text-[14px] text-neutral-500">
-                Latest updates include the full Apple iOS Liquid Glass UI redesign, automated in-app updater, and enhanced Google Sheets sync.
+                Latest updates include the full Liquid Glass UI redesign, automated in-app updater, and enhanced Google Sheets sync.
               </p>
             )}
           </div>
@@ -667,10 +667,10 @@ export default function StoreApp() {
                 <Sparkles size={22} />
               </div>
               <h3 className="font-extrabold text-[16px] text-neutral-900 dark:text-white">
-                Apple Liquid Glass UI
+                Liquid Glass Interface
               </h3>
               <p className="text-[13px] text-neutral-600 dark:text-neutral-400 leading-relaxed">
-                Translucent frosted sheets, refined typography, and floating controls built strictly to Apple&apos;s Human Interface Guidelines.
+                Translucent frosted surfaces, refined typography, and floating controls built for effortless mobile inventory management.
               </p>
             </div>
 
@@ -829,7 +829,7 @@ export default function StoreApp() {
         </div>
       )}
 
-      {/* ---------------- Apple-style Footer ---------------- */}
+      {/* ---------------- Minimal Footer ---------------- */}
       <footer className="border-t border-[#D9D9D0]/70 dark:border-neutral-800 px-5 sm:px-8 py-10 mt-20">
         <div className="mx-auto flex max-w-6xl flex-col sm:flex-row items-center justify-between gap-6">
           <div className="flex items-center gap-3">
@@ -856,7 +856,7 @@ export default function StoreApp() {
           </div>
 
           <p className="text-[12px] text-neutral-400">
-            © 2026 Stockly by DNS. Designed with Apple Human Interface Guidelines.
+            © 2026 Stockly by DNS. Crafted with precision for modern mobile commerce.
           </p>
         </div>
       </footer>

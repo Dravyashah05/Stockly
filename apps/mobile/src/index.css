@@ -8,7 +8,7 @@
     Roboto, sans-serif;
 }
 
-/* ---------------- Apple iOS Liquid Glass design tokens ---------------- */
+/* ---------------- Liquid Glass design tokens ---------------- */
 :root {
   --font-size-xs: 0.75rem;
   --font-size-sm: 0.875rem;
@@ -59,7 +59,7 @@
   --control-border: var(--stroke);
   --focus-ring: 0 0 0 3px var(--accent-soft);
   --shadow-popover: 0 18px 48px -24px rgba(0, 0, 0, .18);
-  /* Consistent Apple corner radii */
+  /* Consistent corner radii */
   --radius-card: 18px;
   --radius-row: 12px;
   --radius-control: 10px;
@@ -68,7 +68,7 @@
   --dialog-mobile-max: 86dvh;
   --breakpoint-tablet: 768px;
   --breakpoint-desktop: 1024px;
-  /* Minimum touch target (WCAG / iOS HIG) */
+  /* Minimum touch target (WCAG 44px) */
   --touch-min: 44px;
   color-scheme: light;
 }
@@ -485,7 +485,7 @@ button:disabled, [aria-disabled="true"] { cursor: not-allowed; }
   .product-detail-stats > div:first-child > p:first-child { font-size: 24px; }
 }
 
-/* ---------------- Apple iOS Liquid Glass surfaces ----------------
+/* ---------------- Liquid Glass surfaces ----------------
  * Content-first readable surfaces for data cards; controlled frosted blur
  * for floating overlays, navigation, and sheets. */
 .glass {
@@ -523,7 +523,7 @@ button:disabled, [aria-disabled="true"] { cursor: not-allowed; }
   }
 }
 
-/* Subtle, calm Apple iOS ambient aura behind the app */
+/* Subtle, calm ambient aura behind the app */
 .ambient {
   position: fixed;
   inset: 0;

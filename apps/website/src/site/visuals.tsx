@@ -137,7 +137,7 @@ export function DashboardMock() {
         <div className="phone-screen shadow-2xl">
           <img
             src="/screenshots/screen-home.png"
-            alt="Stockly Mobile App on Android with Apple iOS Liquid Glass UI"
+            alt="Stockly Mobile App with Liquid Glass Design"
             className="w-full h-full object-cover object-top block"
             loading="eager"
           />
@@ -203,7 +203,7 @@ export function PhoneMock() {
       {/* Overlapping Sheet Preview badge */}
       <div className="absolute -bottom-4 -right-4 z-20 flex items-center gap-2 rounded-2xl bg-[#151515] px-4 py-2.5 text-white shadow-lg sm:-right-6">
         <span className="h-2 w-2 rounded-full bg-[#C7FF4D]" />
-        <span className="text-[12px] font-extrabold uppercase tracking-wider text-white">Liquid Glass iOS UI</span>
+        <span className="text-[12px] font-extrabold uppercase tracking-wider text-white">Liquid Glass Design</span>
       </div>
     </div>
   );
