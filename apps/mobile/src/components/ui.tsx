@@ -109,26 +109,30 @@ export const Header = memo(function Header({
   title,
   subtitle,
   right,
+  indicator = false,
 }: {
   title: string;
-  subtitle?: string;
+  subtitle?: React.ReactNode;
   right?: React.ReactNode;
+  indicator?: boolean;
 }) {
   return (
-    <div className="safe-top px-4 pt-4">
+    <header className="safe-top sticky top-0 z-20 px-4 pt-3.5 pb-2.5 bg-(--bg)/90 backdrop-blur-md border-b border-(--stroke-dim)/30 transition-all">
       <div className="mx-auto flex max-w-md items-center gap-3">
         <div className="min-w-0 flex-1">
           <h1 className="flex items-center gap-2 text-[22px] font-extrabold leading-tight tracking-tight text-(--ink)">
-            <span aria-hidden="true" className="h-[18px] w-[5px] shrink-0 rounded-full bg-[#C7FF4D]" />
+            {indicator ? (
+              <span aria-hidden="true" className="h-[18px] w-[5px] shrink-0 rounded-full bg-[#C7FF4D]" />
+            ) : null}
             <span className="min-w-0 truncate">{title}</span>
           </h1>
           {subtitle ? (
-            <p className="mt-0.5 truncate text-[13px] font-medium text-(--ink-2)">{subtitle}</p>
+            <div className="mt-0.5 truncate text-[11.5px] font-medium text-(--ink-2)">{subtitle}</div>
           ) : null}
         </div>
         {right}
       </div>
-    </div>
+    </header>
   );
 });
 

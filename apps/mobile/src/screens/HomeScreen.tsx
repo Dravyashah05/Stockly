@@ -11,6 +11,7 @@ import {
   PackageX,
   Plus,
   Minus,
+  RefreshCw,
   Sparkles,
   WifiOff,
 } from 'lucide-react';
@@ -188,7 +189,19 @@ export default function HomeScreen({
       <Header
         title="Overview"
         subtitle={
-          lastSync ? `Synced ${lastSync.toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit' })}` : 'Inventory dashboard'
+          <button
+            type="button"
+            onClick={() => void refresh()}
+            disabled={refreshing}
+            className="press inline-flex items-center gap-1.5 text-[11px] font-semibold text-(--ink-2) hover:text-(--ink)"
+            aria-label={refreshing ? 'Syncing inventory' : 'Synced - tap to refresh'}
+          >
+            <RefreshCw
+              size={11}
+              className={`shrink-0 ${refreshing ? 'animate-spin text-(--accent)' : online ? 'text-emerald-500' : 'text-amber-500'}`}
+            />
+            <span>{refreshing ? 'Syncing…' : online ? 'Synced' : 'Offline'}</span>
+          </button>
         }
       />
 
