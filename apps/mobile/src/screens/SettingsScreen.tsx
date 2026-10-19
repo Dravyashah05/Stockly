@@ -5,26 +5,22 @@ import {
   Cloud,
   Database,
   Download,
-  Link2,
+  ShieldCheck,
   LogOut,
   Moon,
   Pencil,
   Plus,
   RefreshCw,
-  ShieldCheck,
   Sun,
   Sunset,
   Tag,
   Trash2,
-  User as UserIcon,
 } from 'lucide-react';
-import { APP_VERSION, LS_KEYS, UPDATE_CHECK_URL } from '@stockly/shared-client/config';
+import { APP_VERSION, LS_KEYS, UPDATE_CHECK_URL, setApiUrl } from '@stockly/shared-client/config';
 import { fetchLatestRelease, formatApkSize } from '@stockly/shared-client/releases';
 import { useStore } from '@stockly/shared-client/store';
-import type { Category, UserProfile } from '@stockly/shared-types';
-import { getCachedProfile, refreshMyProfile, signOutAccount } from '@stockly/shared-client/users';
+import type { Category } from '@stockly/shared-types';
 import { sheetsApi } from '@stockly/shared-client/connection';
-import AdminScreen from './AdminScreen';
 import LinkedDevicesScreen from './LinkedDevicesScreen';
 import { SheetSetupScreen } from './AccessScreens';
 import { Confirm, Field, Header, Sheet, BrandMark, inputCls } from '../components/ui';
@@ -38,23 +34,15 @@ export default function SettingsScreen() {
 
   const [cloudOpen, setCloudOpen] = useState(false);
   const [logoutOpen, setLogoutOpen] = useState(false);
-  // Account (server-verified identity)
-  const [profile, setProfile] = useState<UserProfile | null>(() => getCachedProfile());
-  const [accountOpen, setAccountOpen] = useState(false);
-  const [accBusy, setAccBusy] = useState(false);
-  const [accError, setAccError] = useState('');
-  const [accStatus, setAccStatus] = useState('');
-  // Server-verified sheet connection (never a client-held URL)
+  // Sheet connection
   const [connState, setConnState] = useState<string | null>(null);
   const [connVerifiedAt, setConnVerifiedAt] = useState<string | null>(null);
   const [connError, setConnError] = useState('');
   const [connBusy, setConnBusy] = useState(false);
   const [sheetChangeOpen, setSheetChangeOpen] = useState(false);
-  // Owner-only admin area
-  const [adminOpen, setAdminOpen] = useState(false);
-  // Linked devices (WhatsApp-style Stockly-to-Stockly linking)
+  // Linked devices
   const [devicesOpen, setDevicesOpen] = useState(false);
-  const [devicesMode, setDevicesMode] = useState<'manage' | 'link'>('manage');
+  const [devicesMode] = useState<'manage' | 'link'>('manage');
   // Categories manager
   const [catListOpen, setCatListOpen] = useState(false);
   const [quickCat, setQuickCat] = useState('');
@@ -255,28 +243,7 @@ export default function SettingsScreen() {
     { k: 'system', label: 'System', hint: 'System', icon: <Sunset size={16} /> },
   ] as const;
 
-  /* ---- Account (server-verified identity; sign-in lives on AuthScreen) ---- */
-  const doRefreshStatus = async () => {
-    setAccBusy(true);
-    setAccError('');
-    try {
-      const latest = await refreshMyProfile();
-      const current = latest ?? profile;
-      if (current) setProfile(current);
-      try {
-        const conn = await sheetsApi.getConnection();
-        setAccStatus(
-          conn.connected
-            ? `Account is ${current?.accountStatus ?? 'active'} · sheet verified${conn.verifiedAt ? ` ${new Date(conn.verifiedAt).toLocaleDateString()}` : ''}.`
-            : 'Account is active · sheet not connected.',
-        );
-      } catch {
-        setAccStatus(`Account is ${current?.accountStatus ?? 'active'}.`);
-      }
-    } finally {
-      setAccBusy(false);
-    }
-  };
+
 
   return (
     <div className="app-page-viewport mx-auto max-w-md">
@@ -400,65 +367,7 @@ export default function SettingsScreen() {
           </button>
         </section>
 
-        {/* Account — user database profile (no passwords, no secrets) */}
-        <section className="glass rounded-[24px] p-4">
-          <button
-            type="button"
-            onClick={() => setAccountOpen(true)}
-            className="press flex w-full items-center gap-3 text-left"
-          >
-            <span className="flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl bg-[#EAEAE4] text-[#151515] dark:bg-white/10 dark:text-[#C7FF4D]">
-              <UserIcon size={20} />
-            </span>
-            <span className="min-w-0 flex-1">
-              <span className="block text-[15px] font-extrabold tracking-tight text-(--ink)">Account</span>
-              <span className="block truncate text-[12px] font-medium text-(--ink-2)">
-                {profile ? `${profile.name} · ${profile.accountStatus}` : 'Register or sign in on this device'}
-              </span>
-            </span>
-            <ChevronRight size={18} className="shrink-0 text-(--ink-3)" />
-          </button>
-        </section>
 
-        {/* Linked Devices — one account, many devices */}
-        <section className="glass rounded-[24px] p-4">
-          <button
-            type="button"
-            onClick={() => { setDevicesMode('manage'); setDevicesOpen(true); }}
-            className="press flex w-full items-center gap-3 text-left"
-          >
-            <span className="flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl bg-[#EAEAE4] text-[#151515] dark:bg-white/10 dark:text-[#C7FF4D]">
-              <Link2 size={20} />
-            </span>
-            <span className="min-w-0 flex-1">
-              <span className="block text-[15px] font-extrabold tracking-tight text-(--ink)">Linked Devices</span>
-              <span className="block text-[12px] font-medium text-(--ink-2)">
-                Link phones & tablets to this account
-              </span>
-            </span>
-            <ChevronRight size={18} className="shrink-0 text-(--ink-3)" />
-          </button>
-        </section>
-
-        {/* Administration — owner-only area (server-validated) */}
-        <section className="glass rounded-[24px] p-4">
-          <button
-            type="button"
-            onClick={() => setAdminOpen(true)}
-            className="press flex w-full items-center gap-3 text-left"
-          >
-            <span className="flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl bg-[#EAEAE4] text-[#151515] dark:bg-white/10 dark:text-[#C7FF4D]">
-              <ShieldCheck size={20} />
-            </span>
-            <span className="min-w-0 flex-1">
-              <span className="block text-[15px] font-extrabold tracking-tight text-(--ink)">Administration</span>
-              <span className="block text-[12px] font-medium text-(--ink-2)">
-                Owner-only users, roles, settings & audit logs
-              </span>
-            </span>
-            <ChevronRight size={18} className="shrink-0 text-(--ink-3)" />
-          </button>
-        </section>
 
         {/* Categories — full list lives in a popup sheet */}
         <section className="glass rounded-[24px] p-4">
@@ -593,7 +502,7 @@ export default function SettingsScreen() {
           </div>
         </section>
 
-        {/* Log out — disconnects the cloud database and clears this phone */}
+        {/* Disconnect — disconnects the cloud database and clears this phone */}
         <section className="glass rounded-[24px] border-red-500/20 p-4">
           <button
             onClick={() => setLogoutOpen(true)}
@@ -603,9 +512,9 @@ export default function SettingsScreen() {
               <LogOut size={20} />
             </span>
             <span className="min-w-0 flex-1">
-              <span className="block text-[15px] font-extrabold tracking-tight text-red-500">Log out</span>
+              <span className="block text-[15px] font-extrabold tracking-tight text-red-500">Disconnect Database</span>
               <span className="block text-[12px] font-medium text-(--ink-2)">
-                Disconnects the cloud database and clears this phone’s cache
+                Disconnects your Google Sheet and clears this phone’s cache
               </span>
             </span>
             <ChevronRight size={18} className="shrink-0 text-(--ink-3)" />
@@ -770,81 +679,16 @@ export default function SettingsScreen() {
 
       <Confirm
         open={logoutOpen}
-        title="Log out?"
-        body="You will be signed out on this device and this phone’s cached data cleared. Your Google Sheet is untouched — sign in again any time."
-        confirmLabel="Log out"
+        title="Disconnect database?"
+        body="This will disconnect your Google Sheet and clear this device’s local cache. Your Google Sheet data remains completely untouched."
+        confirmLabel="Disconnect"
         onCancel={() => setLogoutOpen(false)}
         onConfirm={() => {
           setLogoutOpen(false);
-          signOutAccount();
-          setProfile(null);
+          setApiUrl('');
           logout();
         }}
       />
-
-      {/* Account popup — register / sign in / status */}
-      <Sheet open={accountOpen} onClose={() => { setAccountOpen(false); setAccError(''); setAccStatus(''); }} title="Account">
-        {profile ? (
-          <div>
-            <div className="rounded-[20px] bg-(--glass-soft) px-3.5 py-3">
-              <p className="text-[15px] font-extrabold text-(--ink)">{profile.name}</p>
-              <p className="text-[12.5px] text-(--ink-2)">{profile.email}</p>
-              <p className="tnum mt-1 text-[11.5px] font-bold text-(--ink-2)">Status: {profile.accountStatus}</p>
-            </div>
-            {accStatus ? <p className="mt-2 px-1 text-[12.5px] font-semibold text-(--ink-2)">{accStatus}</p> : null}
-            <div className="mt-3 grid grid-cols-2 gap-2 pb-1">
-              <button
-                type="button"
-                onClick={() => void doRefreshStatus()}
-                disabled={accBusy}
-                className="glass-soft press min-h-[52px] rounded-2xl text-[14px] font-extrabold text-(--ink) disabled:opacity-50"
-              >
-                {accBusy ? 'Checking…' : 'Check status'}
-              </button>
-              <button
-                type="button"
-                onClick={() => { signOutAccount(); setProfile(null); setAccountOpen(false); notify('Signed out on this device.'); }}
-                className="press min-h-[52px] rounded-2xl bg-rose-500/12 text-[14px] font-extrabold text-rose-600 dark:text-rose-300"
-              >
-                Sign out
-              </button>
-            </div>
-            <p className="mt-2 px-1 text-[12px] leading-relaxed text-(--ink-2)">
-              Profiles sync to the owner’s admin area automatically. Account status is owner-managed and enforced by
-              the backend.
-            </p>
-          </div>
-        ) : (
-          <div>
-            <p className="mb-3 text-[13px] leading-relaxed text-(--ink-2)">
-              Signed in with a server-verified Stockly account. Sign-in methods attach to one identity — Google and
-              password logins for the same verified email share this account.
-            </p>
-            {accError ? <p role="alert" className="mt-2 text-[12.5px] font-semibold text-rose-600 dark:text-rose-300">{accError}</p> : null}
-            <button
-              type="button"
-              onClick={() => { setAccountOpen(false); setDevicesMode('link'); setDevicesOpen(true); }}
-              className="glass-soft press mt-2 flex min-h-[52px] w-full items-center justify-center gap-1.5 rounded-2xl text-[14px] font-extrabold text-(--ink)"
-            >
-              <Link2 size={16} /> Link another device
-            </button>
-            <button
-              type="button"
-              onClick={() => { signOutAccount(); setProfile(null); setAccountOpen(false); logout(); }}
-              className="press mt-2 min-h-[52px] w-full rounded-2xl bg-rose-500/12 text-[14px] font-extrabold text-rose-600 dark:text-rose-300"
-            >
-              Sign out
-            </button>
-          </div>
-        )}
-      </Sheet>
-
-      {/* Owner-only admin area */}
-      {adminOpen ? (
-        <div className="fixed inset-0 z-40 overflow-y-auto bg-(--bg)">
-          <AdminScreen onBack={() => setAdminOpen(false)} notify={notify} />
-        </div>
-      ) : null}
 
       {/* Linked devices */}
       {devicesOpen ? (
@@ -854,11 +698,8 @@ export default function SettingsScreen() {
             notify={notify}
             initialMode={devicesMode}
             onLinked={() => {
-              void refreshMyProfile().then((p) => {
-                if (p) setProfile(p);
-                setDevicesOpen(false);
-                void refresh();
-              });
+              setDevicesOpen(false);
+              void refresh();
             }}
           />
         </div>

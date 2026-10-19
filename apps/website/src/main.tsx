@@ -4,12 +4,10 @@ import '@stockly/ui/styles.css';
 import './site/site.css';
 import StoreSite from './site/StoreSite';
 import WebApp from './web/WebApp';
-import AdminScreen from './admin/AdminScreen';
 
 /* Website entry — single bundle with client-side hash routing:
  *   #/        Marketing landing page (StoreSite)
  *   #/app     The dedicated Web Inventory Application (dashboard, products, history, devices, settings)
- *   #/admin   Owner / Administrator Console
  *   store.html Dedicated App Store APK download and installation page
  */
 
@@ -22,27 +20,8 @@ function WebsiteRouter() {
     return () => window.removeEventListener('hashchange', handleHash);
   }, []);
 
-  if (hash.startsWith('#/admin')) {
-    return (
-      <AdminScreen
-        onBack={() => {
-          window.location.hash = '#/app';
-        }}
-        notify={(msg) => {
-          console.info(`[admin] ${msg}`);
-        }}
-      />
-    );
-  }
-
-  if (hash.startsWith('#/app')) {
-    return (
-      <WebApp
-        onNavigateAdmin={() => {
-          window.location.hash = '#/admin';
-        }}
-      />
-    );
+  if (hash.startsWith('#/app') || hash.startsWith('#/admin')) {
+    return <WebApp />;
   }
 
   return <StoreSite />;

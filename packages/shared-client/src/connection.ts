@@ -35,8 +35,7 @@ export class SheetsApiError extends Error {
 function authedHeaders(): Record<string, string> {
   const headers: Record<string, string> = { 'Content-Type': 'application/json' };
   const session = getAuthSession();
-  if (!session) throw new SheetsApiError('Sign-in required.', 401);
-  headers.Authorization = `Bearer ${session}`;
+  if (session) headers.Authorization = `Bearer ${session}`;
   const deviceSession = getDeviceSession();
   if (deviceSession) headers['X-Device-Session'] = deviceSession;
   return headers;

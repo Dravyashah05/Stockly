@@ -303,19 +303,38 @@ async function verifyExecUrl(execUrl) {
 }
 async function authorize(req) {
   const authSecret = process.env.AUTH_SESSION_SECRET || "";
-  const session = verifyAuthSession(bearerToken(req), authSecret);
-  if (!session) throw httpError2("Sign-in required.", 401);
-  const accountStatus = await readAccountStatus(session.userId);
-  if (accountStatus !== "active") {
-    throw httpError2(accountStatus === "suspended" ? "This account is suspended. Contact the owner." : "This account is not active. Contact the owner.", 403);
+  const token = bearerToken(req);
+  const session = token ? verifyAuthSession(token, authSecret) : null;
+  if (token && !session) throw httpError2("Sign-in required.", 401);
+  const userId = session?.userId ?? "user_default";
+  if (session) {
+    const accountStatus = await readAccountStatus(session.userId);
+    if (accountStatus !== "active") {
+      throw httpError2(accountStatus === "suspended" ? "This account is suspended. Contact the owner." : "This account is not active. Contact the owner.", 403);
+    }
   }
-  const { conn } = await findConnection(session.userId);
+  let { conn } = await findConnection(userId);
+  if (!conn && !session) {
+    const all = await scriptReadTab("UserSheets").catch(() => []);
+    if (all.length > 0 && all[0].execUrl) {
+      conn = toConnection([all[0].userId, all[0].spreadsheetId, all[0].execUrl, all[0].status, all[0].verifiedAt, all[0].updatedAt]);
+    } else if (process.env.USER_SCRIPT_URL) {
+      conn = {
+        userId,
+        spreadsheetId: "env_configured",
+        execUrl: process.env.USER_SCRIPT_URL.trim(),
+        status: "verified",
+        verifiedAt: (new Date()).toISOString(),
+        updatedAt: (new Date()).toISOString(),
+      };
+    }
+  }
   if (!conn || conn.status !== "verified" || !conn.execUrl) {
     const e = httpError2("No verified sheet connection. Connect your Google Sheet first.", 403);
     e.reason = "sheet-not-connected";
     throw e;
   }
-  const deviceIds = await listUserDeviceIds(session.userId);
+  const deviceIds = session ? await listUserDeviceIds(session.userId) : [];
   let deviceId = null;
   let deviceSession = null;
   if (deviceIds.length > 0) {
@@ -329,7 +348,7 @@ async function authorize(req) {
     deviceId = ds.deviceId;
     deviceSession = raw;
   }
-  return { userId: session.userId, conn, deviceId, deviceSession };
+  return { userId, conn, deviceId, deviceSession };
 }
 function getDeps() {
   if (!adminScriptConfigured() || !process.env.AUTH_SESSION_SECRET) {
@@ -383,17 +402,35 @@ async function handler(req, res) {
     getDeps();
     if (action === "getConnection") {
       const authSecret = process.env.AUTH_SESSION_SECRET || "";
-      const session = verifyAuthSession(bearerToken(req), authSecret);
-      if (!session) {
+      const token = bearerToken(req);
+      const session = token ? verifyAuthSession(token, authSecret) : null;
+      if (token && !session) {
         res.status(401).json({ success: false, error: "Sign-in required." });
         return;
       }
-      const accountStatus = await readAccountStatus(session.userId);
-      if (accountStatus !== "active") {
-        res.status(403).json({ success: false, error: "This account is not active. Contact the owner.", reason: "suspended" });
-        return;
+      const userId = session?.userId ?? "user_default";
+      if (session) {
+        const accountStatus = await readAccountStatus(session.userId);
+        if (accountStatus !== "active") {
+          res.status(403).json({ success: false, error: "This account is not active. Contact the owner.", reason: "suspended" });
+          return;
+        }
       }
-      const { conn } = await findConnection(session.userId);
+      let { conn } = await findConnection(userId);
+      if (!conn && !session) {
+        const all = await scriptReadTab("UserSheets").catch(() => []);
+        if (all.length > 0 && all[0].execUrl) {
+          conn = toConnection([all[0].userId, all[0].spreadsheetId, all[0].execUrl, all[0].status, all[0].verifiedAt, all[0].updatedAt]);
+        } else if (process.env.USER_SCRIPT_URL) {
+          conn = {
+            connected: true,
+            status: "verified",
+            spreadsheetId: "env_configured",
+            execUrl: process.env.USER_SCRIPT_URL.trim(),
+            verifiedAt: (new Date()).toISOString()
+          };
+        }
+      }
       if (!conn) {
         res.status(200).json({ success: true, data: { connected: false, status: null } });
         return;
@@ -411,24 +448,39 @@ async function handler(req, res) {
     }
     if (action === "connectSheet" || action === "reverify") {
       const authSecret = process.env.AUTH_SESSION_SECRET || "";
-      const session = verifyAuthSession(bearerToken(req), authSecret);
-      if (!session) {
+      const token = bearerToken(req);
+      const session = token ? verifyAuthSession(token, authSecret) : null;
+      if (token && !session) {
         res.status(401).json({ success: false, error: "Sign-in required." });
         return;
       }
-      const accountStatus = await readAccountStatus(session.userId);
-      if (accountStatus !== "active") {
-        res.status(403).json({ success: false, error: "This account is not active. Contact the owner." });
-        return;
+      const userId = session?.userId ?? "user_default";
+      if (session) {
+        const accountStatus = await readAccountStatus(session.userId);
+        if (accountStatus !== "active") {
+          res.status(403).json({ success: false, error: "This account is not active. Contact the owner." });
+          return;
+        }
       }
       let execUrl;
       if (action === "reverify") {
-        const found = await findConnection(session.userId);
-        if (!found.conn) {
-          res.status(404).json({ success: false, error: "No sheet connection to verify yet." });
-          return;
+        let found = await findConnection(userId);
+        if (!found.conn && !session) {
+          const all = await scriptReadTab("UserSheets").catch(() => []);
+          if (all.length > 0 && all[0].execUrl) {
+            found = { conn: toConnection([all[0].userId, all[0].spreadsheetId, all[0].execUrl, all[0].status, all[0].verifiedAt, all[0].updatedAt]), exists: true };
+          }
         }
-        execUrl = found.conn.execUrl;
+        if (!found.conn) {
+          if (process.env.USER_SCRIPT_URL) {
+            execUrl = process.env.USER_SCRIPT_URL.trim();
+          } else {
+            res.status(404).json({ success: false, error: "No sheet connection to verify yet." });
+            return;
+          }
+        } else {
+          execUrl = found.conn.execUrl;
+        }
       } else {
         execUrl = String(body.execUrl ?? "").trim();
         if (!execUrl) {
@@ -439,10 +491,10 @@ async function handler(req, res) {
       try {
         const { desc } = await verifyExecUrl(execUrl);
         const now = (/* @__PURE__ */ new Date()).toISOString();
-        const found = await findConnection(session.userId);
+        const found = await findConnection(userId);
         await saveConnection(
           {
-            userId: session.userId,
+            userId,
             spreadsheetId: desc.spreadsheetId,
             execUrl,
             status: "verified",
@@ -452,9 +504,9 @@ async function handler(req, res) {
           found.exists
         );
         await auditLog({
-          adminId: `user:${session.userId}`,
+          adminId: `user:${userId}`,
           action: action === "reverify" ? "sheet.reverify" : "sheet.connect",
-          targetUserId: session.userId,
+          targetUserId: userId,
           newValue: `verified:${desc.spreadsheetId}`
         });
         console.info("[stockly-sheets] connection verified");
@@ -465,7 +517,7 @@ async function handler(req, res) {
         return;
       } catch (e) {
         const now = (/* @__PURE__ */ new Date()).toISOString();
-        const found = await findConnection(session.userId).catch(() => ({ conn: null, exists: false }));
+        const found = await findConnection(userId).catch(() => ({ conn: null, exists: false }));
         if (action === "connectSheet" && found.conn) {
           await saveConnection({ ...found.conn, status: "failed", updatedAt: now }, found.exists).catch(() => void 0);
         }

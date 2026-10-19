@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback, useRef } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import {
   Home,
   Boxes,
@@ -7,24 +7,19 @@ import {
   History,
   Smartphone,
   Settings as SettingsIcon,
-  Shield,
   Plus,
   RefreshCw,
   Moon,
   Sun,
-  LogOut,
   ExternalLink,
   Menu,
   X,
 } from 'lucide-react';
 import { StoreProvider, useStore } from '@stockly/shared-client/store';
-import { getAuthSession } from '@stockly/shared-client/auth';
-import { sheetsApi, SheetsApiError } from '@stockly/shared-client/connection';
-import { getCachedProfile, signOutAccount, refreshMyProfile } from '@stockly/shared-client/users';
+import { isConfigured } from '@stockly/shared-client/config';
 import type { Product } from '@stockly/shared-types';
 import { GlassButton, GlassDialog } from '@stockly/ui';
 
-import WebAuth from './WebAuth';
 import WebSheetSetup from './WebSheetSetup';
 import WebDashboard from './WebDashboard';
 import WebProducts from './WebProducts';
@@ -36,7 +31,7 @@ import WebSettings from './WebSettings';
 
 export type WebTab = 'home' | 'products' | 'history' | 'devices' | 'settings';
 
-function WebShell({ onNavigateAdmin }: { onNavigateAdmin: () => void }) {
+function WebShell() {
   const [activeTab, setActiveTab] = useState<WebTab>('home');
   const [productFilter, setProductFilter] = useState<string>('all');
   const [sidebarOpen, setSidebarOpen] = useState(false);
@@ -70,10 +65,7 @@ function WebShell({ onNavigateAdmin }: { onNavigateAdmin: () => void }) {
     loadMoreTransactions,
     txLoadingMore,
     txExhausted,
-    logout,
   } = useStore();
-
-  const profile = getCachedProfile();
 
   // Keyboard shortcuts
   useEffect(() => {
@@ -227,19 +219,6 @@ function WebShell({ onNavigateAdmin }: { onNavigateAdmin: () => void }) {
                 </button>
               );
             })}
-
-            {/* Owner Admin Console link */}
-            <button
-              type="button"
-              onClick={() => {
-                onNavigateAdmin();
-                setSidebarOpen(false);
-              }}
-              className="w-full flex items-center gap-3 px-3.5 py-2.5 rounded-xl text-[14px] font-bold text-neutral-600 dark:text-neutral-400 hover:bg-neutral-200/50 dark:hover:bg-neutral-800/60 transition-all mt-4"
-            >
-              <Shield size={18} />
-              <span>Admin Console</span>
-            </button>
           </nav>
         </div>
 
@@ -264,15 +243,15 @@ function WebShell({ onNavigateAdmin }: { onNavigateAdmin: () => void }) {
             </button>
           </div>
 
-          {/* User Profile & Theme switcher */}
+          {/* Workspace info & Theme switcher */}
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-2.5 min-w-0">
-              <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-neutral-200 dark:bg-neutral-800 font-bold text-sm">
-                {profile?.name ? profile.name.charAt(0).toUpperCase() : 'U'}
+              <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-[#C7FF4D]/20 text-[#151515] dark:text-[#C7FF4D] font-bold text-sm">
+                S
               </div>
               <div className="min-w-0">
-                <p className="text-[13px] font-bold truncate">{profile?.name ?? 'Account'}</p>
-                <p className="text-[11px] text-neutral-400 truncate">{profile?.email ?? 'Cloud'}</p>
+                <p className="text-[13px] font-bold truncate">Stockly Workspace</p>
+                <p className="text-[11px] text-neutral-400 truncate">Inventory System</p>
               </div>
             </div>
 
@@ -284,18 +263,6 @@ function WebShell({ onNavigateAdmin }: { onNavigateAdmin: () => void }) {
                 className="p-2 rounded-lg text-neutral-500 hover:text-black dark:hover:text-white transition-colors"
               >
                 {theme === 'dark' ? <Sun size={16} /> : <Moon size={16} />}
-              </button>
-              <button
-                type="button"
-                title="Sign Out"
-                onClick={() => {
-                  logout();
-                  signOutAccount();
-                  window.location.reload();
-                }}
-                className="p-2 rounded-lg text-neutral-500 hover:text-rose-600 transition-colors"
-              >
-                <LogOut size={16} />
               </button>
             </div>
           </div>
@@ -389,12 +356,6 @@ function WebShell({ onNavigateAdmin }: { onNavigateAdmin: () => void }) {
                 onThemeChange={setTheme}
                 onReconnectSheet={() => setSheetModalOpen(true)}
                 onForceSync={() => void refresh()}
-                onNavigateAdmin={onNavigateAdmin}
-                onLogout={() => {
-                  logout();
-                  signOutAccount();
-                  window.location.reload();
-                }}
               />
             )}
           </div>
@@ -442,121 +403,21 @@ function WebShell({ onNavigateAdmin }: { onNavigateAdmin: () => void }) {
   );
 }
 
-export default function WebApp({ onNavigateAdmin }: { onNavigateAdmin: () => void }) {
-  const [phase, setPhase] = useState<'loading' | 'login' | 'setup' | 'restricted' | 'app'>('loading');
-  const [setupMode, setSetupMode] = useState<'setup' | 'repair'>('setup');
-  const [setupMessage, setSetupMessage] = useState<string | undefined>(undefined);
-  const [restrictedStatus, setRestrictedStatus] = useState<string>('suspended');
+export default function WebApp() {
+  const [configured, setConfigured] = useState(() => isConfigured());
 
-  const evaluate = useCallback(async () => {
-    const session = getAuthSession();
-    if (!session) {
-      setPhase('login');
-      return;
-    }
-
-    let accountStatus = 'active';
-    try {
-      const me = await refreshMyProfile();
-      if (me?.accountStatus) accountStatus = me.accountStatus;
-    } catch {
-      setPhase('login');
-      return;
-    }
-
-    if (accountStatus !== 'active') {
-      setRestrictedStatus(accountStatus);
-      setPhase('restricted');
-      return;
-    }
-
-    try {
-      const conn = await sheetsApi.getConnection();
-      if (conn.connected && conn.status === 'verified') {
-        setPhase('app');
-      } else if (conn.status === 'failed' || conn.status === 'revoked') {
-        setSetupMode('repair');
-        setSetupMessage('Your sheet connection failed verification. Please reconnect.');
-        setPhase('setup');
-      } else {
-        setSetupMode('setup');
-        setPhase('setup');
-      }
-    } catch (e) {
-      if (e instanceof SheetsApiError && e.status === 401) {
-        signOutAccount();
-        setPhase('login');
-      } else if (e instanceof SheetsApiError && e.reason === 'suspended') {
-        setRestrictedStatus('suspended');
-        setPhase('restricted');
-      } else {
-        setSetupMode('setup');
-        setSetupMessage('Could not verify your sheet connection. Please try again.');
-        setPhase('setup');
-      }
-    }
-  }, []);
-
-  useEffect(() => {
-    void evaluate();
-  }, [evaluate]);
-
-  if (phase === 'loading') {
-    return (
-      <div className="flex min-h-screen items-center justify-center bg-[#F7F7F2] dark:bg-[#111210]">
-        <div className="flex flex-col items-center gap-3">
-          <span className="flex h-12 w-12 items-center justify-center rounded-2xl bg-[#C7FF4D] text-[#151515] font-black text-xl animate-pulse">
-            S
-          </span>
-          <span className="text-[13px] font-bold text-neutral-500">Loading Stockly Web Workspace…</span>
-        </div>
-      </div>
-    );
-  }
-
-  if (phase === 'login') {
-    return <WebAuth onAuthed={() => void evaluate()} />;
-  }
-
-  if (phase === 'restricted') {
-    return (
-      <div className="flex min-h-screen items-center justify-center p-6 bg-[#F7F7F2] dark:bg-[#111210]">
-        <div className="max-w-md w-full p-8 rounded-[28px] bg-white dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-800 text-center space-y-4 shadow-xl">
-          <div className="inline-flex h-16 w-16 items-center justify-center rounded-2xl bg-rose-500/10 text-rose-600">
-            <Shield size={32} />
-          </div>
-          <h2 className="text-xl font-extrabold text-neutral-900 dark:text-white">Account Restricted</h2>
-          <p className="text-[13px] text-neutral-600 dark:text-neutral-400">
-            Your Stockly account status is currently <strong>{restrictedStatus}</strong>. Please contact your workspace administrator for access.
-          </p>
-          <GlassButton
-            variant="secondary"
-            fullWidth
-            onClick={() => {
-              signOutAccount();
-              setPhase('login');
-            }}
-          >
-            Sign Out
-          </GlassButton>
-        </div>
-      </div>
-    );
-  }
-
-  if (phase === 'setup') {
+  if (!configured) {
     return (
       <WebSheetSetup
-        mode={setupMode}
-        initialMessage={setupMessage}
-        onConnected={() => void evaluate()}
+        mode="setup"
+        onConnected={() => setConfigured(true)}
       />
     );
   }
 
   return (
     <StoreProvider>
-      <WebShell onNavigateAdmin={onNavigateAdmin} />
+      <WebShell />
     </StoreProvider>
   );
 }

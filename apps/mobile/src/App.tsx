@@ -1,12 +1,8 @@
 import React, { Suspense, lazy, useCallback, useEffect, useRef, useState, useTransition } from 'react';
 import { CloudOff } from 'lucide-react';
 import { StoreProvider, useStore } from '@stockly/shared-client/store';
-import { LS_KEYS } from '@stockly/shared-client/config';
-import { authApi, getAuthSession } from '@stockly/shared-client/auth';
-import { sheetsApi, SheetsApiError } from '@stockly/shared-client/connection';
-import { signOutAccount } from '@stockly/shared-client/users';
-import AuthScreen from './screens/AuthScreen';
-import { RestrictedScreen, SheetSetupScreen } from './screens/AccessScreens';
+import { LS_KEYS, isConfigured } from '@stockly/shared-client/config';
+import { SheetSetupScreen } from './screens/AccessScreens';
 import type { Product } from '@stockly/shared-types';
 import { BottomNav, DesktopSidebar, DesktopToolbar, SyncStatus, Toasts, AppLoader, hasOpenOverlay, useOverlayOpen, type TabKey } from './components/ui';
 import HomeScreen from './screens/HomeScreen';
@@ -323,75 +319,35 @@ export default function App() {
   );
 }
 
-/* Central route guard (frontend mirror only — every protected API
- * re-validates session, account status, sheet connection, and device).
- * Phases: login → restricted (suspended) → setup/repair (sheet) → app. */
+/* Central route guard:
+ * Directly boots into the inventory workspace if configured.
+ * If no sheet is connected yet, displays SheetSetupScreen.
+ * No login or admin system required. */
 type GatePhase =
   | { name: 'loading' }
-  | { name: 'login' }
-  | { name: 'restricted'; status: string }
   | { name: 'setup'; message?: string }
-  | { name: 'repair'; message: string }
   | { name: 'app' };
 
 function Gate() {
   const [phase, setPhase] = useState<GatePhase>({ name: 'loading' });
   const { setConfiguredFlag } = useStore();
 
-  const evaluate = useCallback(async () => {
-    if (!getAuthSession()) {
-      setPhase({ name: 'login' });
-      return;
-    }
-    let accountStatus = 'active';
-    try {
-      const me = await authApi.me();
-      accountStatus = me.user.accountStatus;
-    } catch (e) {
-      // Dead/expired session → back to login. Anything else keeps the
-      // cached shell away from protected data until retry.
-      const status = (e as { status?: number }).status;
-      if (status === 401) {
-        signOutAccount();
-        setPhase({ name: 'login' });
-      } else {
-        setPhase({ name: 'login' });
-      }
-      return;
-    }
-    if (accountStatus !== 'active') {
-      setPhase({ name: 'restricted', status: accountStatus });
-      return;
-    }
-    try {
-      const conn = await sheetsApi.getConnection();
-      if (conn.connected && conn.status === 'verified') {
-        setConfiguredFlag();
-        setPhase({ name: 'app' });
-      } else if (conn.status === 'failed' || conn.status === 'revoked') {
-        setPhase({ name: 'repair', message: 'Your sheet connection failed verification. Reconnect below.' });
-      } else {
-        setPhase({ name: 'setup' });
-      }
-    } catch (e) {
-      if (e instanceof SheetsApiError && e.status === 401) {
-        signOutAccount();
-        setPhase({ name: 'login' });
-      } else if (e instanceof SheetsApiError && e.reason === 'suspended') {
-        setPhase({ name: 'restricted', status: 'suspended' });
-      } else {
-        setPhase({ name: 'setup', message: 'Could not check your sheet connection. Try again.' });
-      }
+  const evaluate = useCallback(() => {
+    if (isConfigured()) {
+      setConfiguredFlag();
+      setPhase({ name: 'app' });
+    } else {
+      setPhase({ name: 'setup' });
     }
   }, [setConfiguredFlag]);
 
   useEffect(() => {
-    void evaluate();
+    evaluate();
   }, [evaluate]);
 
   // Native splash screen: Shell used to hide it, but Shell only mounts in
   // the app phase now — with launchAutoHide:false the splash would stick
-  // forever on login/setup/restricted. Hide it for every phase.
+  // forever on login/setup. Hide it for every phase.
   useEffect(() => {
     (async () => {
       try {
@@ -403,17 +359,6 @@ function Gate() {
     })();
   }, []);
 
-  // Backend-driven guard: any 401/403 from a protected API re-runs the
-  // gate (session expiry, suspension, revoked sheet/device). Frontend
-  // redirects alone never grant access — this only re-checks state.
-  useEffect(() => {
-    const onForbidden = () => {
-      void evaluate();
-    };
-    window.addEventListener('stockly:forbidden', onForbidden);
-    return () => window.removeEventListener('stockly:forbidden', onForbidden);
-  }, [evaluate]);
-
   if (phase.name === 'loading') {
     return (
       <div className="min-h-dvh bg-(--bg) text-(--ink)">
@@ -421,18 +366,12 @@ function Gate() {
       </div>
     );
   }
-  if (phase.name === 'login') {
-    return <AuthScreen onAuthed={() => void evaluate()} />;
-  }
-  if (phase.name === 'restricted') {
-    return <RestrictedScreen status={phase.status} onSignOut={() => setPhase({ name: 'login' })} />;
-  }
-  if (phase.name === 'setup' || phase.name === 'repair') {
+  if (phase.name === 'setup') {
     return (
       <SheetSetupScreen
-        mode={phase.name}
+        mode="setup"
         initialMessage={phase.message}
-        onConnected={() => void evaluate()}
+        onConnected={() => evaluate()}
       />
     );
   }

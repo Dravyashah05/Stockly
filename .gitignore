@@ -34,3 +34,5 @@ apps/mobile/android/build
 *.njsproj
 *.sln
 *.sw?
+.vercel
+.env*

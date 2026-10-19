@@ -10,7 +10,7 @@
 import { useState } from 'react';
 import { ArrowLeft, CheckCircle2, Database, Link2, RefreshCw, ShieldAlert, X } from 'lucide-react';
 import { sheetsApi, SheetsApiError, type SheetConnection } from '@stockly/shared-client/connection';
-import { getApiUrl } from '@stockly/shared-client/config';
+import { getApiUrl, setApiUrl } from '@stockly/shared-client/config';
 import { signOutAccount } from '@stockly/shared-client/users';
 import { Field, inputCls } from '../components/ui';
 
@@ -50,6 +50,7 @@ export function SheetSetupScreen({
     setBusy(true);
     setError('');
     try {
+      setApiUrl(v);
       const res = await sheetsApi.connectSheet(v);
       setConn(res);
       onConnected();

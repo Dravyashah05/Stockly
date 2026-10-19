@@ -1,8 +1,7 @@
 import { useState } from 'react';
 import { Database, Link2, ShieldAlert, ExternalLink, HelpCircle } from 'lucide-react';
 import { sheetsApi, SheetsApiError, type SheetConnection } from '@stockly/shared-client/connection';
-import { getApiUrl } from '@stockly/shared-client/config';
-import { signOutAccount } from '@stockly/shared-client/users';
+import { getApiUrl, setApiUrl } from '@stockly/shared-client/config';
 import { GlassCard, GlassButton, GlassTextField, StatusBadge } from '@stockly/ui';
 
 function errMsg(e: unknown): string {
@@ -39,6 +38,7 @@ export default function WebSheetSetup({
     setBusy(true);
     setError('');
     try {
+      setApiUrl(v);
       const res = await sheetsApi.connectSheet(v);
       setConn(res);
       onConnected();
@@ -143,14 +143,7 @@ export default function WebSheetSetup({
             </div>
           )}
 
-          <div className="pt-2 flex items-center justify-between text-[12px] text-neutral-500">
-            <button
-              type="button"
-              onClick={() => signOutAccount()}
-              className="text-rose-600 dark:text-rose-400 hover:underline font-semibold"
-            >
-              Sign out
-            </button>
+          <div className="pt-2 flex items-center justify-end text-[12px] text-neutral-500">
             <a href="#/" className="hover:underline">
               Return to Website
             </a>
