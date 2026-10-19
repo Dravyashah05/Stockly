@@ -117,8 +117,8 @@ export const Header = memo(function Header({
   indicator?: boolean;
 }) {
   return (
-    <header className="safe-top sticky top-0 z-20 px-4 pt-3.5 pb-2.5 bg-(--bg)/90 backdrop-blur-md border-b border-(--stroke-dim)/30 transition-all">
-      <div className="mx-auto flex max-w-md items-center gap-3">
+    <header className="safe-top sticky top-0 z-20 px-4 pt-4 pb-2 bg-transparent pointer-events-none">
+      <div className="mx-auto flex max-w-md items-center gap-3 pointer-events-auto">
         <div className="min-w-0 flex-1">
           <h1 className="flex items-center gap-2 text-[22px] font-extrabold leading-tight tracking-tight text-(--ink)">
             {indicator ? (
