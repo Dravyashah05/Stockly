@@ -1,11 +1,13 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
 import { execFileSync } from 'node:child_process';
-import { mkdtempSync, writeFileSync, readFileSync, rmSync } from 'node:fs';
+import { mkdtempSync, mkdirSync, writeFileSync, readFileSync, rmSync } from 'node:fs';
+
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
-import { fetchLatestRelease, formatApkSize, isReleaseInfoLike, mapReleasePayload } from '../packages/shared-client/src/releases.ts';
-import { assertVersionsMatch, buildReleaseJson, parseBadging, readVersions } from '../scripts/release-info.mjs';
+import { cmpVersions, fetchLatestRelease, formatApkSize, isNewerVersion, isReleaseInfoLike, mapReleasePayload } from '../packages/shared-client/src/releases.ts';
+import { assertVersionsMatch, buildReleaseJson, bumpVersion, parseBadging, readVersions } from '../scripts/release-info.mjs';
+
 
 function ghRelease(overrides = {}) {
   return {
@@ -83,9 +85,54 @@ test('formats APK sizes for download UI', () => {
   assert.equal(formatApkSize(4314200), '4.1 MB');
 });
 
+test('cmpVersions compares semantic versions correctly', () => {
+  assert.ok(cmpVersions('1.0.1', '1.0.0') > 0);
+  assert.ok(cmpVersions('1.1.0', '1.0.9') > 0);
+  assert.ok(cmpVersions('2.0.0', '1.9.9') > 0);
+  assert.equal(cmpVersions('1.0.0', '1.0.0'), 0);
+  assert.ok(cmpVersions('1.0.0', '1.0.1') < 0);
+  assert.ok(cmpVersions('v1.0.1', '1.0.0') > 0);
+});
+
+test('isNewerVersion detects updates via version or versionCode', () => {
+  assert.equal(isNewerVersion('1.0.1', '1.0.0'), true);
+  assert.equal(isNewerVersion('1.0.0', '1.0.0'), false);
+  assert.equal(isNewerVersion('1.0.0', '1.0.1'), false);
+  // Higher versionCode wins even if semver is identical
+  assert.equal(isNewerVersion('1.0.0', '1.0.0', 2, 1), true);
+  assert.equal(isNewerVersion('1.0.0', '1.0.0', 1, 1), false);
+});
+
+test('bumpVersion increments patch and versionCode safely in isolated tree', () => {
+  const dir = mkdtempSync(join(tmpdir(), 'stockly-bump-'));
+  try {
+    const pkg = { name: 'stockly', version: '1.2.3' };
+    writeFileSync(join(dir, 'package.json'), JSON.stringify(pkg, null, 2) + '\n');
+    const appDir = join(dir, 'apps/mobile/android/app');
+    mkdirSync(appDir, { recursive: true });
+
+    writeFileSync(join(appDir, 'build.gradle'), 'defaultConfig {\n  versionCode 4\n  versionName "1.2.3"\n}\n');
+    const confDir = join(dir, 'packages/shared-client/src');
+    mkdirSync(confDir, { recursive: true });
+    writeFileSync(join(confDir, 'config.ts'), "export const APP_VERSION = '1.2.3';\nexport const APP_VERSION_CODE = 4;\n");
+
+    const bumped = bumpVersion('patch', dir);
+    assert.equal(bumped.appVersion, '1.2.4');
+    assert.equal(bumped.versionCode, 5);
+
+    const reRead = readVersions(dir);
+    assert.equal(reRead.appVersion, '1.2.4');
+    assert.equal(reRead.versionCode, 5);
+    assert.equal(reRead.versionName, '1.2.4');
+  } finally {
+    rmSync(dir, { recursive: true, force: true });
+  }
+});
+
 test('fetchLatestRelease is a function (network covered by mapping tests)', () => {
   assert.equal(typeof fetchLatestRelease, 'function');
 });
+
 
 test('release versions stay consistent (web, Android name, sane code)', () => {
   const v = readVersions();

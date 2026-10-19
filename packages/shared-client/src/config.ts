@@ -2,7 +2,9 @@
 
 export const APP_NAME = 'Stockly';
 export const APP_ID = 'com.stockly.inventory';
-export const APP_VERSION = '1.0.0';
+export const APP_VERSION = '1.0.1';
+export const APP_VERSION_CODE = 2;
+
 
 /** Update manifest for the in-app updater (Settings → App update).
  *  Point this at the version.json hosted next to your APK download, e.g.

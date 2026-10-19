@@ -65,20 +65,58 @@ jobs:
         with:
           fetch-depth: 0
 
-      - name: Read versions and decide (fail fast, no release on mismatch)
+      - name: Read versions and decide release (auto-bump when changes found)
         id: versions
         run: |
+          # Fetch tags so git can compare with the latest release
+          git fetch --tags --force 2>/dev/null || true
+          
+          # Read current version from repository
           node scripts/release-info.mjs check | tee check.out
-          grep -E '^(version|versionCode)=' check.out >> "$GITHUB_OUTPUT"
           VER=$(grep '^version=' check.out | cut -d= -f2)
-          echo "tag=v$VER" >> "$GITHUB_OUTPUT"
-          if gh release view "v$VER" >/dev/null 2>&1; then
-            echo "publish=false" >> "$GITHUB_OUTPUT"
-            echo "Release v$VER is already published — validation below still runs, nothing will be re-published."
-          else
-            echo "publish=true" >> "$GITHUB_OUTPUT"
-            echo "New version v$VER — a release will be published after successful builds."
+          VCODE=$(grep '^versionCode=' check.out | cut -d= -f2)
+
+          # Find the latest release tag on GitHub
+          LATEST_TAG=$(gh release view --json tagName --jq '.tagName' 2>/dev/null || echo "")
+          if [ -z "$LATEST_TAG" ]; then
+            LATEST_TAG=$(git describe --tags --abbrev=0 2>/dev/null || echo "")
           fi
+          echo "Current repo version: v$VER (code $VCODE)"
+          echo "Latest published release: ${LATEST_TAG:-none}"
+
+          # If the current tag does not exist on GitHub, it's a new version ready to publish
+          if ! gh release view "v$VER" >/dev/null 2>&1; then
+            echo "publish=true" >> "$GITHUB_OUTPUT"
+            echo "autoBumped=false" >> "$GITHUB_OUTPUT"
+            echo "version=$VER" >> "$GITHUB_OUTPUT"
+            echo "versionCode=$VCODE" >> "$GITHUB_OUTPUT"
+            echo "tag=v$VER" >> "$GITHUB_OUTPUT"
+            echo "New version v$VER detected — publishing release."
+          else
+            # Tag v$VER is already released. Check if there are new commits since that tag:
+            COMMITS_SINCE=$(git rev-list "v$VER"..HEAD --count 2>/dev/null || echo "0")
+            echo "Commits since v$VER: $COMMITS_SINCE"
+            if [ "$COMMITS_SINCE" -gt 0 ]; then
+              echo "Changes found since last release ($COMMITS_SINCE commits). Auto-bumping patch version..."
+              node scripts/release-info.mjs bump | tee bump.out
+              NEW_VER=$(grep '^version=' bump.out | cut -d= -f2)
+              NEW_VCODE=$(grep '^versionCode=' bump.out | cut -d= -f2)
+              echo "publish=true" >> "$GITHUB_OUTPUT"
+              echo "autoBumped=true" >> "$GITHUB_OUTPUT"
+              echo "version=$NEW_VER" >> "$GITHUB_OUTPUT"
+              echo "versionCode=$NEW_VCODE" >> "$GITHUB_OUTPUT"
+              echo "tag=v$NEW_VER" >> "$GITHUB_OUTPUT"
+              echo "Auto-bumped to v$NEW_VER (code $NEW_VCODE) for release."
+            else
+              echo "publish=false" >> "$GITHUB_OUTPUT"
+              echo "autoBumped=false" >> "$GITHUB_OUTPUT"
+              echo "version=$VER" >> "$GITHUB_OUTPUT"
+              echo "versionCode=$VCODE" >> "$GITHUB_OUTPUT"
+              echo "tag=v$VER" >> "$GITHUB_OUTPUT"
+              echo "No new changes since release v$VER — validation-only run."
+            fi
+          fi
+
 
       - name: Set up Node.js
         uses: actions/setup-node@v4
@@ -238,20 +276,24 @@ jobs:
             SHA256SUMS.txt
             release.json
 
-      - name: Publish static website metadata (ends the loop safely)
+      - name: Publish static website metadata & sync bumped versions
         if: steps.versions.outputs.publish == 'true'
         run: |
           # The website + in-app updater read same-origin release.json first
-          # (no API rate limits); the Releases API stays as fallback. This
-          # commit triggers one more validation-only run (the tag now exists),
-          # which publishes nothing further — so the loop terminates here.
+          # (no API rate limits); the Releases API stays as fallback.
           cp "$GITHUB_WORKSPACE/release.json" apps/website/public/release.json
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
           git pull --rebase origin main
           git add apps/website/public/release.json
-          git commit -m "Release metadata for ${{ steps.versions.outputs.tag }}"
+          if [ "${{ steps.versions.outputs.autoBumped }}" = "true" ]; then
+            git add package.json apps/mobile/android/app/build.gradle packages/shared-client/src/config.ts
+            git commit -m "chore(release): bump version to ${{ steps.versions.outputs.tag }} [skip ci]"
+          else
+            git commit -m "chore(release): update release metadata for ${{ steps.versions.outputs.tag }} [skip ci]"
+          fi
           git push origin HEAD:main
+
 
       - name: Summarize
         if: always() && steps.versions.outputs.publish == 'true'

@@ -279,20 +279,20 @@ function TxDetailPage({ t, onClose, onSelect }: { t: StockTransaction; onClose: 
         <div className="px-4 pt-3 lg:grid lg:grid-cols-2 lg:items-start lg:gap-5 lg:px-0 lg:pt-6">
           {/* Hero: type-tinted card with status icon, quantity, product */}
           <div
-            className={`rounded-[26px] border p-6 text-center lg:p-8 ${
-              isIn ? 'border-emerald-500/25 bg-emerald-500/[0.07]' : 'border-rose-500/25 bg-rose-500/[0.07]'
+            className={`rounded-[22px] border p-6 text-center lg:p-8 ${
+              isIn ? 'border-emerald-500/20 bg-emerald-500/[0.05]' : 'border-amber-500/20 bg-amber-500/[0.05]'
             }`}
           >
             <span
-              className={`mx-auto flex h-14 w-14 items-center justify-center rounded-2xl text-white lg:h-16 lg:w-16 ${
-                isIn ? 'bg-[#1E7B3C]' : 'bg-[#C2332D]'
+              className={`mx-auto flex h-14 w-14 items-center justify-center rounded-[18px] lg:h-16 lg:w-16 ${
+                isIn ? 'bg-emerald-500/15 text-emerald-600 dark:text-emerald-400' : 'bg-amber-500/15 text-amber-600 dark:text-amber-400'
               }`}
             >
               {isIn ? <ArrowDownToLine size={24} /> : <ArrowUpFromLine size={24} />}
             </span>
             <p
-              className={`tnum mt-3 text-[52px] font-extrabold leading-none tracking-tight lg:text-[60px] ${
-                isIn ? 'text-emerald-600 dark:text-emerald-300' : 'text-rose-600 dark:text-rose-300'
+              className={`tnum mt-3 text-[48px] font-extrabold leading-none tracking-tight lg:text-[56px] ${
+                isIn ? 'text-emerald-600 dark:text-emerald-400' : 'text-amber-600 dark:text-amber-400'
               }`}
             >
               {isIn ? '+' : '−'}
@@ -300,17 +300,17 @@ function TxDetailPage({ t, onClose, onSelect }: { t: StockTransaction; onClose: 
             </p>
             <p className="mx-auto mt-2 max-w-[32ch] break-words text-[17px] font-bold leading-snug text-(--ink)">{t.productName}</p>
             {liveStock != null ? (
-              <p className="tnum mt-1 text-[12.5px] font-semibold text-(--ink-2)">{liveStock} in stock now</p>
+              <p className="tnum mt-1 text-[12.5px] font-medium text-(--ink-2)">{liveStock} in stock now</p>
             ) : null}
             {pending ? (
-              <span className="mt-2.5 inline-block rounded-full bg-(--accent-soft) px-2.5 py-1 text-[11px] font-extrabold text-(--accent)">
+              <span className="mt-2.5 inline-block rounded-full bg-(--accent-soft) px-2.5 py-1 text-[11px] font-bold text-(--accent)">
                 Saving…
               </span>
             ) : null}
           </div>
 
           {/* Facts */}
-          <div className="glass mt-3 divide-y divide-(--stroke-dim) rounded-[26px] px-4 py-1 lg:mt-0">
+          <div className="glass mt-3 divide-y divide-(--stroke-dim) rounded-[20px] px-4 py-1 lg:mt-0">
             <DetailRow label="Date" value={whenFull} />
             {t.reason ? <DetailRow label="Reason" value={t.reason} /> : null}
             {t.note ? <DetailRow label="Note" value={t.note} /> : null}
@@ -324,8 +324,7 @@ function TxDetailPage({ t, onClose, onSelect }: { t: StockTransaction; onClose: 
           {/* Product info — live product record, if it still exists */}
           {product ? (
             <div className="mt-3 lg:col-span-2 lg:mt-0">
-              <p className="mb-2 flex items-center gap-2 px-1 text-[13px] font-extrabold uppercase tracking-wider text-(--ink-2)">
-                <span aria-hidden="true" className="h-3 w-1 rounded-full bg-[#C7FF4D]" />
+              <p className="mb-2 px-1 text-[13px] font-semibold uppercase tracking-wider text-(--ink-2)">
                 Product info
               </p>
               <div className="glass divide-y divide-(--stroke-dim) rounded-[26px] px-4 py-1">
@@ -342,8 +341,7 @@ function TxDetailPage({ t, onClose, onSelect }: { t: StockTransaction; onClose: 
           {/* Same product, recent first — tap to jump between entries */}
           {related.length > 0 ? (
             <div className="mt-3 lg:col-span-2 lg:mt-0">
-              <p className="mb-2 flex items-center gap-2 px-1 text-[13px] font-extrabold uppercase tracking-wider text-(--ink-2)">
-                <span aria-hidden="true" className="h-3 w-1 rounded-full bg-[#C7FF4D]" />
+              <p className="mb-2 px-1 text-[13px] font-semibold uppercase tracking-wider text-(--ink-2)">
                 More for this product
               </p>
               <div className="glass divide-y divide-(--stroke-dim) rounded-[26px] px-1.5 py-1">

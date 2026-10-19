@@ -16,8 +16,10 @@ import {
   Tag,
   Trash2,
 } from 'lucide-react';
-import { APP_VERSION, LS_KEYS, UPDATE_CHECK_URL, setApiUrl } from '@stockly/shared-client/config';
-import { fetchLatestRelease, formatApkSize } from '@stockly/shared-client/releases';
+import { APP_VERSION, APP_VERSION_CODE, LS_KEYS, UPDATE_CHECK_URL, setApiUrl } from '@stockly/shared-client/config';
+import { fetchLatestRelease, formatApkSize, isNewerVersion } from '@stockly/shared-client/releases';
+
+
 import { useStore } from '@stockly/shared-client/store';
 import type { Category } from '@stockly/shared-types';
 import { sheetsApi } from '@stockly/shared-client/connection';
@@ -142,16 +144,7 @@ export default function SettingsScreen() {
       return null;
     }
   });
-  const cmpVersions = (a: string, b: string): number => {
-    const pa = a.split('.').map((x) => parseInt(x, 10) || 0);
-    const pb = b.split('.').map((x) => parseInt(x, 10) || 0);
-    for (let i = 0; i < Math.max(pa.length, pb.length); i++) {
-      const d = (pa[i] || 0) - (pb[i] || 0);
-      if (d !== 0) return d;
-    }
-    return 0;
-  };
-  const checkUpdates = async () => {
+  const checkUpdates = async (force = false) => {
     if (updStatus === 'checking') return;
     if (typeof navigator !== 'undefined' && !navigator.onLine) {
       setUpdError('You’re offline — connect and try again.');
@@ -175,11 +168,12 @@ export default function SettingsScreen() {
       if (UPDATE_CHECK_URL) {
         const res = await fetch(UPDATE_CHECK_URL, { signal: ctrl.signal, cache: 'no-store' });
         if (!res.ok) throw new Error(`HTTP ${res.status}`);
-        const data = (await res.json()) as { version?: unknown; apkUrl?: unknown; notes?: unknown };
+        const data = (await res.json()) as { version?: unknown; apkUrl?: unknown; notes?: unknown; versionCode?: unknown };
         const latest = String(data.version || '').trim();
         if (!latest) throw new Error('Bad version file.');
         remember(latest);
-        if (cmpVersions(latest, APP_VERSION) > 0) {
+        const remoteCode = typeof data.versionCode === 'number' ? data.versionCode : 0;
+        if (isNewerVersion(latest, APP_VERSION, remoteCode, APP_VERSION_CODE)) {
           setUpdLatest(latest);
           setUpdApk(String(data.apkUrl || ''));
           setUpdNotes(String(data.notes || ''));
@@ -189,9 +183,9 @@ export default function SettingsScreen() {
           setUpdStatus('uptodate');
         }
       } else {
-        const rel = await fetchLatestRelease({ noCache: true });
+        const rel = await fetchLatestRelease({ noCache: force });
         remember(rel.version);
-        if (cmpVersions(rel.version, APP_VERSION) > 0) {
+        if (isNewerVersion(rel.version, APP_VERSION, rel.versionCode, APP_VERSION_CODE)) {
           setUpdLatest(rel.version);
           setUpdApk(rel.apkUrl);
           setUpdNotes(rel.releaseNotes.join('\n'));
@@ -215,6 +209,12 @@ export default function SettingsScreen() {
       window.clearTimeout(timer);
     }
   };
+
+  useEffect(() => {
+    void checkUpdates(false);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
 
   /* ---- Server-verified sheet connection (read-only here) ---- */
   const checkConnection = async () => {
@@ -249,41 +249,39 @@ export default function SettingsScreen() {
     <div className="app-page-viewport mx-auto max-w-md">
       <Header title="Settings" subtitle={`Stockly v${APP_VERSION}`} />
 
-      <div className="settings-content mx-auto max-w-md space-y-5 px-4 pt-4 pb-[calc(6rem+env(safe-area-inset-bottom,0px))]">
-        {/* App identity — premium dark hero */}
-        <div className="relative overflow-hidden rounded-[28px] bg-[#111210] p-5 text-white">
-          <div aria-hidden="true" className="pointer-events-none absolute -right-20 -top-24 h-64 w-64 rounded-full bg-white/[0.07] blur-3xl" />
-          <div aria-hidden="true" className="pointer-events-none absolute -bottom-24 -left-16 h-56 w-56 rounded-full bg-white/10 blur-3xl" />
+      <div className="settings-content mx-auto max-w-md space-y-4 px-4 pt-3 pb-[calc(6rem+env(safe-area-inset-bottom,0px))]">
+        {/* App identity — Apple-style hero header */}
+        <div className="relative overflow-hidden rounded-[24px] bg-gradient-to-br from-[#007AFF] to-[#0055D4] dark:from-[#0A84FF] dark:to-[#0055B8] p-5 text-white shadow-sm">
           <div className="relative flex items-center gap-3.5">
-            <span className="flex h-14 w-14 shrink-0 items-center justify-center rounded-[20px] bg-[#C7FF4D] text-[#151515]">
+            <span className="flex h-14 w-14 shrink-0 items-center justify-center rounded-[18px] bg-white/20 text-white backdrop-blur-md">
               <BrandMark size={32} />
             </span>
             <div className="min-w-0 flex-1">
-              <p className="text-[18px] font-extrabold leading-tight tracking-tight">Stockly</p>
-              <p className="text-[12px] font-medium text-white/60">Inventory on Google Sheets · v{APP_VERSION}</p>
-              <span className="mt-1.5 inline-flex items-center gap-1.5 rounded-full px-2.5 py-1 text-[11px] font-extrabold bg-white/10 text-white/80">
-                <span className="h-1.5 w-1.5 rounded-full bg-[#C7FF4D]" />
-                Signed in
+              <p className="text-[19px] font-bold leading-tight tracking-tight">Stockly</p>
+              <p className="text-[12px] font-normal text-white/80">Inventory on Google Sheets · v{APP_VERSION}</p>
+              <span className="mt-1.5 inline-flex items-center gap-1.5 rounded-full px-2.5 py-0.5 text-[11px] font-semibold bg-white/20 text-white">
+                <span className="h-1.5 w-1.5 rounded-full bg-emerald-400" />
+                Connected & Synced
               </span>
             </div>
           </div>
-          <div className="tnum relative mt-4 grid grid-cols-1 gap-2 border-t border-white/10 pt-3">
-            <div className="rounded-2xl bg-white/[0.07] px-3 py-2.5">
-              <p className="text-[17px] font-extrabold leading-none">{String(products.length)}</p>
-              <p className="mt-1 text-[11px] font-semibold text-white/60">Products</p>
+          <div className="tnum relative mt-4 grid grid-cols-1 gap-2 border-t border-white/20 pt-3">
+            <div className="rounded-[14px] bg-white/15 px-3 py-2.5 backdrop-blur-md">
+              <p className="text-[18px] font-bold leading-none">{String(products.length)}</p>
+              <p className="mt-1 text-[11px] font-medium text-white/80">Products in catalogue</p>
             </div>
           </div>
         </div>
 
         {/* App update — version check against the hosted manifest */}
-        <section className="glass rounded-[24px] p-4">
+        <section className={`glass rounded-[24px] p-4 transition-all ${updStatus === 'available' ? 'border-[#007AFF]/30 shadow-md ring-1 ring-[#007AFF]/20' : ''}`}>
           <div className="flex items-center gap-3">
-            <span className="flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl bg-[#EAEAE4] text-[#151515] dark:bg-white/10 dark:text-[#C7FF4D]">
-              <Download size={20} />
+            <span className={`flex h-10 w-10 shrink-0 items-center justify-center rounded-[14px] ${updStatus === 'available' ? 'bg-[#007AFF] text-white shadow-sm' : 'bg-(--field) text-(--ink-2)'}`}>
+              <Download size={19} />
             </span>
             <span className="min-w-0 flex-1">
-              <span className="block text-[15px] font-extrabold tracking-tight text-(--ink)">App update</span>
-              <span className="tnum block text-[12px] font-medium text-(--ink-2)">
+              <span className="block text-[15px] font-bold tracking-tight text-(--ink)">App update</span>
+              <span className="tnum block text-[12px] font-normal text-(--ink-2)">
                 v{APP_VERSION}
                 {updStatus === 'available' && updLatest ? ` → v${updLatest} available` : null}
                 {updStatus !== 'available' && updCheckedAt
@@ -293,131 +291,174 @@ export default function SettingsScreen() {
               </span>
             </span>
             {updStatus === 'available' ? (
-              <span className="shrink-0 rounded-full bg-[#151515] px-2.5 py-1 text-[11px] font-extrabold text-[#C7FF4D] dark:bg-[#C7FF4D] dark:text-[#151515]">
+              <span className="shrink-0 rounded-full bg-[#007AFF] px-2.5 py-0.5 text-[11px] font-bold text-white shadow-sm">
                 New
               </span>
             ) : null}
           </div>
+
           {updStatus === 'available' && updApk ? (
-            <div className="mt-3">
-              {updMeta ? (
-                <p className="tnum mb-2.5 px-1 text-[12px] font-semibold text-(--ink-2)">{updMeta}</p>
-              ) : null}
-              {updNotes ? (
-                <p className="mb-2.5 whitespace-pre-line px-1 text-[13px] leading-relaxed text-(--ink-2)">{updNotes}</p>
-              ) : null}
+            <div className="mt-3.5 space-y-3">
+              <div className="rounded-[18px] border border-[#007AFF]/25 bg-[#007AFF]/10 p-3.5">
+                <div className="flex items-center justify-between">
+                  <span className="text-[13px] font-bold text-[#007AFF] dark:text-[#0A84FF]">
+                    Update Ready to Install
+                  </span>
+                  <span className="rounded-full bg-[#007AFF] px-2 py-0.5 text-[10.5px] font-bold text-white shadow-sm">
+                    v{updLatest}
+                  </span>
+                </div>
+                {updMeta ? (
+                  <p className="tnum mt-1 text-[12px] font-semibold text-(--ink-2)">{updMeta}</p>
+                ) : null}
+                {updNotes ? (
+                  <div className="mt-2.5 max-h-36 overflow-y-auto rounded-[12px] bg-(--glass-soft) p-2.5 text-[12.5px] leading-relaxed text-(--ink-2) whitespace-pre-line">
+                    {updNotes}
+                  </div>
+                ) : null}
+              </div>
+
               <a
                 href={updApk}
                 target="_blank"
                 rel="noreferrer"
-                className="press flex min-h-[52px] items-center justify-center gap-1.5 rounded-2xl bg-[#151515] text-[15px] font-extrabold text-white dark:bg-[#C7FF4D] dark:text-[#151515]"
+                onClick={() => {
+                  try {
+                    window.open(updApk, '_system');
+                  } catch {}
+                }}
+                className="press flex min-h-[48px] items-center justify-center gap-2 rounded-[16px] bg-[#007AFF] text-[15px] font-semibold text-white shadow-sm hover:opacity-95"
               >
-                <Download size={16} /> Download v{updLatest}
+                <Download size={18} /> Download & Update (v{updLatest})
               </a>
-              <p className="mt-2.5 px-1 text-[12px] leading-relaxed text-(--ink-2)">
-                On Android, opening the file asks you to confirm installation — updates must carry Stockly’s official
-                release signature to install over your current app.
-              </p>
+
+              <div className="flex items-center justify-between px-1">
+                <p className="text-[11.5px] text-(--ink-3)">
+                  Official APK update · Preserves existing data
+                </p>
+                <button
+                  type="button"
+                  onClick={() => void checkUpdates(true)}
+                  className="press inline-flex items-center gap-1 text-[12px] font-semibold text-(--ink-2) hover:text-(--ink)"
+                >
+                  <RefreshCw size={12} />
+                  Check again
+                </button>
+              </div>
+            </div>
+          ) : updStatus === 'uptodate' ? (
+            <div className="mt-3 flex items-center justify-between rounded-[16px] bg-(--glass-soft) px-3.5 py-2.5">
+              <span className="flex items-center gap-2 text-[12.5px] font-semibold text-emerald-600 dark:text-emerald-400">
+                <CheckCircle2 size={16} />
+                You’re on the latest version
+              </span>
+              <button
+                type="button"
+                onClick={() => void checkUpdates(true)}
+                className="press inline-flex items-center gap-1.5 rounded-xl bg-(--bg-elev)/70 px-2.5 py-1 text-[12px] font-semibold text-(--ink) shadow-sm"
+              >
+                <RefreshCw size={12} />
+                Check now
+              </button>
+            </div>
+          ) : updStatus === 'error' && updError ? (
+            <div className="mt-3 rounded-[16px] bg-rose-500/10 p-3">
+              <p className="text-[12px] font-semibold text-rose-600 dark:text-rose-400">{updError}</p>
+              <button
+                type="button"
+                onClick={() => void checkUpdates(true)}
+                className="press mt-2 text-[12px] font-bold text-rose-600 dark:text-rose-400 underline"
+              >
+                Try again
+              </button>
             </div>
           ) : (
             <button
               type="button"
-              onClick={() => void checkUpdates()}
+              onClick={() => void checkUpdates(true)}
               disabled={updStatus === 'checking'}
-              className="glass-soft press mt-3 flex min-h-[48px] w-full items-center justify-center gap-1.5 rounded-2xl text-[14px] font-extrabold text-(--ink) disabled:opacity-50"
+              className="press mt-3 flex min-h-[44px] w-full items-center justify-center gap-2 rounded-[14px] bg-(--field) text-[13.5px] font-semibold text-(--ink) disabled:opacity-50 hover:bg-(--field)/80"
             >
-              <Download size={16} />
-              {updStatus === 'checking'
-                ? 'Checking…'
-                : updStatus === 'uptodate'
-                  ? 'Check again'
-                  : 'Check for updates'}
+              <RefreshCw size={16} className={updStatus === 'checking' ? 'animate-spin' : ''} />
+              {updStatus === 'checking' ? 'Checking for updates…' : 'Check for updates'}
             </button>
           )}
-          {updStatus === 'uptodate' ? (
-            <p className="mt-2.5 px-1 text-[12.5px] font-semibold text-(--ink-2)">You’re on the latest version.</p>
-          ) : null}
-          {updStatus === 'error' && updError ? (
-            <p className="mt-2.5 px-1 text-[12.5px] font-semibold text-rose-600 dark:text-rose-300">{updError}</p>
-          ) : null}
         </section>
 
         {/* Cloud connection — summary row only, URL form lives in a popup */}
-        <section className="glass rounded-[24px] p-4">
+        <section className="glass rounded-[20px] p-4">
           <button
             type="button"
             onClick={() => setCloudOpen(true)}
             className="press flex w-full items-center gap-3 text-left"
           >
-            <span className="flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl bg-[#EAEAE4] text-[#151515] dark:bg-white/10 dark:text-[#C7FF4D]">
-              <Cloud size={20} />
+            <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-[12px] bg-(--field) text-(--ink-2)">
+              <Cloud size={19} />
             </span>
             <span className="min-w-0 flex-1">
-              <span className="block text-[15px] font-extrabold tracking-tight text-(--ink)">Cloud database</span>
-              <span className="block truncate text-[12px] font-medium text-(--ink-2)">
+              <span className="block text-[15px] font-bold tracking-tight text-(--ink)">Cloud database</span>
+              <span className="block truncate text-[12px] font-normal text-(--ink-2)">
                 {connected ? 'Sheet verified — tap to manage' : 'Not configured — tap to connect'}
               </span>
             </span>
             {connected ? (
-              <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-emerald-500/12 text-emerald-600 dark:text-emerald-300">
-                <CheckCircle2 size={16} />
+              <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-emerald-500/12 text-emerald-600 dark:text-emerald-400">
+                <CheckCircle2 size={15} />
               </span>
             ) : null}
-            <ChevronRight size={18} className="shrink-0 text-(--ink-3)" />
+            <ChevronRight size={17} className="shrink-0 text-(--ink-3)" />
           </button>
         </section>
 
-
-
         {/* Categories — full list lives in a popup sheet */}
-        <section className="glass rounded-[24px] p-4">
+        <section className="glass rounded-[20px] p-4">
           <button
             type="button"
             onClick={() => setCatListOpen(true)}
             className="press flex w-full items-center gap-3 text-left"
           >
-            <span className="flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl bg-[#EAEAE4] text-[#151515] dark:bg-white/10 dark:text-[#C7FF4D]">
-              <Tag size={20} />
+            <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-[12px] bg-(--field) text-(--ink-2)">
+              <Tag size={19} />
             </span>
             <span className="min-w-0 flex-1">
-              <span className="block text-[15px] font-extrabold tracking-tight text-(--ink)">Categories</span>
-              <span className="block text-[12px] font-medium text-(--ink-2)">
+              <span className="block text-[15px] font-bold tracking-tight text-(--ink)">Categories</span>
+              <span className="block text-[12px] font-normal text-(--ink-2)">
                 {categories.length === 0 ? 'Group products for faster search' : `${categories.length} group${categories.length === 1 ? '' : 's'} — tap to manage`}
               </span>
             </span>
-            <ChevronRight size={18} className="shrink-0 text-(--ink-3)" />
+            <ChevronRight size={17} className="shrink-0 text-(--ink-3)" />
           </button>
           <div className="mt-3 grid grid-cols-2 gap-2">
             <button
               onClick={() => setCatListOpen(true)}
-              className="press glass-soft flex min-h-[48px] items-center justify-center gap-1.5 rounded-2xl text-[14px] font-extrabold text-(--ink)"
+              className="press flex min-h-[44px] items-center justify-center gap-1.5 rounded-[12px] bg-(--field) text-[13.5px] font-semibold text-(--ink)"
             >
-              <Tag size={16} /> Manage
+              <Tag size={15} /> Manage
             </button>
             <button
               onClick={() => { setEditingCat(null); setQuickCat(''); setCatError(''); setCatListOpen(true); }}
-              className="press flex min-h-[48px] items-center justify-center gap-1 rounded-2xl bg-[#151515] text-[14px] font-extrabold text-white dark:bg-[#C7FF4D] dark:text-[#151515]"
+              className="press flex min-h-[44px] items-center justify-center gap-1 rounded-[12px] bg-(--primary) text-[13.5px] font-semibold text-white shadow-sm"
             >
-              <Plus size={16} /> Add
+              <Plus size={15} /> Add
             </button>
           </div>
         </section>
 
         {/* Sync status — durable outbox at a glance */}
-        <section className="glass rounded-[24px] p-4">
+        <section className="glass rounded-[20px] p-4">
           <div className="flex items-center gap-3">
-            <span className="flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl bg-[#EAEAE4] text-[#151515] dark:bg-white/10 dark:text-[#C7FF4D]">
-              <RefreshCw size={20} className={refreshing ? 'animate-spin' : ''} />
+            <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-[12px] bg-(--field) text-(--ink-2)">
+              <RefreshCw size={19} className={refreshing ? 'animate-spin' : ''} />
             </span>
             <span className="min-w-0 flex-1">
-              <span className="block text-[15px] font-extrabold tracking-tight text-(--ink)">{syncState}</span>
-              <span className="tnum block text-[12px] font-medium text-(--ink-2)">
+              <span className="block text-[15px] font-bold tracking-tight text-(--ink)">{syncState}</span>
+              <span className="tnum block text-[12px] font-normal text-(--ink-2)">
                 Last sync: {lastSyncLabel} · Cache {cacheKb} KB
               </span>
             </span>
           </div>
           {failedCount > 0 ? (
-            <div className="mt-3 rounded-2xl border border-rose-500/25 bg-rose-500/10 px-3.5 py-3">
+            <div className="mt-3 rounded-[14px] border border-rose-500/25 bg-rose-500/10 px-3.5 py-3">
               <p className="text-[13px] font-bold text-(--ink)">
                 {failedCount} change{failedCount === 1 ? '' : 's'} couldn&apos;t sync
               </p>
@@ -428,9 +469,9 @@ export default function SettingsScreen() {
                 type="button"
                 onClick={() => void retryAll()}
                 disabled={syncBusy}
-                className="press mt-2.5 flex min-h-[48px] w-full items-center justify-center gap-1.5 rounded-2xl bg-[#151515] text-[14px] font-extrabold text-white disabled:opacity-50 dark:bg-[#C7FF4D] dark:text-[#151515]"
+                className="press mt-2.5 flex min-h-[44px] w-full items-center justify-center gap-1.5 rounded-[12px] bg-(--primary) text-[13.5px] font-semibold text-white shadow-sm disabled:opacity-50"
               >
-                <RefreshCw size={16} className={syncBusy ? 'animate-spin' : ''} />
+                <RefreshCw size={15} className={syncBusy ? 'animate-spin' : ''} />
                 {syncBusy ? 'Retrying…' : `Retry all (${failedCount})`}
               </button>
             </div>
@@ -439,27 +480,27 @@ export default function SettingsScreen() {
             type="button"
             onClick={() => void refresh()}
             disabled={refreshing}
-            className="glass-soft press mt-3 flex min-h-[48px] w-full items-center justify-center gap-1.5 rounded-2xl text-[14px] font-extrabold text-(--ink) disabled:opacity-50"
+            className="press mt-3 flex min-h-[44px] w-full items-center justify-center gap-1.5 rounded-[12px] bg-(--field) text-[13.5px] font-semibold text-(--ink) disabled:opacity-50 hover:bg-(--field)/80"
           >
-            <RefreshCw size={16} className={refreshing ? 'animate-spin' : ''} />
+            <RefreshCw size={15} className={refreshing ? 'animate-spin' : ''} />
             {refreshing ? 'Syncing…' : 'Sync now'}
           </button>
         </section>
 
-        {/* Appearance — compact card matching Cloud style */}
-        <section className="glass rounded-[20px] p-3">
-          <div className="flex items-center gap-2.5 px-1 pb-2.5">
-            <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-2xl bg-[#EAEAE4] text-[#151515] dark:bg-white/10 dark:text-[#C7FF4D]">
-              <Sun size={18} />
+        {/* Appearance — Apple iOS segmented style */}
+        <section className="glass rounded-[20px] p-3.5">
+          <div className="flex items-center gap-2.5 px-1 pb-2">
+            <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-[10px] bg-(--field) text-(--ink-2)">
+              <Sun size={17} />
             </span>
             <div className="min-w-0 flex-1">
-              <p className="text-[14px] font-extrabold tracking-tight text-(--ink)">Appearance</p>
-              <p className="text-[11.5px] font-medium text-(--ink-2)">
+              <p className="text-[14px] font-bold tracking-tight text-(--ink)">Appearance</p>
+              <p className="text-[11.5px] font-normal text-(--ink-2)">
                 {theme === 'system' ? 'Follows your system' : theme === 'dark' ? 'Dark mode' : 'Light mode'}
               </p>
             </div>
           </div>
-          <div className="grid auto-cols-fr grid-flow-col gap-1 rounded-2xl bg-(--glass-soft) p-1">
+          <div className="grid auto-cols-fr grid-flow-col gap-1 rounded-[12px] bg-(--field) p-1">
             {themeOptions.map((t) => {
               const active = theme === t.k;
               return (
@@ -467,10 +508,10 @@ export default function SettingsScreen() {
                   key={t.k}
                   onClick={() => setTheme(t.k)}
                   aria-pressed={active}
-                  className={`press flex items-center justify-center gap-1.5 rounded-xl px-2 py-2.5 text-[12.5px] font-extrabold transition ${
+                  className={`press flex items-center justify-center gap-1.5 rounded-[9px] px-2 py-2 text-[12.5px] font-semibold transition-all duration-150 ${
                     active
-                      ? 'bg-[#151515] text-white dark:bg-[#C7FF4D] dark:text-[#151515]'
-                      : 'text-(--ink-2) hover:bg-(--accent-soft)/50'
+                      ? 'bg-(--bg-elev) text-(--ink) shadow-sm'
+                      : 'text-(--ink-2) hover:text-(--ink)'
                   }`}
                 >
                   {t.icon}
@@ -482,46 +523,46 @@ export default function SettingsScreen() {
         </section>
 
         {/* Data & about */}
-        <section className="glass rounded-[24px] p-4">
+        <section className="glass rounded-[20px] p-4">
           <div className="flex items-start gap-3">
-            <span className="flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl bg-[#EAEAE4] text-[#151515] dark:bg-white/10 dark:text-[#C7FF4D]">
-              <Database size={20} />
+            <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-[12px] bg-(--field) text-(--ink-2)">
+              <Database size={19} />
             </span>
             <p className="text-[13px] leading-relaxed text-(--ink-2)">
               Data lives in <b className="text-(--ink)">your Google Sheet</b> — this phone only caches it. Works across multiple devices via sync.
             </p>
           </div>
-          <div className="mt-3 overflow-hidden rounded-[18px] bg-(--glass-soft)">
-            <div className="flex w-full items-center gap-3 px-3.5 py-3.5">
-              <span className="flex h-9 w-9 items-center justify-center rounded-xl bg-[#EAEAE4] text-[#151515] dark:bg-white/10 dark:text-[#C7FF4D]">
+          <div className="mt-3 overflow-hidden rounded-[14px] bg-(--field)">
+            <div className="flex w-full items-center gap-3 px-3.5 py-3">
+              <span className="flex h-8 w-8 items-center justify-center rounded-[8px] bg-(--bg-elev) text-(--ink-2)">
                 <ShieldCheck size={16} />
               </span>
-              <span className="flex-1 text-[14px] font-bold text-(--ink)">Version</span>
-              <span className="tnum rounded-full bg-(--stroke-dim)/60 px-2.5 py-1 text-[11px] font-extrabold text-(--ink-2)">v{APP_VERSION}</span>
+              <span className="flex-1 text-[13.5px] font-medium text-(--ink)">Version</span>
+              <span className="tnum rounded-full bg-(--bg-elev) px-2.5 py-0.5 text-[11px] font-semibold text-(--ink-2)">v{APP_VERSION}</span>
             </div>
           </div>
         </section>
 
         {/* Disconnect — disconnects the cloud database and clears this phone */}
-        <section className="glass rounded-[24px] border-red-500/20 p-4">
+        <section className="glass rounded-[20px] border-red-500/20 p-4">
           <button
             onClick={() => setLogoutOpen(true)}
             className="flex w-full items-center gap-3 text-left"
           >
-            <span className="flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl bg-red-500/10 text-red-500">
-              <LogOut size={20} />
+            <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-[12px] bg-red-500/10 text-red-500">
+              <LogOut size={19} />
             </span>
             <span className="min-w-0 flex-1">
-              <span className="block text-[15px] font-extrabold tracking-tight text-red-500">Disconnect Database</span>
-              <span className="block text-[12px] font-medium text-(--ink-2)">
+              <span className="block text-[15px] font-bold tracking-tight text-red-500">Disconnect Database</span>
+              <span className="block text-[12px] font-normal text-(--ink-2)">
                 Disconnects your Google Sheet and clears this phone’s cache
               </span>
             </span>
-            <ChevronRight size={18} className="shrink-0 text-(--ink-3)" />
+            <ChevronRight size={17} className="shrink-0 text-(--ink-3)" />
           </button>
         </section>
 
-        <p className="settings-footnote px-2 pb-2 text-center text-[11.5px] font-medium text-(--ink-3)">
+        <p className="settings-footnote px-2 pb-2 text-center text-[11.5px] font-normal text-(--ink-3)">
           Made for small businesses · your data stays yours
         </p>
       </div>
@@ -564,7 +605,7 @@ export default function SettingsScreen() {
           <button
             type="button"
             onClick={() => { setCloudOpen(false); setSheetChangeOpen(true); }}
-            className="press flex min-h-[52px] w-full items-center justify-center gap-1.5 rounded-2xl bg-[#151515] text-[15px] font-extrabold text-white dark:bg-[#C7FF4D] dark:text-[#151515]"
+            className="press flex min-h-[48px] w-full items-center justify-center gap-1.5 rounded-[14px] bg-(--primary) text-[15px] font-semibold text-white shadow-sm"
           >
             Change sheet
           </button>
@@ -623,7 +664,7 @@ export default function SettingsScreen() {
           <button
             type="submit"
             disabled={quickBusy}
-            className="press flex min-h-11 items-center gap-1.5 rounded-xl bg-[#151515] px-4 text-[13px] font-extrabold text-white disabled:opacity-50 dark:bg-[#C7FF4D] dark:text-[#151515]"
+            className="press flex min-h-10 items-center gap-1.5 rounded-[12px] bg-(--primary) px-4 text-[13.5px] font-semibold text-white disabled:opacity-50 shadow-sm"
           >
             {quickBusy ? 'Saving…' : editingCat ? 'Save category' : 'Add category'}
           </button>

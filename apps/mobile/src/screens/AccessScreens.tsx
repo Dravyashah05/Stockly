@@ -81,16 +81,16 @@ export function SheetSetupScreen({
         className="mx-auto max-w-md space-y-5 px-4"
         style={{ paddingTop: 'calc(env(safe-area-inset-top, 0px) + 1.5rem)' }}
       >
-        <div className="relative overflow-hidden rounded-[28px] bg-[#111210] p-5 text-white">
-          <div aria-hidden="true" className="pointer-events-none absolute -right-20 -top-24 h-64 w-64 rounded-full bg-white/[0.07] blur-3xl" />
-          <div className="relative flex items-center gap-3.5">
-            <span className="flex h-14 w-14 shrink-0 items-center justify-center rounded-[20px] bg-[#C7FF4D] text-[#151515]">
-              <Database size={28} />
+        <div className="relative overflow-hidden rounded-[28px] bg-linear-to-br from-[#007AFF] to-[#0056D6] dark:from-[#0A84FF] dark:to-[#0056D6] p-6 text-white shadow-lg">
+          <div aria-hidden="true" className="pointer-events-none absolute -right-16 -top-20 h-48 w-48 rounded-full bg-white/20 blur-2xl" />
+          <div className="relative flex items-center gap-4">
+            <span className="flex h-14 w-14 shrink-0 items-center justify-center rounded-[18px] bg-white/20 text-white shadow-inner backdrop-blur-md">
+              <Database size={26} />
             </span>
             <div className="min-w-0 flex-1">
-              <p className="text-[18px] font-extrabold leading-tight tracking-tight">Connect Your Google Sheet</p>
-              <p className="text-[12px] font-medium text-white/60">
-                Connect your own Google Sheet to store and manage your Stockly inventory data.
+              <p className="text-[19px] font-bold leading-tight tracking-tight">Connect Google Sheet</p>
+              <p className="mt-1 text-[13px] font-normal leading-snug text-white/80">
+                Connect your own Google Sheet to store and manage your Stockly inventory data securely.
               </p>
             </div>
           </div>
@@ -153,7 +153,7 @@ export function SheetSetupScreen({
               type="button"
               onClick={() => void connect()}
               disabled={busy}
-              className="press min-h-[52px] w-full rounded-2xl bg-[#151515] text-[15px] font-extrabold text-white disabled:opacity-50 dark:bg-[#C7FF4D] dark:text-[#151515]"
+              className="press min-h-[50px] w-full rounded-[14px] bg-(--primary) text-[15px] font-semibold text-white shadow-sm transition-transform hover:opacity-90 active:scale-[0.99] disabled:opacity-50"
             >
               {busy ? 'Verifying…' : 'Connect Sheet'}
             </button>
@@ -161,7 +161,7 @@ export function SheetSetupScreen({
               type="button"
               onClick={() => void verify()}
               disabled={verifying}
-              className="glass-soft press flex min-h-[48px] w-full items-center justify-center gap-1.5 rounded-2xl text-[14px] font-extrabold text-(--ink) disabled:opacity-50"
+              className="press flex min-h-[46px] w-full items-center justify-center gap-2 rounded-[14px] bg-(--field) text-[14px] font-semibold text-(--ink) transition-colors hover:bg-(--field-hover) disabled:opacity-50"
             >
               <RefreshCw size={15} className={verifying ? 'animate-spin' : ''} />
               {verifying ? 'Verifying…' : 'Verify Connection'}
@@ -170,7 +170,7 @@ export function SheetSetupScreen({
               <button
                 type="button"
                 onClick={onBack}
-                className="press flex min-h-[48px] w-full items-center justify-center gap-1.5 rounded-2xl text-[14px] font-bold text-(--ink-2)"
+                className="press flex min-h-[44px] w-full items-center justify-center gap-1.5 rounded-[14px] text-[14px] font-medium text-(--ink-2) hover:text-(--ink)"
               >
                 <ArrowLeft size={15} /> Back
               </button>
@@ -231,7 +231,7 @@ export function RestrictedScreen({ status, onSignOut }: { status: string; onSign
             signOutAccount();
             onSignOut();
           }}
-          className="press min-h-[52px] w-full rounded-2xl bg-[#151515] text-[15px] font-extrabold text-white dark:bg-[#C7FF4D] dark:text-[#151515]"
+          className="press min-h-[50px] w-full rounded-[14px] bg-(--primary) text-[15px] font-semibold text-white shadow-sm transition-transform hover:opacity-90 active:scale-[0.99]"
         >
           Sign out
         </button>
@@ -256,7 +256,7 @@ export function AccessDeniedScreen({ onBack }: { onBack: () => void }) {
         <button
           type="button"
           onClick={onBack}
-          className="press min-h-[52px] w-full rounded-2xl bg-[#151515] text-[15px] font-extrabold text-white dark:bg-[#C7FF4D] dark:text-[#151515]"
+          className="press min-h-[50px] w-full rounded-[14px] bg-(--primary) text-[15px] font-semibold text-white shadow-sm transition-transform hover:opacity-90 active:scale-[0.99]"
         >
           Back to Settings
         </button>

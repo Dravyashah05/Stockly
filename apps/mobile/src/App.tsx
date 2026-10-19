@@ -1,7 +1,9 @@
 import React, { Suspense, lazy, useCallback, useEffect, useRef, useState, useTransition } from 'react';
 import { CloudOff } from 'lucide-react';
 import { StoreProvider, useStore } from '@stockly/shared-client/store';
-import { LS_KEYS, isConfigured } from '@stockly/shared-client/config';
+import { APP_VERSION, APP_VERSION_CODE, LS_KEYS, isConfigured } from '@stockly/shared-client/config';
+import { fetchLatestRelease, isNewerVersion } from '@stockly/shared-client/releases';
+
 import { SheetSetupScreen } from './screens/AccessScreens';
 import type { Product } from '@stockly/shared-types';
 import { BottomNav, DesktopSidebar, DesktopToolbar, SyncStatus, Toasts, AppLoader, hasOpenOverlay, useOverlayOpen, type TabKey } from './components/ui';
@@ -53,7 +55,24 @@ function Shell() {
   const [productFilter, setProductFilter] = useState<ProductFilter>('all');
   const [formOpen, setFormOpen] = useState(false);
   const [editing, setEditing] = useState<Product | null>(null);
+  const [updateAvailable, setUpdateAvailable] = useState<string | null>(null);
+
+  useEffect(() => {
+    let active = true;
+    void fetchLatestRelease()
+      .then((rel) => {
+        if (active && isNewerVersion(rel.version, APP_VERSION, rel.versionCode, APP_VERSION_CODE)) {
+          setUpdateAvailable(rel.version);
+        }
+      })
+      .catch(() => {});
+    return () => {
+      active = false;
+    };
+  }, []);
+
   const { toasts, dismissToast, configured, ready, loading, lastSync, online, pendingIds, failedOps, retryFailedOp, dismissFailedOp } = useStore();
+
   // Hide the bottom nav under any popup so sheet buttons are never covered.
   const overlayOpen = useOverlayOpen();
   const showSync = !overlayOpen && (pendingIds.length > 0 || failedOps.length > 0);
@@ -257,6 +276,8 @@ function Shell() {
               onStockOutProduct={stockOutFor}
               goProducts={goProducts}
               goHistory={goHistoryTab}
+              goSettings={() => switchTab('settings')}
+              updateAvailable={updateAvailable}
             />
           </div>
         ) : null}
@@ -285,7 +306,7 @@ function Shell() {
         </Suspense>
         </div>
 
-        {overlayOpen ? null : <BottomNav tab={tab} setTab={switchTab} />}
+        {overlayOpen ? null : <BottomNav tab={tab} setTab={switchTab} hasUpdate={Boolean(updateAvailable)} />}
         <Suspense fallback={null}>
           {formOpen ? <ProductForm open={formOpen} editing={editing} onClose={closeForm} /> : null}
           {stockReq !== null ? (

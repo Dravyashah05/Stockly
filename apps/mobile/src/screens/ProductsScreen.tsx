@@ -100,22 +100,22 @@ export default function ProductsScreen({
           <button
             onClick={onAdd}
             aria-label="Add product"
-            className="press flex h-10 w-10 shrink-0 items-center justify-center rounded-2xl bg-[#151515] text-white dark:bg-[#C7FF4D] dark:text-[#151515]"
+            className="press flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-(--primary) text-white shadow-sm"
           >
-            <Plus size={20} />
+            <Plus size={19} />
           </button>
         }
       />
 
       {/* Fixed controls */}
-      <div className="products-controls mx-auto w-full max-w-md shrink-0 space-y-3 px-4 pt-3">
+      <div className="products-controls mx-auto w-full max-w-md shrink-0 space-y-2.5 px-4 pt-2">
         <div className="desktop-products-heading hidden items-center justify-between">
           <p className="text-[13px] font-semibold text-(--ink-2)">{list.length} matching product{list.length === 1 ? '' : 's'}</p>
           <button type="button" onClick={onAdd} className="press flex min-h-11 items-center gap-2 rounded-xl bg-(--primary) px-4 text-[13px] font-bold text-(--primary-foreground)">
             <Plus size={16} /> Add product
           </button>
         </div>
-        {/* Floating glass search (header above is already sticky) */}
+        {/* Apple iOS Search bar */}
         <div className="products-search">
           <SearchBar value={q} onChange={setQ} placeholder="Search name, SKU…" />
         </div>
@@ -147,18 +147,18 @@ export default function ProductsScreen({
               setSort((s) => (s === 'updated' ? 'name' : s === 'name' ? 'stock' : s === 'stock' ? 'price' : 'updated'))
             }
             aria-label="Change sorting"
-            className="glass press flex min-h-[44px] items-center gap-1.5 rounded-2xl px-3 py-2.5 text-[13px] font-bold text-(--ink)"
+            className="press flex min-h-[38px] h-[38px] items-center gap-1.5 rounded-[10px] bg-(--field) border border-(--stroke-dim) px-3 py-1.5 text-[12.5px] font-semibold text-(--ink)"
           >
-            <ArrowDownUp size={16} />
+            <ArrowDownUp size={15} />
             {sort === 'updated' ? 'Recent' : sort === 'name' ? 'Name' : sort === 'stock' ? 'Stock' : 'Price'}
           </button>
           {filtersActive ? (
             <button
               type="button"
               onClick={clearFilters}
-              className="press flex min-h-[44px] shrink-0 items-center gap-1 rounded-2xl bg-rose-500/10 px-3 py-2.5 text-[13px] font-bold text-rose-600 dark:text-rose-400"
+              className="press flex min-h-[38px] h-[38px] shrink-0 items-center gap-1 rounded-[10px] bg-rose-500/10 px-3 py-1.5 text-[12.5px] font-semibold text-rose-600 dark:text-rose-400"
             >
-              <X size={16} /> Clear
+              <X size={15} /> Clear
             </button>
           ) : null}
         </div>
@@ -541,27 +541,25 @@ function DetailPage({
           </div>
 
           {(p.description || '').trim() ? (
-            <div className="product-detail-desc glass rounded-[26px] p-5">
-              <p className="mb-1.5 flex items-center gap-2 text-[12px] font-bold uppercase tracking-wider text-(--ink-2)">
-                <span aria-hidden="true" className="h-3 w-1 rounded-full bg-[#C7FF4D]" />
+            <div className="product-detail-desc glass rounded-[20px] p-4">
+              <p className="mb-1.5 text-[12px] font-semibold uppercase tracking-wider text-(--ink-2)">
                 Description
               </p>
-              <p className="whitespace-pre-wrap break-words text-[14.5px] leading-relaxed text-(--ink)">{p.description}</p>
+              <p className="whitespace-pre-wrap break-words text-[14px] leading-relaxed text-(--ink)">{p.description}</p>
             </div>
           ) : null}
 
           {/* Stock In / Out history for this product */}
-          <div className="product-detail-history glass rounded-[26px] p-4">
+          <div className="product-detail-history glass rounded-[20px] p-4">
             <div className="mb-2 flex items-center justify-between gap-2">
-              <p className="flex items-center gap-2 text-[12px] font-bold uppercase tracking-wider text-(--ink-2)">
-                <span aria-hidden="true" className="h-3 w-1 rounded-full bg-[#C7FF4D]" />
+              <p className="text-[12px] font-semibold uppercase tracking-wider text-(--ink-2)">
                 Stock history{history.length > 0 ? ` · ${history.length}` : ''}
               </p>
               {history.length > 0 ? (
-                <p className="tnum shrink-0 text-[11.5px] font-bold">
-                  <span className="text-emerald-600 dark:text-emerald-300">+{totalIn} in</span>
+                <p className="tnum shrink-0 text-[11.5px] font-semibold">
+                  <span className="text-emerald-600 dark:text-emerald-400">+{totalIn} in</span>
                   <span className="text-(--ink-3)"> · </span>
-                  <span className="text-rose-600 dark:text-rose-300">−{totalOut} out</span>
+                  <span className="text-amber-600 dark:text-amber-400">−{totalOut} out</span>
                 </p>
               ) : null}
             </div>
@@ -572,15 +570,15 @@ function DetailPage({
             ) : (
               <div className="divide-y divide-(--stroke-dim)">
                 {history.slice(0, 20).map((t) => (
-                  <div key={t.id} className="flex items-center gap-3 rounded-[18px] px-2 py-3 transition-colors hover:bg-(--accent-soft)/40">
+                  <div key={t.id} className="flex items-center gap-3 rounded-[16px] px-2 py-3 transition-colors hover:bg-(--accent-soft)/40">
                     <StockBadge kind={t.type} />
                     {isPending(t.id) ? (
-                      <span className="shrink-0 rounded-full bg-(--accent-soft) px-2 py-0.5 text-[10.5px] font-extrabold text-(--accent)">
+                      <span className="shrink-0 rounded-full bg-(--accent-soft) px-2 py-0.5 text-[10.5px] font-bold text-(--accent)">
                         Saving…
                       </span>
                     ) : null}
                     <div className="min-w-0 flex-1">
-                      <p className="text-xs font-medium leading-relaxed text-(--ink-2)">
+                      <p className="text-xs font-normal leading-relaxed text-(--ink-2)">
                         {dateTimeFmt(t.createdAt)}
                         {t.reason ? ` · ${t.reason}` : ''}
                       </p>
@@ -589,8 +587,8 @@ function DetailPage({
                       ) : null}
                     </div>
                     <span
-                      className={`tnum shrink-0 rounded-full px-2.5 py-1 text-[14px] font-extrabold ${
-                        t.type === 'IN' ? 'bg-emerald-500/12 text-emerald-600 dark:text-emerald-300' : 'bg-rose-500/12 text-rose-600 dark:text-rose-300'
+                      className={`tnum shrink-0 rounded-full px-2.5 py-1 text-[13px] font-bold ${
+                        t.type === 'IN' ? 'bg-emerald-500/12 text-emerald-600 dark:text-emerald-400' : 'bg-amber-500/12 text-amber-600 dark:text-amber-400'
                       }`}
                     >
                       {t.type === 'IN' ? '+' : '−'}
@@ -609,18 +607,18 @@ function DetailPage({
 
         {/* Sticky action bar */}
         <div className="product-detail-actions sticky bottom-[calc(1rem+env(safe-area-inset-bottom,0px))] md:static md:col-span-2">
-          <div className="glass-strong grid grid-cols-2 gap-2 rounded-[26px] p-2">
+          <div className="glass-strong grid grid-cols-2 gap-2 rounded-[22px] p-2">
             <button
               type="button"
               onClick={onStockIn}
-              className="press flex min-h-[48px] items-center justify-center gap-1.5 rounded-[20px] bg-[#151515] py-3.5 text-[14.5px] font-bold text-white dark:bg-[#C7FF4D] dark:text-[#151515]"
+              className="press flex min-h-[46px] items-center justify-center gap-1.5 rounded-[14px] bg-emerald-600 py-3 text-[14.5px] font-semibold text-white shadow-sm"
             >
               <ArrowDownToLine size={16} /> Stock In
             </button>
             <button
               type="button"
               onClick={onStockOut}
-              className="press flex min-h-[48px] items-center justify-center gap-1.5 rounded-[20px] bg-[#151515] py-3.5 text-[14.5px] font-bold text-white dark:bg-[#C7FF4D] dark:text-[#151515]"
+              className="press flex min-h-[46px] items-center justify-center gap-1.5 rounded-[14px] bg-amber-600 py-3 text-[14.5px] font-semibold text-white shadow-sm"
             >
               <ArrowUpFromLine size={16} /> Stock Out
             </button>
@@ -628,7 +626,7 @@ function DetailPage({
           <button
             type="button"
             onClick={onDelete}
-            className="press mx-auto mt-1 flex min-h-[44px] items-center gap-1.5 rounded-2xl px-4 py-2.5 text-[13px] font-bold text-rose-600 dark:text-rose-400"
+            className="press mx-auto mt-1 flex min-h-[40px] items-center gap-1.5 rounded-full px-4 py-2 text-[13px] font-medium text-rose-600 dark:text-rose-400 hover:bg-rose-500/10"
           >
             <Trash2 size={14} /> Delete product
           </button>
@@ -646,8 +644,8 @@ export const Chip = memo(function Chip({ active, onClick, label }: { active: boo
       type="button"
       onClick={onClick}
       aria-pressed={active}
-      className={`chip-glass min-h-[40px] shrink-0 rounded-full px-4 py-2 text-[13px] font-bold ${
-        active ? 'bg-(--primary) text-(--primary-foreground)' : 'glass text-(--ink-2)'
+      className={`chip-glass press min-h-[36px] shrink-0 rounded-full px-3.5 py-1.5 text-[13px] font-semibold transition-all duration-150 ${
+        active ? 'is-active' : ''
       }`}
     >
       {label}

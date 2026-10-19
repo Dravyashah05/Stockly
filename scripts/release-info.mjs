@@ -46,6 +46,58 @@ export function assertVersionsMatch(v = readVersions()) {
   return v;
 }
 
+export function bumpVersion(type = 'patch', root = rootDir) {
+  const v = assertVersionsMatch(readVersions(root));
+  const parts = v.appVersion.split('.').map((n) => parseInt(n, 10) || 0);
+  while (parts.length < 3) parts.push(0);
+  if (type === 'major') {
+    parts[0] += 1;
+    parts[1] = 0;
+    parts[2] = 0;
+  } else if (type === 'minor') {
+    parts[1] += 1;
+    parts[2] = 0;
+  } else {
+    parts[2] += 1;
+  }
+  const nextVersion = parts.join('.');
+  const nextCode = v.versionCode + 1;
+
+  // 1. package.json
+  const pkgPath = join(root, 'package.json');
+  const pkg = JSON.parse(readFileSync(pkgPath, 'utf8'));
+  pkg.version = nextVersion;
+  writeFileSync(pkgPath, JSON.stringify(pkg, null, 2) + '\n');
+
+  // 2. apps/mobile/android/app/build.gradle
+  const gradlePath = join(root, 'apps/mobile/android/app/build.gradle');
+  let gradle = readFileSync(gradlePath, 'utf8');
+  gradle = gradle.replace(/versionCode\s+\d+/, `versionCode ${nextCode}`);
+  gradle = gradle.replace(/versionName\s+"[^"]+"/, `versionName "${nextVersion}"`);
+  writeFileSync(gradlePath, gradle);
+
+  // 3. packages/shared-client/src/config.ts
+  const configPath = join(root, 'packages/shared-client/src/config.ts');
+  try {
+    let conf = readFileSync(configPath, 'utf8');
+    conf = conf.replace(/export const APP_VERSION = '[^']+';/, `export const APP_VERSION = '${nextVersion}';`);
+    if (/export const APP_VERSION_CODE = \d+;/.test(conf)) {
+      conf = conf.replace(/export const APP_VERSION_CODE = \d+;/, `export const APP_VERSION_CODE = ${nextCode};`);
+    } else {
+      conf = conf.replace(
+        `export const APP_VERSION = '${nextVersion}';`,
+        `export const APP_VERSION = '${nextVersion}';\nexport const APP_VERSION_CODE = ${nextCode};`,
+      );
+    }
+    writeFileSync(configPath, conf);
+  } catch {
+    /* ignore if missing in test roots */
+  }
+
+  return { appVersion: nextVersion, versionCode: nextCode, versionName: nextVersion };
+}
+
+
 /** Parse the first line of `aapt dump badging` output. */
 export function parseBadging(line) {
   const get = (k) => line.match(new RegExp(`${k}='([^']*)'`))?.[1] ?? '';
@@ -114,6 +166,14 @@ async function main() {
     console.log(`versionCode=${v.versionCode}`);
     return;
   }
+  if (cmd === 'bump') {
+    const type = process.argv[3] || 'patch';
+    const v = bumpVersion(type);
+    console.log(`version=${v.appVersion}`);
+    console.log(`versionCode=${v.versionCode}`);
+    console.log(`tag=v${v.appVersion}`);
+    return;
+  }
   if (cmd === 'notes') {
     const prev = process.argv[3] || '';
     for (const line of gitNotes(prev)) console.log(line);
@@ -144,7 +204,7 @@ async function main() {
     console.log(`wrote ${outFile} for ${tag}`);
     return;
   }
-  throw new Error('Usage: release-info.mjs <check|notes [prevTag]|write ...>');
+  throw new Error('Usage: release-info.mjs <check|bump [type]|notes [prevTag]|write ...>');
 }
 
 /**

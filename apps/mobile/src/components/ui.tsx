@@ -9,7 +9,6 @@ import {
   History,
   Home,
   Info,
-  LayoutGrid,
   PackagePlus,
   PanelLeftClose,
   PanelLeftOpen,
@@ -103,13 +102,11 @@ export function useOverlayOpen(): boolean {
   return open;
 }
 
-/* ---------- Floating glass app header (no refresh button — sync lives
- * in Settings > Cloud database and runs automatically) ---------- */
+/* ---------- Floating glass app header ---------- */
 export const Header = memo(function Header({
   title,
   subtitle,
   right,
-  indicator = false,
 }: {
   title: string;
   subtitle?: React.ReactNode;
@@ -120,14 +117,11 @@ export const Header = memo(function Header({
     <header className="safe-top sticky top-0 z-20 px-4 pt-4 pb-2 bg-transparent pointer-events-none">
       <div className="mx-auto flex max-w-md items-center gap-3 pointer-events-auto">
         <div className="min-w-0 flex-1">
-          <h1 className="flex items-center gap-2 text-[22px] font-extrabold leading-tight tracking-tight text-(--ink)">
-            {indicator ? (
-              <span aria-hidden="true" className="h-[18px] w-[5px] shrink-0 rounded-full bg-[#C7FF4D]" />
-            ) : null}
+          <h1 className="text-[24px] font-bold leading-tight tracking-tight text-(--ink)">
             <span className="min-w-0 truncate">{title}</span>
           </h1>
           {subtitle ? (
-            <div className="mt-0.5 truncate text-[11.5px] font-medium text-(--ink-2)">{subtitle}</div>
+            <div className="mt-0.5 truncate text-[12px] font-medium text-(--ink-2)">{subtitle}</div>
           ) : null}
         </div>
         {right}
@@ -140,13 +134,21 @@ export const Header = memo(function Header({
 export type TabKey = 'home' | 'products' | 'history' | 'settings';
 
 const TABS: { key: TabKey; label: string; icon: React.ReactNode }[] = [
-  { key: 'home', label: 'Home', icon: <Home size={20} /> },
-  { key: 'products', label: 'Products', icon: <LayoutGrid size={20} /> },
-  { key: 'history', label: 'History', icon: <History size={20} /> },
-  { key: 'settings', label: 'Settings', icon: <SettingsIcon size={20} /> },
+  { key: 'home', label: 'Home', icon: <Home size={21} /> },
+  { key: 'products', label: 'Inventory', icon: <Boxes size={21} /> },
+  { key: 'history', label: 'Activity', icon: <History size={21} /> },
+  { key: 'settings', label: 'Settings', icon: <SettingsIcon size={21} /> },
 ];
 
-export const BottomNav = memo(function BottomNav({ tab, setTab }: { tab: TabKey; setTab: (t: TabKey) => void }) {
+export const BottomNav = memo(function BottomNav({
+  tab,
+  setTab,
+  hasUpdate,
+}: {
+  tab: TabKey;
+  setTab: (t: TabKey) => void;
+  hasUpdate?: boolean;
+}) {
   // Instant highlight: App routes tab switches through a transition so the
   // new screen renders in the background — the nav + sliding pill react now.
   const [fast, setFast] = useState<TabKey>(tab);
@@ -178,11 +180,11 @@ export const BottomNav = memo(function BottomNav({ tab, setTab }: { tab: TabKey;
   return (
     <nav className="bottom-navigation nav-bottom-offset pointer-events-none fixed inset-x-0 z-30 px-4">
       <div className="glass-nav pointer-events-auto relative mx-auto grid max-w-md grid-cols-4 gap-0.5 rounded-[28px] p-1.5">
-        {/* Sliding active pill — solid ink (lime in dark mode). */}
+        {/* Apple iOS Liquid Glass active sliding pill */}
         {pill ? (
           <span
             aria-hidden="true"
-            className="nav-slide-pill absolute left-0 top-1.5 rounded-[22px] bg-(--primary)"
+            className="nav-slide-pill absolute left-0 top-1.5 rounded-[22px] bg-white/95 shadow-[0_2px_8px_rgba(0,0,0,0.08)] dark:bg-white/15 dark:shadow-none transition-all duration-200"
             style={{ width: pill.w, height: pill.h, transform: `translateX(${pill.x}px)` }}
           />
         ) : null}
@@ -198,11 +200,19 @@ export const BottomNav = memo(function BottomNav({ tab, setTab }: { tab: TabKey;
               onClick={() => pick(t.key)}
               aria-label={t.label}
               aria-current={active ? 'page' : undefined}
-              className={`nav-pill relative z-[1] flex min-h-[56px] flex-col items-center justify-center gap-1 rounded-[22px] text-[10.5px] font-semibold ${
-                active ? 'text-(--primary-foreground)' : 'text-(--ink-3)'
+              className={`nav-pill relative z-[1] flex min-h-[56px] flex-col items-center justify-center gap-1 rounded-[22px] text-[10.5px] transition-colors duration-150 ${
+                active ? 'font-semibold text-(--primary)' : 'font-medium text-(--ink-3)'
               }`}
             >
-              <span className={active ? 'animate-pop-in' : ''}>{t.icon}</span>
+              <span className={`relative ${active ? 'animate-pop-in' : ''}`}>
+                {t.icon}
+                {t.key === 'settings' && hasUpdate ? (
+                  <span
+                    aria-label="Update available"
+                    className="absolute -top-0.5 -right-0.5 h-2 w-2 rounded-full bg-[#007AFF] ring-2 ring-white dark:ring-black/40"
+                  />
+                ) : null}
+              </span>
               {t.label}
             </button>
           );
@@ -407,16 +417,12 @@ export function Sheet({
       <div className="sheet-dialog-position absolute inset-x-0 bottom-0 mx-auto flex max-w-md justify-center">
         <div
           ref={panelRef}
-          className="sheet-dialog-panel glass-strong animate-sheet-up flex max-h-[86dvh] w-full flex-col overflow-hidden rounded-t-[28px] border-b-0 border-x-0"
+          className="sheet-dialog-panel glass-strong animate-sheet-up flex max-h-[86dvh] w-full flex-col overflow-hidden rounded-t-[32px] border-b-0 border-x-0"
         >
           <div
-            className="shrink-0 cursor-grab touch-none select-none px-5 pb-2.5 pt-2.5 active:cursor-grabbing"
+            className="shrink-0 cursor-grab touch-none select-none px-5 pb-2 pt-2.5 active:cursor-grabbing"
             onPointerDown={(e) => {
               if (!e.isPrimary) return;
-              // The X close button lives inside this drag zone. Capturing the
-              // pointer here would retarget pointerup/click to this div, so
-              // the button's click would never fire and the sheet wouldn't
-              // close. Leave interactive descendants alone.
               if (
                 (e.target as HTMLElement | null)?.closest?.(
                   'button, a, input, select, textarea, [contenteditable="true"]',
@@ -443,24 +449,24 @@ export function Sheet({
             <div
               role="presentation"
               onPointerDown={tapHandle}
-              className={`sheet-handle mx-auto mb-2 h-1.5 rounded-full transition-all duration-200 ease-out ${
-                handleTap ? 'w-16 bg-(--accent)' : 'w-10 bg-(--ink-3)/40'
+              className={`sheet-handle mx-auto mb-2.5 h-1 rounded-full transition-all duration-200 ease-out ${
+                handleTap ? 'w-14 bg-(--accent)' : 'w-9 bg-black/20 dark:bg-white/25'
               }`}
             />
             <div className="flex items-center justify-between gap-3">
               <div className="min-w-0 flex-1">
-                <h2 className="truncate text-[16px] font-bold tracking-tight text-(--ink)">{title}</h2>
+                <h2 className="truncate text-[17px] font-bold tracking-tight text-(--ink)">{title}</h2>
                 {subtitle ? (
-                  <p className="truncate text-[12.5px] font-medium text-(--ink-2)">{subtitle}</p>
+                  <p className="truncate text-[12px] font-normal text-(--ink-2)">{subtitle}</p>
                 ) : null}
               </div>
               <button
                 type="button"
                 onClick={onClose}
                 aria-label="Close dialog"
-                className="press glass-soft flex h-11 w-11 shrink-0 items-center justify-center rounded-full text-(--ink-2)"
+                className="press flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-(--field) text-(--ink-2) hover:text-(--ink)"
               >
-                <X size={18} />
+                <X size={16} />
               </button>
             </div>
           </div>
@@ -487,7 +493,7 @@ export function Field({
 }) {
   return (
     <label className="block">
-      <span className="mb-1.5 block text-[13px] font-semibold text-(--ink)">{label}</span>
+      <span className="mb-1.5 block text-[13px] font-medium text-(--ink)">{label}</span>
       {children}
       {hint ? <span className="mt-1 block text-xs text-(--ink-2)">{hint}</span> : null}
     </label>
@@ -495,7 +501,7 @@ export function Field({
 }
 
 export const inputCls =
-  'min-h-[48px] w-full rounded-2xl border border-(--stroke-dim) bg-(--field) backdrop-blur-md px-4 py-3 text-[15px] text-(--ink) outline-none transition placeholder:text-(--ink-3) focus:border-(--accent) focus:ring-[3px] focus:ring-(--accent-soft)';
+  'min-h-[46px] w-full rounded-[14px] border border-(--stroke-dim) bg-(--field) px-3.5 py-2.5 text-[15px] text-(--ink) outline-none transition placeholder:text-(--ink-3) focus:border-(--accent) focus:ring-[2px] focus:ring-(--accent-soft)';
 
 /* ---------- Shared search bar (single implementation for every list) ---------- */
 export const SearchBar = memo(function SearchBar({
@@ -510,20 +516,30 @@ export const SearchBar = memo(function SearchBar({
   label?: string;
 }) {
   return (
-    <div className="search-field relative">
-        <Search
-          size={16}
-          aria-hidden="true"
-          className="pointer-events-none absolute left-3.5 top-1/2 -translate-y-1/2 text-(--ink-3)"
-        />
-        <input
-          value={value}
-          onChange={(e) => onChange(e.target.value)}
-          placeholder={placeholder}
-          aria-label={label || placeholder}
-          role="searchbox"
-          className="min-h-12 w-full rounded-2xl border border-(--stroke-dim) bg-(--field) backdrop-blur-md py-2.5 pl-10 pr-4 text-[16px] text-(--ink) outline-none transition focus:border-(--accent) focus:ring-[3px] focus:ring-(--accent-soft) placeholder:text-(--ink-3)"
-        />
+    <div className="search-field relative flex items-center">
+      <Search
+        size={16}
+        aria-hidden="true"
+        className="pointer-events-none absolute left-3.5 text-(--ink-3)"
+      />
+      <input
+        value={value}
+        onChange={(e) => onChange(e.target.value)}
+        placeholder={placeholder}
+        aria-label={label || placeholder}
+        role="searchbox"
+        className="min-h-[42px] h-[42px] w-full rounded-[12px] border border-(--stroke-dim) bg-(--field) py-2 pl-9 pr-9 text-[15px] font-normal text-(--ink) outline-none transition focus:border-(--accent) focus:ring-[2px] focus:ring-(--accent-soft) placeholder:text-(--ink-3)"
+      />
+      {value ? (
+        <button
+          type="button"
+          onClick={() => onChange('')}
+          aria-label="Clear search"
+          className="absolute right-2.5 flex h-5 w-5 items-center justify-center rounded-full bg-(--ink-3)/30 text-(--ink) hover:bg-(--ink-3)/50"
+        >
+          <X size={12} />
+        </button>
+      ) : null}
     </div>
   );
 });
@@ -541,15 +557,15 @@ export function Segmented<T extends string>({
   label?: string;
 }) {
   return (
-    <div className="glass-soft grid auto-cols-fr grid-flow-col gap-1 rounded-2xl p-1" role="group" aria-label={label}>
+    <div className="grid auto-cols-fr grid-flow-col gap-1 rounded-[12px] bg-(--field) p-1" role="group" aria-label={label}>
       {options.map((o) => (
         <button
           key={o.key}
           type="button"
           onClick={() => onChange(o.key)}
           aria-pressed={value === o.key}
-          className={`chip-glass rounded-xl py-2 text-[13px] font-bold ${
-            value === o.key ? 'bg-(--accent-soft) text-(--accent)' : 'text-(--ink-2)'
+          className={`rounded-[9px] py-1.5 text-[13px] font-semibold transition-all duration-150 ${
+            value === o.key ? 'bg-(--bg-elev) text-(--ink) shadow-sm' : 'text-(--ink-2) hover:text-(--ink)'
           }`}
         >
           {o.label}
@@ -616,7 +632,7 @@ export function PrimaryBtn({
       type={type}
       disabled={disabled}
       onClick={onClick}
-      className={`press flex min-h-12 w-full items-center justify-center gap-2 rounded-xl bg-(--primary) text-[15px] font-bold text-(--primary-foreground) disabled:opacity-50 ${dense ? 'py-3' : 'py-4'}`}
+      className={`press flex min-h-12 w-full items-center justify-center gap-2 rounded-[14px] bg-(--primary) text-[15px] font-semibold text-white shadow-sm disabled:opacity-40 ${dense ? 'py-2.5' : 'py-3.5'}`}
     >
       {children}
     </button>
@@ -626,8 +642,8 @@ export function PrimaryBtn({
 /* ---------- Empty state ---------- */
 export function EmptyState({ icon, title, hint }: { icon: React.ReactNode; title: string; hint?: string }) {
   return (
-    <div className="glass flex flex-col items-center gap-2 rounded-3xl px-6 py-10 text-center">
-      <div className="glass-soft mb-1 flex h-13 w-13 items-center justify-center rounded-2xl p-3 text-(--ink-2)">
+    <div className="glass flex flex-col items-center gap-2 rounded-[24px] px-6 py-10 text-center">
+      <div className="glass-soft mb-1 flex h-12 w-12 items-center justify-center rounded-2xl p-2.5 text-(--ink-2)">
         {icon}
       </div>
       <p className="text-[15px] font-semibold text-(--ink)">{title}</p>
@@ -638,7 +654,7 @@ export function EmptyState({ icon, title, hint }: { icon: React.ReactNode; title
 
 /* ---------- Loading skeletons ---------- */
 export const SkeletonRow = memo(function SkeletonRow({ h = 76 }: { h?: number }) {
-  return <div className="shimmer rounded-3xl border border-(--stroke-dim)" style={{ height: h }} />;
+  return <div className="shimmer rounded-[18px] border border-(--stroke-dim)" style={{ height: h }} />;
 });
 
 /* ---------- Sync status banner (optimistic writes) ----------
@@ -660,7 +676,7 @@ export const SyncStatus = memo(function SyncStatus({
   return createPortal(
     <div className="safe-bottom pointer-events-none fixed inset-x-0 bottom-24 z-30 mx-auto flex max-w-md flex-col items-center gap-2 px-5">
       {pending > 0 ? (
-        <div className="glass-strong animate-toast-in pointer-events-auto flex w-full items-center gap-2.5 rounded-2xl px-4 py-3 text-[13px] font-semibold text-(--ink)">
+        <div className="glass-strong animate-toast-in pointer-events-auto flex w-full items-center gap-2.5 rounded-[16px] px-4 py-3 text-[13px] font-semibold text-(--ink)">
           <RefreshCw size={16} className="shrink-0 animate-spin text-(--accent)" />
           <span className="flex-1">
             Saving… {pending} change{pending === 1 ? '' : 's'} syncing to Google Sheets
@@ -671,22 +687,22 @@ export const SyncStatus = memo(function SyncStatus({
         <div
           key={f.key}
           role="alert"
-          className="glass-strong animate-toast-in pointer-events-auto w-full rounded-2xl border-rose-500/30 px-4 py-3"
+          className="glass-strong animate-toast-in pointer-events-auto w-full rounded-[16px] border-rose-500/30 px-4 py-3"
         >
           <p className="text-[13px] font-bold text-(--ink)">Unsaved: {f.label}</p>
           <p className="mt-0.5 truncate text-[12px] text-(--ink-2)">{f.detail}</p>
-          <div className="mt-2 grid grid-cols-2 gap-2">
+          <div className="mt-2.5 grid grid-cols-2 gap-2">
             <button
               type="button"
               onClick={() => onRetry(f.key)}
-              className="press flex min-h-[44px] items-center justify-center gap-1.5 rounded-2xl bg-[#151515] text-[13.5px] font-extrabold text-white dark:bg-[#C7FF4D] dark:text-[#151515]"
+              className="press flex min-h-[44px] items-center justify-center gap-1.5 rounded-[12px] bg-(--primary) text-[13.5px] font-semibold text-white shadow-sm"
             >
               <RotateCcw size={16} /> Retry
             </button>
             <button
               type="button"
               onClick={() => onDismiss(f.key)}
-              className="press glass-soft min-h-[44px] rounded-2xl text-[13.5px] font-bold text-(--ink-2)"
+              className="press min-h-[44px] rounded-[12px] bg-(--field) text-[13.5px] font-medium text-(--ink-2)"
             >
               Discard
             </button>
@@ -708,7 +724,7 @@ export function Toasts({ toasts, onDismiss, lifted }: { toasts: ToastMsg[]; onDi
           key={t.id}
           type="button"
           onClick={() => onDismiss(t.id)}
-          className="glass-strong animate-toast-in pointer-events-auto flex w-full items-center gap-2.5 rounded-2xl px-4 py-3 text-left text-[13.5px] font-medium text-(--ink)"
+          className="glass-strong animate-toast-in pointer-events-auto flex w-full items-center gap-2.5 rounded-[16px] px-4 py-3 text-left text-[13.5px] font-medium text-(--ink)"
         >
           {t.kind === 'success' ? (
             <CheckCircle2 size={18} className="shrink-0 text-emerald-500" />
@@ -727,8 +743,7 @@ export function Toasts({ toasts, onDismiss, lifted }: { toasts: ToastMsg[]; onDi
 
 /* ---------- Canonical Stockly mark ----------
  * Stacked inventory bars — same geometry as the website logo. Inherits
- * color via currentColor: place on an ink tile for lime, anywhere else
- * for a monochrome mark. Decorative (hidden from screen readers). */
+ * color via currentColor. */
 export function BrandMark({ size = 32 }: { size?: number }) {
   return (
     <svg width={size} height={size} viewBox="0 0 32 32" fill="none" aria-hidden="true">
@@ -740,9 +755,7 @@ export function BrandMark({ size = 32 }: { size?: number }) {
 }
 
 /* ---------- Branded startup loader ----------
- * Covers first paint until the initial sync settles (or a min brand moment
- * passes). Fades out via the `fading` flag; the parent unmounts it after
- * the transition. Pure presentational — no data fetching. */
+ * Covers first paint until the initial sync settles. Pure presentational. */
 export function AppLoader({ status, fading }: { status: string; fading?: boolean }) {
   return (
     <div
@@ -753,15 +766,15 @@ export function AppLoader({ status, fading }: { status: string; fading?: boolean
         fading ? 'pointer-events-none opacity-0' : 'opacity-100'
       }`}
     >
-      <span className="animate-pop-in flex h-20 w-20 items-center justify-center rounded-[26px] bg-[#151515] text-[#C7FF4D]">
+      <span className="animate-pop-in flex h-20 w-20 items-center justify-center rounded-[24px] bg-(--primary) text-white shadow-lg">
         <BrandMark size={38} />
       </span>
-      <h1 className="mt-5 text-[26px] font-extrabold tracking-tight text-(--ink)">Stockly</h1>
-      <p className="mt-1 text-[13px] font-medium text-(--ink-2)">Small-business inventory</p>
+      <h1 className="mt-5 text-[26px] font-bold tracking-tight text-(--ink)">Stockly</h1>
+      <p className="mt-1 text-[13px] font-normal text-(--ink-2)">Small-business inventory</p>
       <div className="mt-7 h-1.5 w-44 overflow-hidden rounded-full bg-(--stroke-dim)" aria-hidden="true">
-        <div className="loader-bar h-full w-2/5 rounded-full bg-[#151515] dark:bg-[#C7FF4D]" />
+        <div className="loader-bar h-full w-2/5 rounded-full bg-(--primary)" />
       </div>
-      <p className="tnum mt-3.5 text-[12.5px] font-semibold text-(--ink-2)">{status}</p>
+      <p className="tnum mt-3.5 text-[12.5px] font-medium text-(--ink-2)">{status}</p>
     </div>
   );
 }
@@ -791,7 +804,7 @@ export function Confirm({
         <button
           type="button"
           onClick={onCancel}
-          className="press glass-soft min-h-[48px] rounded-2xl py-3.5 text-[15px] font-bold text-(--ink)"
+          className="press min-h-[48px] rounded-[14px] bg-(--field) py-3 text-[15px] font-semibold text-(--ink)"
         >
           Cancel
         </button>
@@ -799,7 +812,7 @@ export function Confirm({
           type="button"
           onClick={onConfirm}
           disabled={busy}
-          className="press min-h-[48px] rounded-2xl bg-[#C2332D] py-3.5 text-[15px] font-bold text-white disabled:opacity-50"
+          className="press min-h-[48px] rounded-[14px] bg-(--destructive) py-3 text-[15px] font-semibold text-white shadow-sm disabled:opacity-50"
         >
           {busy ? 'Working…' : confirmLabel}
         </button>
@@ -822,7 +835,7 @@ export function ActionSheet({
 }) {
   return (
     <Sheet open={open} onClose={onClose} title={title}>
-      <div className="space-y-1.5 pb-2">
+      <div className="space-y-1 pb-2">
         {actions.map((a) => (
           <button
             key={a.label}
@@ -831,11 +844,11 @@ export function ActionSheet({
               onClose();
               a.onClick();
             }}
-            className={`press flex w-full items-center gap-3 rounded-2xl px-4 py-3.5 text-[15px] font-semibold ${
-              a.danger ? 'text-rose-600 dark:text-rose-400' : 'text-(--ink)'
+            className={`press flex w-full items-center gap-3 rounded-[14px] px-3.5 py-3 text-[15px] font-medium ${
+              a.danger ? 'text-(--destructive)' : 'text-(--ink)'
             } hover:bg-(--accent-soft)`}
           >
-            <span className="glass-soft flex h-9 w-9 items-center justify-center rounded-xl">{a.icon}</span>
+            <span className="flex h-8 w-8 items-center justify-center rounded-[10px] bg-(--field)">{a.icon}</span>
             {a.label}
           </button>
         ))}
@@ -846,11 +859,11 @@ export function ActionSheet({
 
 export function StockBadge({ kind }: { kind: 'IN' | 'OUT' }) {
   return kind === 'IN' ? (
-    <span className="inline-flex items-center gap-1 rounded-full bg-emerald-500/12 px-2.5 py-1 text-[11px] font-bold text-emerald-600 dark:text-emerald-300">
+    <span className="inline-flex items-center gap-1 rounded-full bg-emerald-500/12 px-2.5 py-1 text-[11px] font-semibold text-emerald-600 dark:text-emerald-400">
       <ArrowDownToLine size={12} /> IN
     </span>
   ) : (
-    <span className="inline-flex items-center gap-1 rounded-full bg-rose-500/12 px-2.5 py-1 text-[11px] font-bold text-rose-600 dark:text-rose-300">
+    <span className="inline-flex items-center gap-1 rounded-full bg-amber-500/12 px-2.5 py-1 text-[11px] font-semibold text-amber-600 dark:text-amber-400">
       <ArrowUpFromLine size={12} /> OUT
     </span>
   );

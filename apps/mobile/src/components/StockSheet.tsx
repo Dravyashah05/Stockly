@@ -181,13 +181,13 @@ export default function StockSheet({
               switchMode(isIn ? 'OUT' : 'IN');
             }
           }}
-          className="relative grid grid-cols-2 gap-1 rounded-full bg-(--glass-soft) p-1.5"
+          className="relative grid grid-cols-2 gap-1 rounded-2xl bg-(--field) p-1"
         >
           <span
             aria-hidden="true"
-            className={`absolute inset-y-1.5 left-1.5 w-[calc(50%-6px)] rounded-full transition-transform duration-300 ${
+            className={`absolute inset-y-1 left-1 w-[calc(50%-4px)] rounded-xl transition-transform duration-300 ${
               isIn ? 'translate-x-0' : 'translate-x-full'
-            } bg-[#151515] dark:bg-[#C7FF4D]`}
+            } bg-(--bg-elev) shadow-sm`}
           />
           {(
             [
@@ -202,9 +202,11 @@ export default function StockSheet({
                 type="button"
                 aria-pressed={active}
                 onClick={() => switchMode(o.m)}
-                className={`relative z-[1] flex items-center justify-center gap-2 rounded-full py-2.5 text-[13.5px] font-extrabold transition-colors ${
+                className={`relative z-[1] flex items-center justify-center gap-2 rounded-xl py-2 text-[14px] font-semibold transition-colors ${
                   active
-                    ? 'text-[#C7FF4D] dark:text-[#151515]'
+                    ? o.m === 'IN'
+                      ? 'text-emerald-600 dark:text-emerald-400 font-bold'
+                      : 'text-amber-600 dark:text-amber-400 font-bold'
                     : 'text-(--ink-2) hover:text-(--ink)'
                 }`}
               >
@@ -271,7 +273,7 @@ export default function StockSheet({
                       type="button"
                       onClick={() => bump(n)}
                       aria-label={`Add ${n} to quantity`}
-                      className="tnum press rounded-full bg-(--bg) px-2.5 py-1 text-[12px] font-extrabold text-(--ink) transition-colors hover:bg-(--accent-soft)"
+                      className="tnum press rounded-full bg-(--field) px-3 py-1 text-[12px] font-semibold text-(--ink) transition-colors hover:bg-(--field-hover) active:scale-95"
                     >
                       +{n}
                     </button>
@@ -284,7 +286,7 @@ export default function StockSheet({
                   onClick={() => bump(-1)}
                   aria-label="Decrease quantity"
                   disabled={qtyNum <= 0}
-                  className="press flex h-11 w-11 shrink-0 items-center justify-center rounded-full border border-(--stroke-dim) text-(--ink) transition-colors hover:bg-(--bg) disabled:opacity-30 disabled:hover:bg-transparent"
+                  className="press flex h-11 w-11 shrink-0 items-center justify-center rounded-full bg-(--field) text-(--ink) transition-colors hover:bg-(--field-hover) disabled:opacity-30 disabled:hover:bg-(--field)"
                 >
                   <Minus size={18} />
                 </button>
@@ -300,7 +302,7 @@ export default function StockSheet({
                   type="button"
                   onClick={() => bump(1)}
                   aria-label="Increase quantity"
-                  className="press flex h-11 w-11 shrink-0 items-center justify-center rounded-full bg-[#151515] text-[#C7FF4D] transition-transform hover:scale-105 active:scale-95 dark:bg-[#C7FF4D] dark:text-[#151515]"
+                  className="press flex h-11 w-11 shrink-0 items-center justify-center rounded-full bg-(--primary) text-white shadow-sm transition-transform hover:opacity-90 active:scale-95"
                 >
                   <Plus size={18} />
                 </button>
@@ -348,10 +350,10 @@ export default function StockSheet({
                       type="button"
                       onClick={() => setReason(r)}
                       aria-pressed={reason === r}
-                      className={`press flex items-center gap-1.5 rounded-full px-3.5 py-2 text-[13px] font-bold transition-colors ${
+                      className={`press flex items-center gap-1.5 rounded-full px-3.5 py-1.5 text-[13px] font-medium transition-all ${
                         reason === r
-                          ? 'bg-[#151515] text-[#C7FF4D] dark:bg-[#C7FF4D] dark:text-[#151515]'
-                          : 'bg-(--glass-soft) text-(--ink-2) hover:text-(--ink)'
+                          ? 'bg-(--primary) text-white shadow-sm'
+                          : 'bg-(--field) text-(--ink-2) hover:text-(--ink)'
                       }`}
                     >
                       {REASON_ICONS[r] ?? null}

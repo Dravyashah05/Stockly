@@ -5,7 +5,10 @@
  * API, cached briefly. Nothing here logs URLs, tokens, or checksums.
  */
 
+import { API_BASE_URL } from './config.ts';
+
 export interface ReleaseInfo {
+
   /** Release tag without the leading v, e.g. "1.0.0". */
   tag: string;
   version: string;
@@ -76,7 +79,32 @@ export function isReleaseInfoLike(v: unknown): v is ReleaseInfo {
   return true;
 }
 
+/** Compares semantic versions (e.g. "1.0.1" vs "1.0.0"). Returns > 0 if a > b. */
+export function cmpVersions(a: string, b: string): number {
+  const pa = String(a || '').replace(/^v/i, '').split('.').map((x) => parseInt(x, 10) || 0);
+  const pb = String(b || '').replace(/^v/i, '').split('.').map((x) => parseInt(x, 10) || 0);
+  for (let i = 0; i < Math.max(pa.length, pb.length); i++) {
+    const d = (pa[i] || 0) - (pb[i] || 0);
+    if (d !== 0) return d;
+  }
+  return 0;
+}
+
+/** Determines if a remote release is an update compared to local app version & versionCode. */
+export function isNewerVersion(
+  remoteVersion: string,
+  localVersion: string,
+  remoteCode = 0,
+  localCode = 0,
+): boolean {
+  if (remoteCode > 0 && localCode > 0 && remoteCode > localCode) {
+    return true;
+  }
+  return cmpVersions(remoteVersion, localVersion) > 0;
+}
+
 function isNativeRuntime(): boolean {
+
   try {
     return typeof window !== 'undefined' && !!(window as unknown as { Capacitor?: unknown }).Capacitor;
   } catch {
@@ -166,15 +194,13 @@ export async function fetchLatestRelease(opts?: { noCache?: boolean }): Promise<
       return cached.info;
     }
   }
-  // Static metadata shipped with the website: updated on every publish, no
-  // rate limits, no extra requests. Skipped on native builds, whose bundled
-  // copy would be stale by design — installed apps always check the network.
-  if (!isNativeRuntime()) {
+  const staticUrl = isNativeRuntime() ? (API_BASE_URL ? `${API_BASE_URL}/release.json` : '') : 'release.json';
+  if (staticUrl) {
     try {
       const ctrl = new AbortController();
       const timer = window.setTimeout(() => ctrl.abort(), 8000);
       try {
-        const res = await fetch('release.json', { cache: 'no-store', signal: ctrl.signal });
+        const res = await fetch(staticUrl, { cache: 'no-store', signal: ctrl.signal });
         if (res.ok) {
           const data = (await res.json().catch(() => null)) as unknown;
           if (isReleaseInfoLike(data)) {
