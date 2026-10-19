@@ -93,6 +93,16 @@ function WebShell() {
         setStockMode('OUT');
         setStockTargetProductId(undefined);
         setStockModalOpen(true);
+      } else if (e.key === '1') {
+        setActiveTab('home');
+      } else if (e.key === '2') {
+        setActiveTab('products');
+      } else if (e.key === '3') {
+        setActiveTab('history');
+      } else if (e.key === '4') {
+        setActiveTab('devices');
+      } else if (e.key === '5') {
+        setActiveTab('settings');
       }
     };
 
@@ -127,12 +137,12 @@ function WebShell() {
     setActiveTab(tab as WebTab);
   };
 
-  const NAV_ITEMS: { key: WebTab; label: string; icon: React.ReactNode }[] = [
-    { key: 'home', label: 'Dashboard', icon: <Home size={18} /> },
-    { key: 'products', label: 'Products & Stock', icon: <Boxes size={18} /> },
-    { key: 'history', label: 'Transaction Log', icon: <History size={18} /> },
-    { key: 'devices', label: 'Linked Devices', icon: <Smartphone size={18} /> },
-    { key: 'settings', label: 'Settings', icon: <SettingsIcon size={18} /> },
+  const NAV_ITEMS: { key: WebTab; label: string; icon: React.ReactNode; hotkey: string }[] = [
+    { key: 'home', label: 'Dashboard', icon: <Home size={17} />, hotkey: '1' },
+    { key: 'products', label: 'Catalog & Stock', icon: <Boxes size={17} />, hotkey: '2' },
+    { key: 'history', label: 'Audit Ledger', icon: <History size={17} />, hotkey: '3' },
+    { key: 'devices', label: 'Linked Devices', icon: <Smartphone size={17} />, hotkey: '4' },
+    { key: 'settings', label: 'Settings', icon: <SettingsIcon size={17} />, hotkey: '5' },
   ];
 
   return (
@@ -208,14 +218,27 @@ function WebShell() {
                     setActiveTab(item.key);
                     setSidebarOpen(false);
                   }}
-                  className={`w-full flex items-center gap-3 px-3.5 py-2.5 rounded-xl text-[14px] font-bold transition-all ${
+                  className={`w-full flex items-center justify-between px-3.5 py-2.5 rounded-xl text-[14px] font-bold transition-all ${
                     active
                       ? 'bg-[#151515] text-white dark:bg-[#C7FF4D] dark:text-[#151515] shadow-sm'
                       : 'text-neutral-600 dark:text-neutral-400 hover:bg-neutral-200/50 dark:hover:bg-neutral-800/60'
                   }`}
                 >
-                  {item.icon}
-                  <span>{item.label}</span>
+                  <div className="flex items-center gap-3">
+                    {item.icon}
+                    <span>{item.label}</span>
+                  </div>
+                  {item.hotkey && (
+                    <kbd
+                      className={`text-[10px] font-mono px-1.5 py-0.5 rounded border transition-colors ${
+                        active
+                          ? 'border-white/20 text-white/70 dark:border-black/20 dark:text-black/60'
+                          : 'border-neutral-300 dark:border-neutral-700 text-neutral-400 dark:text-neutral-500'
+                      }`}
+                    >
+                      {item.hotkey}
+                    </kbd>
+                  )}
                 </button>
               );
             })}
@@ -281,15 +304,25 @@ function WebShell() {
             >
               <Menu size={18} />
             </button>
-            <div className="hidden sm:flex items-center gap-2 text-[13px] font-medium text-neutral-500">
-              <span>Stockly</span>
-              <span>/</span>
+            <div className="flex items-center gap-2 text-[13px] font-medium text-neutral-500">
+              <span className="hidden sm:inline">Stockly</span>
+              <span className="hidden sm:inline">/</span>
               <span className="font-bold text-neutral-900 dark:text-white capitalize">{activeTab}</span>
+              <span className="text-[11px] font-mono font-medium px-2 py-0.5 rounded-full bg-neutral-200/70 dark:bg-neutral-800 text-neutral-600 dark:text-neutral-400">
+                {products.length} {products.length === 1 ? 'item' : 'items'}
+              </span>
             </div>
           </div>
 
           {/* Quick Actions in Header */}
-          <div className="flex items-center gap-3">
+          <div className="flex items-center gap-2.5">
+            <div className="hidden md:flex items-center gap-1.5 text-[11px] text-neutral-400 font-mono px-2 py-1 rounded-md bg-neutral-200/40 dark:bg-neutral-800/40 border border-[#D9D9D0]/30 dark:border-neutral-800">
+              <span>Press</span>
+              <kbd className="px-1 rounded bg-white dark:bg-neutral-700 shadow-xs border border-neutral-300 dark:border-neutral-600">1-5</kbd>
+              <span>or</span>
+              <kbd className="px-1 rounded bg-white dark:bg-neutral-700 shadow-xs border border-neutral-300 dark:border-neutral-600">N</kbd>
+            </div>
+
             <a
               href="#/"
               className="hidden sm:flex items-center gap-1.5 text-[12px] font-bold text-neutral-500 hover:text-black dark:hover:text-white px-3 py-1.5 rounded-lg border border-neutral-300/60 dark:border-neutral-800 transition-colors"

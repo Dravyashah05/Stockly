@@ -344,6 +344,22 @@ const ProductRow = memo(function ProductRow({
             <span className="tnum text-[12.5px] font-bold text-(--ink)">{formatMoney(p.sellingPrice)}</span>
           ) : null}
         </div>
+        <div className="w-20 h-1 bg-black/10 dark:bg-white/10 rounded-full overflow-hidden mt-1.5">
+          <div
+            className={`h-full rounded-full transition-all duration-300 ${
+              st === 'out' ? 'bg-rose-500' : st === 'low' ? 'bg-amber-500' : 'bg-emerald-500'
+            }`}
+            style={{
+              width: `${
+                p.minimumStock > 0
+                  ? Math.min(100, Math.max(0, (p.currentStock / (p.minimumStock * 2)) * 100))
+                  : p.currentStock > 0
+                  ? 100
+                  : 0
+              }%`,
+            }}
+          />
+        </div>
       </div>
       <span className="product-desktop-name hidden" title={p.name}>{p.name}</span>
       </div>

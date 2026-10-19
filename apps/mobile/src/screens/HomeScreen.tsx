@@ -14,6 +14,7 @@ import {
   Sparkles,
   WifiOff,
 } from 'lucide-react';
+import { formatMoney } from '@stockly/shared-client/config';
 import { stockStatus, useStore } from '@stockly/shared-client/store';
 import type { Product } from '@stockly/shared-types';
 import { Header, ErrorState, SkeletonRow } from '../components/ui';
@@ -46,21 +47,32 @@ export default function HomeScreen({
     useStore();
 
   const stats = useMemo(() => {
-    if (dashboard) return dashboard;
-    const totalProducts = products.length;
-    const totalUnits = products.reduce((a, p) => a + (p.currentStock || 0), 0);
+    const totalProducts = dashboard?.totalProducts ?? products.length;
+    const totalUnits = dashboard?.totalUnits ?? products.reduce((a, p) => a + (p.currentStock || 0), 0);
     const low = products.filter((p) => stockStatus(p) === 'low');
     const out = products.filter((p) => stockStatus(p) === 'out');
-    const cost = products.reduce((a, p) => a + (p.currentStock || 0) * (p.costPrice || 0), 0);
+    const lowStockCount = dashboard?.lowStockCount ?? low.length;
+    const outOfStockCount = dashboard?.outOfStockCount ?? out.length;
+    const optimalCount = Math.max(0, totalProducts - lowStockCount - outOfStockCount);
+    const cost = dashboard?.inventoryCostValue ?? products.reduce((a, p) => a + (p.currentStock || 0) * (p.costPrice || 0), 0);
+    const retail = dashboard?.inventoryRetailValue ?? products.reduce((a, p) => a + (p.currentStock || 0) * (p.sellingPrice || 0), 0);
+    const optimalPct = totalProducts > 0 ? Math.round((optimalCount / totalProducts) * 100) : 0;
+    const lowPct = totalProducts > 0 ? Math.round((lowStockCount / totalProducts) * 100) : 0;
+    const outPct = totalProducts > 0 ? Math.max(0, 100 - optimalPct - lowPct) : 0;
+
     return {
       totalProducts,
       totalUnits,
-      lowStockCount: low.length,
-      outOfStockCount: out.length,
+      lowStockCount,
+      outOfStockCount,
+      optimalCount,
+      optimalPct,
+      lowPct,
+      outPct,
       inventoryCostValue: cost,
-      inventoryRetailValue: 0,
-      recentMovements: transactions.slice(0, 6),
-      lowStockItems: [...out, ...low].slice(0, 8),
+      inventoryRetailValue: retail,
+      recentMovements: (dashboard?.recentMovements?.length ? dashboard.recentMovements : transactions).slice(0, 6),
+      lowStockItems: (dashboard?.lowStockItems?.length ? dashboard.lowStockItems : [...out, ...low]).slice(0, 8),
     };
   }, [dashboard, products, transactions]);
 
@@ -106,6 +118,15 @@ export default function HomeScreen({
         onClick: () => goProducts(),
       },
       {
+        label: 'Valuation',
+        value: formatMoney(stats.inventoryCostValue),
+        foot: `Retail ${formatMoney(stats.inventoryRetailValue)}`,
+        icon: <Boxes size={18} />,
+        iconCls: 'bg-emerald-500/14 text-emerald-600 dark:text-emerald-300',
+        ringCls: 'hover:border-emerald-500/40',
+        onClick: undefined,
+      },
+      {
         label: 'Low stock',
         value: String(stats.lowStockCount),
         foot: 'needs restock',
@@ -124,9 +145,7 @@ export default function HomeScreen({
         onClick: () => goProducts('out'),
       },
     ],
-    // goProducts is a stable useCallback from App; stats is the only real dep.
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-    [stats],
+    [stats, goProducts],
   );
 
   // Precompute per-row display data once per stats change: stock-bar width
@@ -266,6 +285,24 @@ export default function HomeScreen({
                 </div>
               </div>
               <p className="relative mt-3 border-t border-white/15 pt-3 text-[12px] font-semibold text-white/65 dark:border-[#151515]/15 dark:text-[#151515]/65">Across your catalogue</p>
+            </div>
+
+            {/* Health Distribution Meter */}
+            <div className="glass rounded-[24px] p-4 space-y-2.5">
+              <div className="flex items-center justify-between text-[12px] font-bold">
+                <span className="text-(--ink-2) uppercase tracking-wider text-[11px]">Stock Health</span>
+                <span className="text-emerald-600 dark:text-emerald-400 font-extrabold">{stats.optimalPct}% Optimal</span>
+              </div>
+              <div className="h-2 w-full bg-black/10 dark:bg-white/10 rounded-full overflow-hidden flex">
+                <div style={{ width: `${stats.optimalPct}%` }} className="bg-emerald-500 h-full transition-all duration-500" />
+                <div style={{ width: `${stats.lowPct}%` }} className="bg-amber-500 h-full transition-all duration-500" />
+                <div style={{ width: `${stats.outPct}%` }} className="bg-rose-500 h-full transition-all duration-500" />
+              </div>
+              <div className="flex items-center justify-between text-[11px] text-(--ink-2) pt-0.5 font-medium">
+                <span className="flex items-center gap-1.5"><span className="h-2 w-2 rounded-full bg-emerald-500" /> {stats.optimalCount} healthy</span>
+                <span className="flex items-center gap-1.5"><span className="h-2 w-2 rounded-full bg-amber-500" /> {stats.lowStockCount} low</span>
+                <span className="flex items-center gap-1.5"><span className="h-2 w-2 rounded-full bg-rose-500" /> {stats.outOfStockCount} out</span>
+              </div>
             </div>
 
             {/* Uneven metrics give urgent stock levels a faster visual read. */}

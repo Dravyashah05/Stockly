@@ -7,11 +7,14 @@ import {
   ArrowUpFromLine,
   Edit2,
   Trash2,
-  Tag,
+  LayoutGrid,
+  List,
+  X,
 } from 'lucide-react';
 import type { Category, Product } from '@stockly/shared-types';
 import { stockStatus } from '@stockly/shared-validation';
-import { GlassCard, GlassButton, StatusBadge, GlassDialog } from '@stockly/ui';
+import { formatMoney } from '@stockly/shared-client/config';
+import { GlassCard, GlassButton, GlassDialog } from '@stockly/ui';
 
 interface WebProductsProps {
   products: Product[];
@@ -38,6 +41,7 @@ export default function WebProducts({
   const [selectedCategory, setSelectedCategory] = useState<string>('all');
   const [statusFilter, setStatusFilter] = useState<string>(initialFilter);
   const [sortKey, setSortKey] = useState<'name' | 'stock-desc' | 'stock-asc' | 'price-desc' | 'sku'>('name');
+  const [viewMode, setViewMode] = useState<'grid' | 'table'>('grid');
 
   // Delete confirm state
   const [deleteTarget, setDeleteTarget] = useState<Product | null>(null);
@@ -102,51 +106,92 @@ export default function WebProducts({
     }
   };
 
-  const formatCurrency = (val?: number) => {
-    if (val === undefined || Number.isNaN(val)) return '$0.00';
-    return new Intl.NumberFormat('en-US', {
-      style: 'currency',
-      currency: 'USD',
-      minimumFractionDigits: 2,
-    }).format(val);
+  const getStatusInfo = (p: Product) => {
+    const st = stockStatus(p);
+    if (st === 'out') {
+      return { label: 'Out of Stock', tone: 'danger' as const, dotColor: 'bg-rose-500', textColor: 'text-rose-600 dark:text-rose-400' };
+    }
+    if (st === 'low') {
+      return { label: 'Low Stock', tone: 'warning' as const, dotColor: 'bg-amber-500', textColor: 'text-amber-600 dark:text-amber-400' };
+    }
+    return { label: 'Optimal', tone: 'success' as const, dotColor: 'bg-emerald-500', textColor: 'text-emerald-600 dark:text-emerald-400' };
   };
 
   return (
     <div className="space-y-6">
-      {/* Header and New Product button */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+      {/* Header & New Product CTA */}
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-2 border-b border-black/[0.06] dark:border-white/[0.08]">
         <div>
           <h1 className="text-2xl lg:text-3xl font-extrabold tracking-tight text-neutral-900 dark:text-white">
-            Products & Inventory
+            Catalog & Inventory
           </h1>
           <p className="text-[13px] text-neutral-500 dark:text-neutral-400 mt-1">
-            Manage your full product catalog, SKU references, and stock levels
+            {products.length} products tracked • Real-time stock movements & pricing
           </p>
         </div>
 
-        <GlassButton
-          variant="primary"
-          size="md"
-          onClick={onNewProduct}
-          iconStart={<Plus size={16} />}
-        >
-          Add Product
-        </GlassButton>
+        <div className="flex items-center gap-2">
+          {/* View Mode Toggle: Grid vs Table */}
+          <div className="flex items-center p-1 rounded-xl bg-neutral-200/60 dark:bg-neutral-800 border border-neutral-300/50 dark:border-neutral-700/50">
+            <button
+              type="button"
+              title="Grid Cards View"
+              onClick={() => setViewMode('grid')}
+              className={`p-1.5 rounded-lg transition-all ${
+                viewMode === 'grid'
+                  ? 'bg-white dark:bg-black text-neutral-900 dark:text-white shadow-xs'
+                  : 'text-neutral-500 hover:text-neutral-900 dark:hover:text-white'
+              }`}
+            >
+              <LayoutGrid size={16} />
+            </button>
+            <button
+              type="button"
+              title="Dense Table View"
+              onClick={() => setViewMode('table')}
+              className={`p-1.5 rounded-lg transition-all ${
+                viewMode === 'table'
+                  ? 'bg-white dark:bg-black text-neutral-900 dark:text-white shadow-xs'
+                  : 'text-neutral-500 hover:text-neutral-900 dark:hover:text-white'
+              }`}
+            >
+              <List size={16} />
+            </button>
+          </div>
+
+          <GlassButton
+            variant="primary"
+            size="md"
+            onClick={onNewProduct}
+            iconStart={<Plus size={16} />}
+          >
+            Add Product
+          </GlassButton>
+        </div>
       </div>
 
-      {/* Control Bar: Search, Category, Status Tabs, Sorting */}
-      <GlassCard tone="regular" radius="20px" className="p-4 space-y-4">
+      {/* Control Bar: Search, Category, Sort */}
+      <GlassCard tone="regular" radius="20px" className="p-4 space-y-3">
         <div className="grid grid-cols-1 md:grid-cols-12 gap-3">
-          {/* Search field */}
+          {/* Search input with clear button */}
           <div className="md:col-span-5 relative">
-            <Search size={16} className="absolute left-3.5 top-1/2 -translate-y-1/2 text-neutral-400 pointer-events-none" />
+            <Search size={15} className="absolute left-3.5 top-1/2 -translate-y-1/2 text-neutral-400 pointer-events-none" />
             <input
               type="text"
-              placeholder="Search by name, SKU, or description..."
+              placeholder="Search by name, SKU, or notes…"
               value={search}
               onChange={(e) => setSearch(e.target.value)}
-              className="w-full pl-10 pr-4 py-2.5 rounded-xl border border-neutral-300 dark:border-neutral-700 bg-white/70 dark:bg-neutral-800/80 text-[14px] font-medium text-neutral-900 dark:text-white backdrop-blur-md focus:outline-none focus:ring-2 focus:ring-[#151515] dark:focus:ring-[#C7FF4D]"
+              className="w-full pl-9 pr-8 py-2 rounded-xl border border-neutral-200 dark:border-neutral-800 bg-white/60 dark:bg-neutral-900/60 text-[13px] font-medium text-neutral-900 dark:text-white backdrop-blur-md focus:outline-none focus:ring-2 focus:ring-[#151515] dark:focus:ring-[#C7FF4D]"
             />
+            {search && (
+              <button
+                type="button"
+                onClick={() => setSearch('')}
+                className="absolute right-2.5 top-1/2 -translate-y-1/2 text-neutral-400 hover:text-neutral-600 dark:hover:text-neutral-200"
+              >
+                <X size={14} />
+              </button>
+            )}
           </div>
 
           {/* Category Dropdown */}
@@ -154,7 +199,7 @@ export default function WebProducts({
             <select
               value={selectedCategory}
               onChange={(e) => setSelectedCategory(e.target.value)}
-              className="w-full px-3.5 py-2.5 rounded-xl border border-neutral-300 dark:border-neutral-700 bg-white/70 dark:bg-neutral-800/80 text-[14px] font-medium text-neutral-900 dark:text-white backdrop-blur-md focus:outline-none focus:ring-2 focus:ring-[#151515] dark:focus:ring-[#C7FF4D]"
+              className="w-full px-3 py-2 rounded-xl border border-neutral-200 dark:border-neutral-800 bg-white/60 dark:bg-neutral-900/60 text-[13px] font-medium text-neutral-900 dark:text-white backdrop-blur-md focus:outline-none focus:ring-2 focus:ring-[#151515] dark:focus:ring-[#C7FF4D]"
             >
               <option value="all">All Categories ({categories.length})</option>
               {categories.map((c) => (
@@ -163,29 +208,29 @@ export default function WebProducts({
             </select>
           </div>
 
-          {/* Sort Dropdown */}
+          {/* Sort Selector */}
           <div className="md:col-span-3">
             <select
               value={sortKey}
               onChange={(e) => setSortKey(e.target.value as any)}
-              className="w-full px-3.5 py-2.5 rounded-xl border border-neutral-300 dark:border-neutral-700 bg-white/70 dark:bg-neutral-800/80 text-[14px] font-medium text-neutral-900 dark:text-white backdrop-blur-md focus:outline-none focus:ring-2 focus:ring-[#151515] dark:focus:ring-[#C7FF4D]"
+              className="w-full px-3 py-2 rounded-xl border border-neutral-200 dark:border-neutral-800 bg-white/60 dark:bg-neutral-900/60 text-[13px] font-medium text-neutral-900 dark:text-white backdrop-blur-md focus:outline-none focus:ring-2 focus:ring-[#151515] dark:focus:ring-[#C7FF4D]"
             >
-              <option value="name">Sort: Name (A-Z)</option>
-              <option value="sku">Sort: SKU</option>
-              <option value="stock-desc">Sort: Highest Stock</option>
-              <option value="stock-asc">Sort: Lowest Stock</option>
-              <option value="price-desc">Sort: Highest Price</option>
+              <option value="name">Name (A-Z)</option>
+              <option value="sku">SKU</option>
+              <option value="stock-desc">Highest Stock</option>
+              <option value="stock-asc">Lowest Stock</option>
+              <option value="price-desc">Highest Price</option>
             </select>
           </div>
         </div>
 
-        {/* Status Filter Tabs */}
-        <div className="flex items-center gap-2 overflow-x-auto pt-1 border-t border-neutral-200/50 dark:border-neutral-800">
+        {/* Status Filter Chips */}
+        <div className="flex items-center gap-2 overflow-x-auto pt-2 border-t border-black/[0.04] dark:divide-white/[0.04]">
           {[
-            { key: 'all', label: 'All Items', count: counts.all, tone: 'neutral' as const },
-            { key: 'in', label: 'In Stock', count: counts.in, tone: 'success' as const },
-            { key: 'low', label: 'Low Stock', count: counts.low, tone: 'warning' as const },
-            { key: 'out', label: 'Out of Stock', count: counts.out, tone: 'danger' as const },
+            { key: 'all', label: 'All Items', count: counts.all, dot: 'bg-neutral-400' },
+            { key: 'in', label: 'Optimal', count: counts.in, dot: 'bg-emerald-500' },
+            { key: 'low', label: 'Low Stock', count: counts.low, dot: 'bg-amber-500' },
+            { key: 'out', label: 'Depleted', count: counts.out, dot: 'bg-rose-500' },
           ].map((tab) => {
             const active = statusFilter === tab.key;
             return (
@@ -193,166 +238,217 @@ export default function WebProducts({
                 key={tab.key}
                 type="button"
                 onClick={() => setStatusFilter(tab.key)}
-                className={`flex items-center gap-2 px-3.5 py-1.5 rounded-xl text-[13px] font-bold transition-all ${
+                className={`flex items-center gap-2 px-3 py-1.5 rounded-xl text-[12px] font-bold transition-all ${
                   active
-                    ? 'bg-[#151515] text-white dark:bg-[#C7FF4D] dark:text-[#151515] shadow-sm'
+                    ? 'bg-[#151515] text-white dark:bg-[#C7FF4D] dark:text-[#151515] shadow-xs'
                     : 'bg-white/40 dark:bg-neutral-800/40 text-neutral-600 dark:text-neutral-400 hover:bg-neutral-100/60 dark:hover:bg-neutral-700/60'
                 }`}
               >
+                <span className={`h-1.5 w-1.5 rounded-full ${tab.dot}`} />
                 <span>{tab.label}</span>
-                <span
-                  className={`px-1.5 py-0.5 rounded-full text-[11px] font-mono ${
-                    active
-                      ? 'bg-white/20 dark:bg-black/20 text-inherit'
-                      : 'bg-neutral-200/60 dark:bg-neutral-700 text-neutral-700 dark:text-neutral-300'
-                  }`}
-                >
-                  {tab.count}
-                </span>
+                <span className="font-mono text-[11px] opacity-75">({tab.count})</span>
               </button>
             );
           })}
         </div>
       </GlassCard>
 
-      {/* Main Inventory Data Table */}
-      <GlassCard tone="regular" radius="24px" className="p-0 overflow-hidden">
-        {filteredProducts.length === 0 ? (
-          <div className="p-12 text-center space-y-3">
-            <div className="inline-flex h-14 w-14 items-center justify-center rounded-2xl bg-neutral-200/50 dark:bg-neutral-800 text-neutral-500">
-              <Boxes size={28} />
-            </div>
-            <h3 className="font-bold text-lg text-neutral-900 dark:text-white">No products found</h3>
-            <p className="text-[13px] text-neutral-500 max-w-sm mx-auto">
-              {search || statusFilter !== 'all' || selectedCategory !== 'all'
-                ? 'Try clearing your filters or search term to see more items.'
-                : 'Your catalog is empty. Click "+ Add Product" to create your first item.'}
-            </p>
-            {(!search && statusFilter === 'all' && selectedCategory === 'all') && (
-              <GlassButton variant="primary" onClick={onNewProduct} iconStart={<Plus size={16} />}>
-                Create First Product
-              </GlassButton>
-            )}
+      {/* Main Content: Grid vs Table */}
+      {filteredProducts.length === 0 ? (
+        <GlassCard tone="regular" radius="20px" className="p-12 text-center space-y-3">
+          <div className="inline-flex h-12 w-12 items-center justify-center rounded-2xl bg-neutral-100 dark:bg-white/5 text-neutral-400">
+            <Boxes size={24} />
           </div>
-        ) : (
+          <h3 className="font-bold text-base text-neutral-900 dark:text-white">No products match your filter</h3>
+          <p className="text-[12px] text-neutral-500 max-w-sm mx-auto">
+            {search || statusFilter !== 'all' || selectedCategory !== 'all'
+              ? 'Try adjusting your search query, status chip, or category filter.'
+              : 'Your inventory catalog is currently empty. Click Add Product to get started.'}
+          </p>
+          {!search && statusFilter === 'all' && selectedCategory === 'all' && (
+            <GlassButton variant="primary" size="sm" onClick={onNewProduct} iconStart={<Plus size={15} />}>
+              Create First Product
+            </GlassButton>
+          )}
+        </GlassCard>
+      ) : viewMode === 'grid' ? (
+        /* GRID VIEW */
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
+          {filteredProducts.map((p) => {
+            const status = getStatusInfo(p);
+            const stock = p.currentStock || 0;
+            const minStock = p.minimumStock || 5;
+            const stockPct = Math.min(100, Math.round((stock / Math.max(minStock * 2, stock, 1)) * 100));
+            const margin = p.sellingPrice && p.costPrice
+              ? Math.round(((p.sellingPrice - p.costPrice) / p.sellingPrice) * 100)
+              : null;
+
+            return (
+              <GlassCard
+                key={p.id}
+                tone="regular"
+                radius="20px"
+                className="p-4 flex flex-col justify-between hover:border-black/20 dark:hover:border-white/20 transition-all group"
+              >
+                <div>
+                  {/* Card Header: Category & Status */}
+                  <div className="flex items-center justify-between gap-2 text-[11px]">
+                    <span className="font-semibold text-neutral-400 uppercase tracking-wider truncate">
+                      {categoryMap.get(p.categoryId) || 'General'}
+                    </span>
+                    <span className="flex items-center gap-1.5 font-bold">
+                      <span className={`h-1.5 w-1.5 rounded-full ${status.dotColor}`} />
+                      <span className={status.textColor}>{status.label}</span>
+                    </span>
+                  </div>
+
+                  {/* Product Title & SKU */}
+                  <div className="mt-2.5">
+                    <h3 className="font-extrabold text-[15px] text-neutral-900 dark:text-white tracking-tight line-clamp-1" title={p.name}>
+                      {p.name}
+                    </h3>
+                    <span className="font-mono text-[11px] font-semibold text-neutral-400">
+                      {p.sku}
+                    </span>
+                  </div>
+
+                  {/* Stock Gauge Meter */}
+                  <div className="mt-4 p-3 rounded-xl bg-black/[0.02] dark:bg-white/[0.03] border border-black/[0.04] dark:border-white/[0.04]">
+                    <div className="flex items-baseline justify-between">
+                      <span className="text-[11px] text-neutral-500 font-medium">In Stock</span>
+                      <div className="flex items-baseline gap-1">
+                        <span className="text-xl font-black font-mono text-neutral-900 dark:text-white">
+                          {stock}
+                        </span>
+                        <span className="text-[11px] text-neutral-400 font-mono">/ min {minStock}</span>
+                      </div>
+                    </div>
+                    {/* Micro bar */}
+                    <div className="h-1.5 w-full bg-neutral-200 dark:bg-neutral-800 rounded-full mt-2 overflow-hidden">
+                      <div
+                        style={{ width: `${stockPct}%` }}
+                        className={`h-full rounded-full transition-all duration-300 ${status.dotColor}`}
+                      />
+                    </div>
+                  </div>
+
+                  {/* Pricing info */}
+                  <div className="mt-3 flex items-center justify-between text-[12px] font-mono">
+                    <span className="text-neutral-500">
+                      Cost: <b className="text-neutral-700 dark:text-neutral-300">{formatMoney(p.costPrice || 0)}</b>
+                    </span>
+                    <span className="font-bold text-neutral-900 dark:text-white">
+                      Sell: {formatMoney(p.sellingPrice || 0)}
+                    </span>
+                  </div>
+
+                  {margin !== null && (
+                    <div className="mt-1 text-right">
+                      <span className="text-[10px] font-mono font-bold text-emerald-600 dark:text-emerald-400">
+                        +{margin}% margin
+                      </span>
+                    </div>
+                  )}
+                </div>
+
+                {/* Card Actions: Quick Stock In/Out + Edit/Delete */}
+                <div className="mt-4 pt-3 border-t border-black/[0.04] dark:border-white/[0.04] flex items-center justify-between gap-2">
+                  <div className="flex items-center gap-1.5">
+                    <button
+                      type="button"
+                      title="Quick Stock In (+)"
+                      onClick={() => onStockIn(p.id)}
+                      className="px-2.5 py-1.5 rounded-lg text-[12px] font-bold bg-emerald-500/10 text-emerald-700 dark:text-emerald-400 hover:bg-emerald-500/20 active:scale-95 transition-all flex items-center gap-1 border border-emerald-500/20"
+                    >
+                      <ArrowDownToLine size={13} /> +In
+                    </button>
+                    <button
+                      type="button"
+                      title="Quick Stock Out (-)"
+                      onClick={() => onStockOut(p.id)}
+                      disabled={stock <= 0}
+                      className="px-2.5 py-1.5 rounded-lg text-[12px] font-bold bg-amber-500/10 text-amber-700 dark:text-amber-400 hover:bg-amber-500/20 active:scale-95 transition-all flex items-center gap-1 border border-amber-500/20 disabled:opacity-40"
+                    >
+                      <ArrowUpFromLine size={13} /> -Out
+                    </button>
+                  </div>
+
+                  <div className="flex items-center gap-1">
+                    <button
+                      type="button"
+                      title="Edit Product"
+                      onClick={() => onEditProduct(p)}
+                      className="p-1.5 rounded-lg text-neutral-400 hover:text-neutral-900 dark:hover:text-white transition-colors"
+                    >
+                      <Edit2 size={14} />
+                    </button>
+                    <button
+                      type="button"
+                      title="Delete Product"
+                      onClick={() => setDeleteTarget(p)}
+                      className="p-1.5 rounded-lg text-neutral-400 hover:text-rose-600 dark:hover:text-rose-400 transition-colors"
+                    >
+                      <Trash2 size={14} />
+                    </button>
+                  </div>
+                </div>
+              </GlassCard>
+            );
+          })}
+        </div>
+      ) : (
+        /* TABLE VIEW */
+        <GlassCard tone="regular" radius="20px" className="p-0 overflow-hidden">
           <div className="overflow-x-auto">
             <table className="w-full text-left border-collapse text-[13px]">
               <thead>
-                <tr className="border-b border-neutral-200/60 dark:border-neutral-800 bg-neutral-100/60 dark:bg-neutral-800/40 text-neutral-500 font-bold text-[11px] uppercase tracking-wider">
-                  <th className="py-3.5 px-4">SKU</th>
-                  <th className="py-3.5 px-4">Product Name & Category</th>
-                  <th className="py-3.5 px-4">Stock Level</th>
-                  <th className="py-3.5 px-3">Status</th>
-                  <th className="py-3.5 px-3 text-right">Cost Price</th>
-                  <th className="py-3.5 px-3 text-right">Selling Price</th>
-                  <th className="py-3.5 px-3 text-right">Margin</th>
-                  <th className="py-3.5 px-4 text-right">Actions</th>
+                <tr className="border-b border-black/[0.06] dark:border-white/[0.08] bg-black/[0.02] dark:bg-white/[0.02] text-neutral-500 font-bold text-[11px] uppercase tracking-wider">
+                  <th className="py-3 px-4">SKU</th>
+                  <th className="py-3 px-4">Product Name</th>
+                  <th className="py-3 px-3">Category</th>
+                  <th className="py-3 px-3 text-center">Stock</th>
+                  <th className="py-3 px-3">Status</th>
+                  <th className="py-3 px-3 text-right">Cost</th>
+                  <th className="py-3 px-3 text-right">Selling</th>
+                  <th className="py-3 px-4 text-right">Actions</th>
                 </tr>
               </thead>
-              <tbody className="divide-y divide-neutral-200/50 dark:divide-neutral-800">
+              <tbody className="divide-y divide-black/[0.04] dark:divide-white/[0.04]">
                 {filteredProducts.map((p) => {
-                  const status = stockStatus(p);
-                  const isOut = status === 'out';
-                  const isLow = status === 'low';
-                  const catName = p.categoryId ? categoryMap.get(p.categoryId) ?? 'General' : 'General';
-                  const marginPct =
-                    p.sellingPrice && p.costPrice
-                      ? (((p.sellingPrice - p.costPrice) / p.sellingPrice) * 100).toFixed(0)
-                      : null;
-
-                  const maxRef = Math.max(p.minimumStock * 2, 20);
-                  const fillRatio = Math.min(100, Math.round((p.currentStock / maxRef) * 100));
-
+                  const status = getStatusInfo(p);
                   return (
-                    <tr
-                      key={p.id}
-                      className="hover:bg-neutral-50/70 dark:hover:bg-neutral-800/40 transition-colors"
-                    >
-                      {/* SKU */}
-                      <td className="py-3.5 px-4 font-mono font-bold text-[12px] text-neutral-700 dark:text-neutral-300">
-                        <span className="px-2 py-0.5 rounded-md bg-neutral-100 dark:bg-neutral-800/80 border border-neutral-200 dark:border-neutral-700">
-                          {p.sku}
+                    <tr key={p.id} className="hover:bg-black/[0.02] dark:hover:bg-white/[0.02] transition-colors">
+                      <td className="py-3 px-4 font-mono font-bold text-neutral-500 text-[12px]">
+                        {p.sku}
+                      </td>
+                      <td className="py-3 px-4 font-bold text-neutral-900 dark:text-white">
+                        {p.name}
+                      </td>
+                      <td className="py-3 px-3 text-neutral-500 text-[12px]">
+                        {categoryMap.get(p.categoryId) || 'General'}
+                      </td>
+                      <td className="py-3 px-3 text-center font-mono font-bold text-neutral-900 dark:text-white">
+                        {p.currentStock || 0}
+                      </td>
+                      <td className="py-3 px-3">
+                        <span className="inline-flex items-center gap-1.5 font-bold text-[12px]">
+                          <span className={`h-1.5 w-1.5 rounded-full ${status.dotColor}`} />
+                          <span className={status.textColor}>{status.label}</span>
                         </span>
                       </td>
-
-                      {/* Name & Category */}
-                      <td className="py-3.5 px-4">
-                        <div className="font-bold text-neutral-900 dark:text-white text-[14px]">
-                          {p.name}
-                        </div>
-                        <div className="text-[11px] text-neutral-500 flex items-center gap-1.5 mt-0.5">
-                          <Tag size={11} /> {catName}
-                        </div>
+                      <td className="py-3 px-3 text-right font-mono text-neutral-600 dark:text-neutral-400">
+                        {formatMoney(p.costPrice || 0)}
                       </td>
-
-                      {/* Stock Level */}
-                      <td className="py-3.5 px-4">
-                        <div className="flex items-center gap-2">
-                          <span
-                            className={`font-black text-[15px] ${
-                              isOut
-                                ? 'text-rose-600 dark:text-rose-400'
-                                : isLow
-                                  ? 'text-amber-600 dark:text-amber-400'
-                                  : 'text-neutral-900 dark:text-white'
-                            }`}
-                          >
-                            {p.currentStock}
-                          </span>
-                          <span className="text-[12px] text-neutral-500 font-medium">
-                            units
-                          </span>
-                        </div>
-                        <div className="w-24 h-1.5 rounded-full bg-neutral-200 dark:bg-neutral-700 overflow-hidden mt-1.5">
-                          <div
-                            className={`h-full rounded-full ${
-                              isOut ? 'bg-rose-500' : isLow ? 'bg-amber-500' : 'bg-emerald-500'
-                            }`}
-                            style={{ width: `${isOut ? 0 : Math.max(6, fillRatio)}%` }}
-                          />
-                        </div>
+                      <td className="py-3 px-3 text-right font-mono font-bold text-neutral-900 dark:text-white">
+                        {formatMoney(p.sellingPrice || 0)}
                       </td>
-
-                      {/* Status Badge */}
-                      <td className="py-3.5 px-3">
-                        <StatusBadge
-                          tone={isOut ? 'danger' : isLow ? 'warning' : 'success'}
-                          size="sm"
-                          dot
-                        >
-                          {isOut ? 'Out of Stock' : isLow ? 'Low Stock' : 'In Stock'}
-                        </StatusBadge>
-                      </td>
-
-                      {/* Cost Price */}
-                      <td className="py-3.5 px-3 text-right font-medium text-neutral-600 dark:text-neutral-400">
-                        {formatCurrency(p.costPrice)}
-                      </td>
-
-                      {/* Selling Price */}
-                      <td className="py-3.5 px-3 text-right font-bold text-neutral-900 dark:text-white">
-                        {formatCurrency(p.sellingPrice)}
-                      </td>
-
-                      {/* Margin % */}
-                      <td className="py-3.5 px-3 text-right">
-                        {marginPct !== null ? (
-                          <span className={`font-mono text-[12px] font-bold ${Number(marginPct) > 0 ? 'text-emerald-600 dark:text-emerald-400' : 'text-neutral-400'}`}>
-                            {marginPct}%
-                          </span>
-                        ) : (
-                          <span className="text-neutral-400 text-[11px]">—</span>
-                        )}
-                      </td>
-
-                      {/* Actions */}
-                      <td className="py-3.5 px-4 text-right">
-                        <div className="inline-flex items-center gap-1.5">
+                      <td className="py-3 px-4 text-right">
+                        <div className="inline-flex items-center gap-1">
                           <button
                             type="button"
                             title="Stock In (+)"
                             onClick={() => onStockIn(p.id)}
-                            className="p-1.5 rounded-lg border border-neutral-200 dark:border-neutral-700 hover:bg-emerald-500/10 hover:border-emerald-500/40 text-emerald-600 dark:text-emerald-400 transition-colors"
+                            className="p-1 rounded-md text-emerald-600 dark:text-emerald-400 hover:bg-emerald-500/10 transition-colors"
                           >
                             <ArrowDownToLine size={15} />
                           </button>
@@ -360,7 +456,8 @@ export default function WebProducts({
                             type="button"
                             title="Stock Out (-)"
                             onClick={() => onStockOut(p.id)}
-                            className="p-1.5 rounded-lg border border-neutral-200 dark:border-neutral-700 hover:bg-amber-500/10 hover:border-amber-500/40 text-amber-600 dark:text-amber-400 transition-colors"
+                            disabled={(p.currentStock || 0) <= 0}
+                            className="p-1 rounded-md text-amber-600 dark:text-amber-400 hover:bg-amber-500/10 transition-colors disabled:opacity-40"
                           >
                             <ArrowUpFromLine size={15} />
                           </button>
@@ -368,7 +465,7 @@ export default function WebProducts({
                             type="button"
                             title="Edit Product"
                             onClick={() => onEditProduct(p)}
-                            className="p-1.5 rounded-lg border border-neutral-200 dark:border-neutral-700 hover:bg-neutral-100 dark:hover:bg-neutral-700 text-neutral-600 dark:text-neutral-300 transition-colors"
+                            className="p-1 rounded-md text-neutral-500 hover:text-neutral-900 dark:hover:text-white transition-colors"
                           >
                             <Edit2 size={15} />
                           </button>
@@ -376,7 +473,7 @@ export default function WebProducts({
                             type="button"
                             title="Delete Product"
                             onClick={() => setDeleteTarget(p)}
-                            className="p-1.5 rounded-lg border border-neutral-200 dark:border-neutral-700 hover:bg-rose-500/10 hover:border-rose-500/40 text-rose-600 dark:text-rose-400 transition-colors"
+                            className="p-1 rounded-md text-neutral-500 hover:text-rose-600 dark:hover:text-rose-400 transition-colors"
                           >
                             <Trash2 size={15} />
                           </button>
@@ -388,33 +485,34 @@ export default function WebProducts({
               </tbody>
             </table>
           </div>
-        )}
-      </GlassCard>
+        </GlassCard>
+      )}
 
       {/* Delete Confirmation Dialog */}
       <GlassDialog
         open={Boolean(deleteTarget)}
         onClose={() => setDeleteTarget(null)}
-        title="Confirm Delete Product"
+        title="Delete Product"
         size="sm"
       >
-        <div className="space-y-4 pt-2">
-          <p className="text-[14px] text-neutral-600 dark:text-neutral-300">
-            Are you sure you want to delete <strong>{deleteTarget?.name}</strong> ({deleteTarget?.sku})?
+        <div className="space-y-4 pt-1">
+          <p className="text-[13.5px] text-neutral-700 dark:text-neutral-300">
+            Are you sure you want to delete <strong>{deleteTarget?.name}</strong> (<span className="font-mono text-xs">{deleteTarget?.sku}</span>)?
           </p>
           <p className="text-[12px] text-rose-600 dark:text-rose-400 font-medium">
-            This will permanently remove the item from your Google Sheet catalog.
+            This permanently removes the product and its history link from your Google Sheet.
           </p>
-          <div className="flex justify-end gap-3 pt-2">
-            <GlassButton variant="secondary" onClick={() => setDeleteTarget(null)} disabled={deleteBusy}>
+          <div className="flex justify-end gap-2.5 pt-2">
+            <GlassButton variant="secondary" size="md" onClick={() => setDeleteTarget(null)} disabled={deleteBusy}>
               Cancel
             </GlassButton>
             <GlassButton
               variant="destructive"
+              size="md"
               loading={deleteBusy}
               onClick={() => void handleDeleteConfirm()}
             >
-              Confirm Delete
+              Delete Product
             </GlassButton>
           </div>
         </div>

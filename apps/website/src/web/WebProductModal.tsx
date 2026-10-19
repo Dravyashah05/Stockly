@@ -1,9 +1,10 @@
-import { useState, useEffect } from 'react';
-import { Package, AlertCircle } from 'lucide-react';
+import { useState, useEffect, useMemo } from 'react';
+import { AlertCircle, Sparkles } from 'lucide-react';
 import type { Category, Product } from '@stockly/shared-types';
 import type { ProductFormInput } from '@stockly/shared-client/store';
 import { validateProductInput } from '@stockly/shared-validation';
-import { GlassDialog, GlassButton, GlassTextField } from '@stockly/ui';
+import { CURRENCY_SYMBOL, formatMoney } from '@stockly/shared-client/config';
+import { GlassDialog, GlassButton } from '@stockly/ui';
 
 interface WebProductModalProps {
   open: boolean;
@@ -55,6 +56,21 @@ export default function WebProductModal({
     }
     setError('');
   }, [open, editingProduct, categories]);
+
+  const generateAutoSku = () => {
+    const prefix = name ? name.replace(/[^A-Za-z]/g, '').slice(0, 3).toUpperCase() : 'STK';
+    const random = Math.floor(1000 + Math.random() * 9000);
+    setSku(`${prefix || 'STK'}-${random}`);
+  };
+
+  const marginCalculation = useMemo(() => {
+    const cost = parseFloat(costPrice) || 0;
+    const sell = parseFloat(sellingPrice) || 0;
+    if (sell <= 0) return null;
+    const profit = sell - cost;
+    const margin = Math.round((profit / sell) * 100);
+    return { profit, margin };
+  }, [costPrice, sellingPrice]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -111,118 +127,170 @@ export default function WebProductModal({
     <GlassDialog
       open={open}
       onClose={onClose}
-      title={
-        <div className="flex items-center gap-2">
-          <Package className="text-[#C7FF4D]" size={22} />
-          <span>{isNew ? 'Create New Product' : 'Edit Product'}</span>
-        </div>
-      }
-      size="lg"
+      title={isNew ? 'Create New Product' : 'Edit Product'}
+      size="md"
     >
-      <form onSubmit={handleSubmit} className="space-y-4 pt-2">
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-          <GlassTextField
-            label="Product Name"
-            placeholder="e.g. Wireless Mouse M350"
-            value={name}
-            onChange={(e) => setName(e.target.value)}
-            required
-          />
+      <form onSubmit={handleSubmit} className="space-y-4 pt-1">
+        {/* Name & SKU row */}
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+          <div className="space-y-1.5">
+            <label className="text-[12px] font-bold uppercase tracking-wider text-neutral-500">
+              Product Name *
+            </label>
+            <input
+              type="text"
+              placeholder="e.g. Wireless Mouse"
+              value={name}
+              onChange={(e) => { setName(e.target.value); setError(''); }}
+              className="w-full px-3.5 py-2 rounded-xl border border-neutral-200 dark:border-neutral-800 bg-white dark:bg-neutral-900 text-[13px] font-medium text-neutral-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-[#151515] dark:focus:ring-[#C7FF4D]"
+              required
+            />
+          </div>
 
-          <GlassTextField
-            label="SKU / Barcode"
-            placeholder="e.g. ELEC-MOU-01"
-            value={sku}
-            onChange={(e) => setSku(e.target.value.toUpperCase())}
-            hint="Unique identifier for stock tracking"
-            required
-          />
+          <div className="space-y-1.5">
+            <div className="flex items-center justify-between">
+              <label className="text-[12px] font-bold uppercase tracking-wider text-neutral-500">
+                SKU / Barcode *
+              </label>
+              {isNew && (
+                <button
+                  type="button"
+                  onClick={generateAutoSku}
+                  className="text-[11px] font-semibold text-emerald-600 dark:text-emerald-400 hover:underline flex items-center gap-1"
+                >
+                  <Sparkles size={11} /> Auto-generate
+                </button>
+              )}
+            </div>
+            <input
+              type="text"
+              placeholder="e.g. WM-1001"
+              value={sku}
+              onChange={(e) => { setSku(e.target.value); setError(''); }}
+              className="w-full px-3.5 py-2 rounded-xl border border-neutral-200 dark:border-neutral-800 bg-white dark:bg-neutral-900 text-[13px] font-mono font-bold text-neutral-900 dark:text-white uppercase focus:outline-none focus:ring-2 focus:ring-[#151515] dark:focus:ring-[#C7FF4D]"
+              required
+            />
+          </div>
         </div>
 
-        <div>
-          <label className="block text-[13px] font-semibold text-neutral-700 dark:text-neutral-300 mb-1.5">
+        {/* Category Picker */}
+        <div className="space-y-1.5">
+          <label className="text-[12px] font-bold uppercase tracking-wider text-neutral-500">
             Category
           </label>
           <select
             value={categoryId}
             onChange={(e) => setCategoryId(e.target.value)}
-            className="w-full rounded-xl border border-neutral-300 dark:border-neutral-700 bg-white/70 dark:bg-neutral-800/80 px-3.5 py-2.5 text-[14px] font-medium text-neutral-900 dark:text-white backdrop-blur-md focus:outline-none focus:ring-2 focus:ring-[#151515] dark:focus:ring-[#C7FF4D]"
+            className="w-full px-3.5 py-2 rounded-xl border border-neutral-200 dark:border-neutral-800 bg-white dark:bg-neutral-900 text-[13px] font-medium text-neutral-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-[#151515] dark:focus:ring-[#C7FF4D]"
           >
-            <option value="">General / Uncategorized</option>
             {categories.map((c) => (
-              <option key={c.id} value={c.id}>{c.name}</option>
+              <option key={c.id} value={c.id}>
+                {c.name}
+              </option>
             ))}
           </select>
         </div>
 
-        <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-4">
-          <GlassTextField
-            label={isNew ? 'Opening Stock' : 'Current Stock'}
-            type="number"
-            min="0"
-            step="1"
-            value={currentStock}
-            onChange={(e) => setCurrentStock(e.target.value)}
-            required
-          />
+        {/* Cost & Selling Price with Live Margin Badge */}
+        <div className="p-3.5 rounded-2xl bg-black/[0.02] dark:bg-white/[0.02] border border-black/[0.04] dark:border-white/[0.06] space-y-3">
+          <div className="grid grid-cols-2 gap-3">
+            <div className="space-y-1.5">
+              <label className="text-[11px] font-bold uppercase tracking-wider text-neutral-500">
+                Cost Price ({CURRENCY_SYMBOL})
+              </label>
+              <input
+                type="number"
+                step="0.01"
+                min="0"
+                value={costPrice}
+                onChange={(e) => setCostPrice(e.target.value)}
+                className="w-full px-3 py-1.5 rounded-xl border border-neutral-200 dark:border-neutral-800 bg-white dark:bg-neutral-900 text-[13px] font-mono font-bold text-neutral-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-[#151515] dark:focus:ring-[#C7FF4D]"
+              />
+            </div>
+            <div className="space-y-1.5">
+              <label className="text-[11px] font-bold uppercase tracking-wider text-neutral-500">
+                Selling Price ({CURRENCY_SYMBOL})
+              </label>
+              <input
+                type="number"
+                step="0.01"
+                min="0"
+                value={sellingPrice}
+                onChange={(e) => setSellingPrice(e.target.value)}
+                className="w-full px-3 py-1.5 rounded-xl border border-neutral-200 dark:border-neutral-800 bg-white dark:bg-neutral-900 text-[13px] font-mono font-bold text-neutral-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-[#151515] dark:focus:ring-[#C7FF4D]"
+              />
+            </div>
+          </div>
 
-          <GlassTextField
-            label="Min Stock Alert"
-            type="number"
-            min="0"
-            step="1"
-            value={minimumStock}
-            onChange={(e) => setMinimumStock(e.target.value)}
-            hint="Low stock warning"
-            required
-          />
-
-          <GlassTextField
-            label="Cost Price ($)"
-            type="number"
-            min="0"
-            step="0.01"
-            value={costPrice}
-            onChange={(e) => setCostPrice(e.target.value)}
-            required
-          />
-
-          <GlassTextField
-            label="Selling Price ($)"
-            type="number"
-            min="0"
-            step="0.01"
-            value={sellingPrice}
-            onChange={(e) => setSellingPrice(e.target.value)}
-            required
-          />
+          {marginCalculation && (
+            <div className="flex items-center justify-between pt-1 text-[11px] font-mono">
+              <span className="text-neutral-500">
+                Estimated profit: <b className="text-neutral-900 dark:text-white">{formatMoney(marginCalculation.profit)}/unit</b>
+              </span>
+              <span className={`px-2 py-0.5 rounded-md font-bold ${marginCalculation.margin >= 0 ? 'bg-emerald-500/10 text-emerald-600 dark:text-emerald-400' : 'bg-rose-500/10 text-rose-600'}`}>
+                {marginCalculation.margin}% Margin
+              </span>
+            </div>
+          )}
         </div>
 
-        <div>
-          <label className="block text-[13px] font-semibold text-neutral-700 dark:text-neutral-300 mb-1.5">
-            Description / Specifications (Optional)
+        {/* Stock Levels */}
+        <div className="grid grid-cols-2 gap-3">
+          <div className="space-y-1.5">
+            <label className="text-[12px] font-bold uppercase tracking-wider text-neutral-500">
+              {isNew ? 'Initial Stock' : 'Current Stock'}
+            </label>
+            <input
+              type="number"
+              min="0"
+              value={currentStock}
+              onChange={(e) => setCurrentStock(e.target.value)}
+              className="w-full px-3.5 py-2 rounded-xl border border-neutral-200 dark:border-neutral-800 bg-white dark:bg-neutral-900 text-[13px] font-mono font-bold text-neutral-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-[#151515] dark:focus:ring-[#C7FF4D]"
+            />
+          </div>
+
+          <div className="space-y-1.5">
+            <label className="text-[12px] font-bold uppercase tracking-wider text-neutral-500">
+              Low Stock Alert Threshold
+            </label>
+            <input
+              type="number"
+              min="0"
+              value={minimumStock}
+              onChange={(e) => setMinimumStock(e.target.value)}
+              className="w-full px-3.5 py-2 rounded-xl border border-neutral-200 dark:border-neutral-800 bg-white dark:bg-neutral-900 text-[13px] font-mono font-bold text-neutral-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-[#151515] dark:focus:ring-[#C7FF4D]"
+            />
+          </div>
+        </div>
+
+        {/* Description */}
+        <div className="space-y-1.5">
+          <label className="text-[12px] font-bold uppercase tracking-wider text-neutral-500">
+            Description / Specifications <span className="text-neutral-400 font-normal lowercase">(optional)</span>
           </label>
           <textarea
             rows={2}
+            placeholder="Key product attributes, supplier codes, or warehouse shelf location..."
             value={description}
             onChange={(e) => setDescription(e.target.value)}
-            placeholder="Additional product details, supplier info, or shelf location"
-            className="w-full rounded-xl border border-neutral-300 dark:border-neutral-700 bg-white/70 dark:bg-neutral-800/80 px-3.5 py-2.5 text-[14px] font-medium text-neutral-900 dark:text-white backdrop-blur-md focus:outline-none focus:ring-2 focus:ring-[#151515] dark:focus:ring-[#C7FF4D]"
+            className="w-full px-3.5 py-2 rounded-xl border border-neutral-200 dark:border-neutral-800 bg-white dark:bg-neutral-900 text-[13px] text-neutral-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-[#151515] dark:focus:ring-[#C7FF4D]"
           />
         </div>
 
+        {/* Error Alert */}
         {error && (
-          <div role="alert" className="rounded-xl border border-rose-500/20 bg-rose-500/10 p-3 text-[13px] font-semibold text-rose-600 dark:text-rose-400 flex items-center gap-2">
-            <AlertCircle size={16} className="shrink-0" />
+          <div role="alert" className="p-3 rounded-xl border border-rose-500/20 bg-rose-500/10 text-[12px] font-semibold text-rose-600 dark:text-rose-400 flex items-center gap-2">
+            <AlertCircle size={15} className="shrink-0" />
             <span>{error}</span>
           </div>
         )}
 
-        <div className="flex justify-end gap-3 pt-3">
-          <GlassButton variant="secondary" onClick={onClose} disabled={busy}>
+        {/* Action Buttons */}
+        <div className="flex items-center justify-end gap-2.5 pt-2">
+          <GlassButton variant="secondary" size="md" onClick={onClose} disabled={busy}>
             Cancel
           </GlassButton>
-          <GlassButton type="submit" variant="primary" loading={busy} disabled={busy}>
+          <GlassButton variant="primary" size="md" loading={busy} type="submit">
             {isNew ? 'Create Product' : 'Save Changes'}
           </GlassButton>
         </div>
