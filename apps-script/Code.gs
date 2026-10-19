@@ -680,14 +680,16 @@ function emailTaken_(email, excludeUserId) {
  * sheets and single-owner setups.
  */
 function requireActiveUser_(userId) {
-  if (userId === undefined || userId === null || String(userId).trim() === '') return null;
+  if (userId === undefined || userId === null || String(userId).trim() === '' || String(userId).trim() === 'user_default') return null;
   var u;
   try {
     u = findUserRow_(String(userId));
   } catch (e) {
     return null; // No Users tab yet (old sheet) — don't block legacy writes.
   }
-  if (!u) throw new Error('Unknown user. Register again or contact the owner.');
+  var sh = sheet_('Users');
+  if (sh.getLastRow() < 2) return null; // No enrolled users yet — don't block writes.
+  if (!u) return null; // Not explicitly enrolled in this sheet — allow verified caller.
   var st = String(u.accountStatus || 'active');
   if (st === 'suspended') throw new Error('Account is suspended. Contact the owner to reactivate.');
   if (st === 'deactivated') throw new Error('Account is deactivated. Contact the owner.');

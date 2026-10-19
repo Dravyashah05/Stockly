@@ -400,7 +400,7 @@ async function authorize(req) {
     deviceId = ds.deviceId;
     deviceSession = raw;
   }
-  return { userId, conn, deviceId, deviceSession };
+  return { userId, conn, deviceId, deviceSession, session };
 }
 function getDeps() {
   return true;
@@ -589,7 +589,7 @@ async function handler(req, res) {
       }
     }
     if (action === "proxy") {
-      const { userId, conn, deviceId, deviceSession } = await authorize(req);
+      const { userId, conn, deviceId, deviceSession, session } = await authorize(req);
       const gsAction = String(body.gsAction ?? "").trim();
       if (!ALLOWED_PROXY_ACTIONS.has(gsAction)) {
         res.status(400).json({ success: false, error: "Unknown inventory action." });
@@ -612,10 +612,12 @@ async function handler(req, res) {
         delete payload.userId;
         delete payload.deviceId;
         delete payload.deviceSession;
+        const USER_PROFILE_ACTIONS = new Set(["registerUser", "updateUserProfile", "reportLogin", "getUser"]);
+        const forwardUserId = USER_PROFILE_ACTIONS.has(gsAction) && session && session.userId && session.userId !== "user_default";
         inner = await upstreamPost(target, {
           ...payload,
           action: gsAction,
-          userId,
+          ...forwardUserId ? { userId: session.userId } : {},
           ...deviceId && deviceSession ? { deviceId, deviceSession } : {}
         });
       }
