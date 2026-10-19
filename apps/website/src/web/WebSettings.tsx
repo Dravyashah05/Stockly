@@ -9,9 +9,13 @@ import {
   CheckCircle2,
   AlertCircle,
   HelpCircle,
+  Download,
+  Smartphone,
+  ExternalLink,
 } from 'lucide-react';
 import { sheetsApi, type SheetConnection } from '@stockly/shared-client/connection';
-import { getApiUrl, setApiUrl } from '@stockly/shared-client/config';
+import { getApiUrl, setApiUrl, APP_VERSION } from '@stockly/shared-client/config';
+import { fetchLatestRelease, formatApkSize, isNewerVersion, type ReleaseInfo } from '@stockly/shared-client/releases';
 import { GlassCard, GlassButton, StatusBadge } from '@stockly/ui';
 
 interface WebSettingsProps {
@@ -32,8 +36,31 @@ export default function WebSettings({
   const [testResult, setTestResult] = useState<{ ok: boolean; message: string } | null>(null);
   const [showGuide, setShowGuide] = useState(false);
 
+  // App Update State
+  const [updInfo, setUpdInfo] = useState<ReleaseInfo | null>(null);
+  const [updStatus, setUpdStatus] = useState<'idle' | 'checking' | 'latest' | 'available' | 'error'>('idle');
+  const [updError, setUpdError] = useState<string>('');
+
+  const checkUpdates = async () => {
+    setUpdStatus('checking');
+    setUpdError('');
+    try {
+      const rel = await fetchLatestRelease();
+      setUpdInfo(rel);
+      if (isNewerVersion(rel.version, APP_VERSION)) {
+        setUpdStatus('available');
+      } else {
+        setUpdStatus('latest');
+      }
+    } catch (e: any) {
+      setUpdStatus('error');
+      setUpdError(e?.message || 'Failed to check updates');
+    }
+  };
+
   useEffect(() => {
     void sheetsApi.getConnection().then(setConn).catch(() => setConn(null));
+    void checkUpdates();
   }, []);
 
   const handleTestConnection = async () => {
@@ -85,6 +112,90 @@ export default function WebSettings({
           Configure your database connection, display theme, and workspace preferences
         </p>
       </div>
+
+      {/* App Update & Release Card (Apple iOS style) */}
+      <GlassCard tone="regular" radius="24px" className="p-6 space-y-4">
+        <div className="flex items-center justify-between">
+          <div className="flex items-center gap-3">
+            <span className="flex h-10 w-10 items-center justify-center rounded-xl bg-blue-500/10 text-blue-600 dark:text-blue-400">
+              <Download size={20} />
+            </span>
+            <div>
+              <h3 className="font-bold text-[16px] text-neutral-900 dark:text-white flex items-center gap-2">
+                <span>Stockly App & Releases</span>
+                <span className="font-mono text-xs px-2 py-0.5 rounded-full bg-neutral-200/60 dark:bg-neutral-800 text-neutral-600 dark:text-neutral-400">
+                  v{APP_VERSION}
+                </span>
+              </h3>
+              <p className="text-[12px] text-neutral-500">
+                Universal Android APK & Web Workspace auto-releases from GitHub
+              </p>
+            </div>
+          </div>
+
+          <StatusBadge
+            tone={updStatus === 'available' ? 'warning' : updStatus === 'latest' ? 'success' : 'neutral'}
+            size="sm"
+            dot
+          >
+            {updStatus === 'checking'
+              ? 'Checking…'
+              : updStatus === 'available'
+                ? `Update v${updInfo?.version} Ready`
+                : updStatus === 'latest'
+                  ? 'On Latest Version'
+                  : 'Release Channel'}
+          </StatusBadge>
+        </div>
+
+        {/* Update status message */}
+        {updStatus === 'available' && updInfo && (
+          <div className="p-4 rounded-2xl bg-amber-500/10 border border-amber-500/25 flex flex-col sm:flex-row sm:items-center justify-between gap-3 text-[13px]">
+            <div>
+              <p className="font-bold text-amber-700 dark:text-amber-300">
+                New version v{updInfo.version} is available!
+              </p>
+              <p className="text-[12px] text-neutral-600 dark:text-neutral-400 mt-0.5">
+                Download size: {formatApkSize(updInfo.apkSize)} • Published via GitHub Releases
+              </p>
+            </div>
+            <a
+              href={updInfo.apkUrl}
+              className="inline-flex items-center gap-1.5 px-4 py-2 rounded-xl bg-[#151515] text-[#C7FF4D] dark:bg-[#C7FF4D] dark:text-[#151515] text-[12px] font-extrabold uppercase tracking-wider shadow-sm hover:scale-105 active:scale-95 transition-all self-start sm:self-auto"
+            >
+              <Download size={14} />
+              <span>Download APK</span>
+            </a>
+          </div>
+        )}
+
+        {updStatus === 'error' && updError && (
+          <div className="p-3.5 rounded-xl bg-rose-500/10 border border-rose-500/20 text-rose-600 dark:text-rose-400 text-[12px] font-medium">
+            {updError}
+          </div>
+        )}
+
+        <div className="flex flex-wrap items-center gap-3 pt-1">
+          <GlassButton
+            variant="secondary"
+            size="md"
+            loading={updStatus === 'checking'}
+            onClick={() => void checkUpdates()}
+            iconStart={<RefreshCw size={14} />}
+          >
+            {updStatus === 'checking' ? 'Checking…' : 'Check for Updates'}
+          </GlassButton>
+
+          <a
+            href="store.html"
+            className="inline-flex items-center gap-1.5 text-[12px] font-extrabold uppercase tracking-wider text-neutral-600 dark:text-neutral-300 hover:text-black dark:hover:text-white px-3.5 py-2 rounded-xl border border-neutral-300/60 dark:border-neutral-700 transition-colors"
+          >
+            <Smartphone size={14} />
+            <span>Open App Store Page</span>
+            <ExternalLink size={12} />
+          </a>
+        </div>
+      </GlassCard>
 
       {/* Google Sheets Connection Card */}
       <GlassCard tone="regular" radius="24px" className="p-6 space-y-5">

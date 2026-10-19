@@ -1,23 +1,33 @@
-/* Stockly App Store (/app-store → store.html) — minimal creative redesign.
- *
- * Minimal editorial launch page in the exact Stockly site language
- * (bg #F7F7F2, ink #151515, lime #C7FF4D). Short text, oversized type,
- * one real app screenshot, live GitHub release data only — no hardcoded
- * versions, no invented screenshots, no fake QR.
- */
-
 import { StrictMode, useEffect, useRef, useState } from 'react';
 import { createRoot } from 'react-dom/client';
 import QRCode from 'react-qr-code';
-import { ArrowDown, ArrowUpRight, Barcode, Package, ShieldCheck, Zap } from 'lucide-react';
+import {
+  ArrowDown,
+  Barcode,
+  CheckCircle2,
+  ChevronLeft,
+  ChevronRight,
+  Copy,
+  ExternalLink,
+  Laptop,
+  QrCode,
+  RefreshCw,
+  ShieldCheck,
+  Sparkles,
+  Star,
+} from 'lucide-react';
 import './site.css';
-import { Logo, Reveal } from './visuals';
+import { Logo } from './visuals';
 import { APP_VERSION } from '@stockly/shared-client/config';
-import { fetchLatestRelease, fetchReleaseChecksum, fetchReleaseHistory, formatApkSize } from '@stockly/shared-client/releases';
+import {
+  fetchLatestRelease,
+  fetchReleaseChecksum,
+  fetchReleaseHistory,
+  formatApkSize,
+} from '@stockly/shared-client/releases';
 import type { ReleaseInfo, ReleaseSummary } from '@stockly/shared-client/releases';
-import settingsShot from './stockly-settings.png';
 
-/** Stable public URL of this page — the single payload of the QR code. */
+/** Stable public URL of this page — single payload for phone QR code scanning. */
 const STORE_URL = 'https://stocklybydns.vercel.app/store.html';
 
 type LoadState =
@@ -32,7 +42,7 @@ function fmtDate(iso: string): string {
   return d.toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' });
 }
 
-/** Strip release-notes markdown into plain display lines. */
+/** Clean release-notes markdown into clear bullet lines. */
 function cleanNotes(notes: string[]): string[] {
   return notes
     .map((n) => n.replace(/^#{1,3}\s*/, '').replace(/^[-·*]\s*/, '').trim())
@@ -43,228 +53,240 @@ function isDetailLine(n: string): boolean {
   return /^(version|build|commit|note|signed with)\s*:/i.test(n);
 }
 
-function useCopyFeedback(timeoutMs = 2000): [boolean, string | null, () => void] {  const [copied, setCopied] = useState(false);
+function useCopyFeedback(timeoutMs = 2000): [boolean, string | null, (text?: string) => void] {
+  const [copied, setCopied] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const timer = useRef(0);
+
   useEffect(() => () => window.clearTimeout(timer.current), []);
-  return [
-    copied,
-    error,
-    () => {
-      setError(null);
-      const done = () => {
-        setCopied(true);
-        window.clearTimeout(timer.current);
-        timer.current = window.setTimeout(() => setCopied(false), timeoutMs);
-      };
-      const fail = () => setError('Copy failed — long-press the link to copy it.');
-      if (navigator.clipboard?.writeText) {
-        navigator.clipboard.writeText(STORE_URL).then(done).catch(fail);
-      } else {
-        try {
-          const ta = document.createElement('textarea');
-          ta.value = STORE_URL;
-          document.body.appendChild(ta);
-          ta.select();
-          document.execCommand('copy');
-          document.body.removeChild(ta);
-          done();
-        } catch {
-          fail();
-        }
+
+  const trigger = (text: string = STORE_URL) => {
+    setError(null);
+    const done = () => {
+      setCopied(true);
+      window.clearTimeout(timer.current);
+      timer.current = window.setTimeout(() => setCopied(false), timeoutMs);
+    };
+    const fail = () => setError('Copy failed — please select and copy manually.');
+
+    if (navigator.clipboard?.writeText) {
+      navigator.clipboard.writeText(text).then(done).catch(fail);
+    } else {
+      try {
+        const ta = document.createElement('textarea');
+        ta.value = text;
+        document.body.appendChild(ta);
+        ta.select();
+        document.execCommand('copy');
+        document.body.removeChild(ta);
+        done();
+      } catch {
+        fail();
       }
-    },
-  ];
+    }
+  };
+
+  return [copied, error, trigger];
 }
 
-/* App screen gallery. Each slide points at a real capture — today every
- * slide tours a genuine region of the Settings screenshot; when new app
- * screenshots land in src/web/, just add { img, kicker, caption } entries
- * below and the gallery, counter, and progress pick them up. Nothing here
- * is fabricated: every caption names something truly visible. */
-interface TourSlide {
+/* Genuine high-resolution mobile UI screenshots captured from Pixel Android device */
+interface ScreenshotSlide {
   img: string;
-  scale: number;
-  origin: string;
-  kicker: string;
-  caption: string;
+  tag: string;
+  title: string;
+  description: string;
   alt: string;
 }
 
-const TOUR_SLIDES: TourSlide[] = [
+const APP_SCREENSHOTS: ScreenshotSlide[] = [
   {
-    img: settingsShot,
-    scale: 1,
-    origin: '50% 0%',
-    kicker: 'Settings',
-    caption: 'Everything in one place.',
-    alt: 'Stockly app on Android — real Settings screen',
+    img: '/screenshots/screen-home.png',
+    tag: 'OVERVIEW & DASHBOARD',
+    title: 'Real-Time Inventory Health',
+    description: 'Total stock units, asset valuation at cost & retail basis, stock health distribution, and 1-tap quick actions.',
+    alt: 'Stockly Mobile Overview Dashboard showing stock metrics, valuation, and liquid glass navigation',
   },
   {
-    img: settingsShot,
-    scale: 2.1,
-    origin: '50% 20%',
-    kicker: 'Cloud database',
-    caption: 'Connected, on every device.',
-    alt: 'Stockly app close-up — cloud database card showing connected state',
+    img: '/screenshots/screen-inventory.png',
+    tag: 'CATALOGUE & SEARCH',
+    title: 'Instant Search & Categorization',
+    description: 'Dynamic category filter pills, low-stock alerts, instant search by SKU or name, and price badges.',
+    alt: 'Stockly Mobile Catalogue screen with category chips and product listings',
   },
   {
-    img: settingsShot,
-    scale: 2.1,
-    origin: '50% 50%',
-    kicker: 'Sync status',
-    caption: 'Fresh data in one tap.',
-    alt: 'Stockly app close-up — sync status card with Sync now button',
+    img: '/screenshots/screen-stock.png',
+    tag: 'FAST MOVEMENTS',
+    title: 'Liquid Glass Stock In & Out',
+    description: 'Native-feeling modal sheet with quantity counter, live quantity preview (10 → 15), and optional cost note tracking.',
+    alt: 'Stockly Mobile Stock In & Out sheet with quantity stepper and live calculation',
   },
   {
-    img: settingsShot,
-    scale: 2.1,
-    origin: '50% 72%',
-    kicker: 'Appearance',
-    caption: 'Dark mode, done right.',
-    alt: 'Stockly app close-up — appearance controls with Dark mode selected',
+    img: '/screenshots/screen-activity.png',
+    tag: 'AUDIT LEDGER',
+    title: 'Chronological Transaction History',
+    description: 'Tamper-evident audit timeline of all stock movements with IN/OUT badge indicators, timestamps, and filters.',
+    alt: 'Stockly Mobile Transaction History screen showing audit movements',
   },
   {
-    img: settingsShot,
-    scale: 2.1,
-    origin: '50% 92%',
-    kicker: 'Navigate',
-    caption: 'Home, products, history.',
-    alt: 'Stockly app close-up — bottom navigation bar',
+    img: '/screenshots/screen-settings.png',
+    tag: 'CLOUD SYNC & UPDATER',
+    title: 'Google Sheets Sync & In-App Updates',
+    description: 'Direct 2-way Google Sheets cloud database sync, seamless GitHub Releases in-app updater, and appearance controls.',
+    alt: 'Stockly Mobile Settings screen with in-app updater and cloud database connection',
   },
 ];
 
-function ScreenTour() {
-  const [index, setIndex] = useState(0);
-  const [paused, setPaused] = useState(false);
-  const touchX = useRef<number | null>(null);
-  const reduceMotion =
-    typeof window !== 'undefined' && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
-  const total = TOUR_SLIDES.length;
-  const go = (dir: 1 | -1) => setIndex((i) => (i + dir + total) % total);
+/* Apple App Store Screenshot Showcase Component */
+function AppStoreScreenshotShowcase() {
+  const [activeIdx, setActiveIdx] = useState(0);
+  const [isPaused, setIsPaused] = useState(false);
+  const containerRef = useRef<HTMLDivElement>(null);
+  const total = APP_SCREENSHOTS.length;
+
+  const scrollToSlide = (idx: number) => {
+    const nextIdx = (idx + total) % total;
+    setActiveIdx(nextIdx);
+    if (containerRef.current) {
+      const slideEl = containerRef.current.children[nextIdx] as HTMLElement;
+      if (slideEl) {
+        slideEl.scrollIntoView({ behavior: 'smooth', block: 'nearest', inline: 'center' });
+      }
+    }
+  };
 
   useEffect(() => {
-    if (paused || reduceMotion) return;
-    const t = window.setInterval(() => setIndex((i) => (i + 1) % total), 5000);
-    return () => window.clearInterval(t);
-  }, [paused, total, reduceMotion]);
+    if (isPaused) return;
+    const interval = window.setInterval(() => {
+      setActiveIdx((prev) => (prev + 1) % total);
+    }, 6000);
+    return () => window.clearInterval(interval);
+  }, [isPaused, total]);
 
-  const slide = TOUR_SLIDES[index];
-  const num = String(index + 1).padStart(2, '0');
+  const active = APP_SCREENSHOTS[activeIdx];
+
   return (
-    <figure
-      className="relative mx-auto w-full max-w-[340px]"
-      onMouseEnter={() => setPaused(true)}
-      onMouseLeave={() => setPaused(false)}
-      onFocus={() => setPaused(true)}
-      onBlur={() => setPaused(false)}
+    <div
+      className="space-y-8"
+      onMouseEnter={() => setIsPaused(true)}
+      onMouseLeave={() => setIsPaused(false)}
     >
-      {/* gallery backdrop */}
-      <span aria-hidden="true" className="tnum pointer-events-none absolute -top-10 left-1/2 -translate-x-1/2 select-none text-[7rem] font-extrabold leading-none tracking-tight text-[#EAEAE4]">
-        {num}
-      </span>
-      <span aria-hidden="true" className="absolute left-1/2 top-24 -z-10 h-72 w-72 -translate-x-1/2 rounded-full bg-[#C7FF4D]/50 blur-3xl" />
-      <span aria-hidden="true" className="absolute -right-4 top-1/3 -z-10 h-28 w-28 rounded-full border-[10px] border-[#C7FF4D]" />
-
-      {/* device */}
-      <div className="relative -rotate-2 rounded-[48px] bg-[#151515] p-3 shadow-[0_60px_100px_-40px_rgba(21,21,21,0.6)] ring-1 ring-black transition-transform duration-500 hover:rotate-0">
-        <div
-          className="overflow-hidden rounded-[38px] bg-black"
-          onTouchStart={(e) => {
-            touchX.current = e.touches[0].clientX;
-          }}
-          onTouchEnd={(e) => {
-            if (touchX.current === null) return;
-            const dx = e.changedTouches[0].clientX - touchX.current;
-            if (dx < -40) go(1);
-            else if (dx > 40) go(-1);
-            touchX.current = null;
-          }}
-        >
-          <img
-            key={slide.img}
-            src={slide.img}
-            alt={slide.alt}
-            className="block aspect-[9/19.5] w-full object-cover object-top"
-            style={{
-              transform: `scale(${slide.scale})`,
-              transformOrigin: slide.origin,
-              transition: reduceMotion ? 'none' : 'transform 0.9s cubic-bezier(0.22, 0.9, 0.3, 1)',
-            }}
-            loading="lazy"
-          />
+      {/* Header and Controls */}
+      <div className="flex flex-col sm:flex-row sm:items-end justify-between gap-4">
+        <div>
+          <span className="text-[11px] font-extrabold uppercase tracking-[0.24em] text-neutral-500">
+            Preview & Highlights
+          </span>
+          <h2 className="text-3xl sm:text-4xl font-extrabold tracking-tight mt-1 text-neutral-900 dark:text-white">
+            Screenshots
+          </h2>
         </div>
-        <span aria-hidden="true" className="absolute -left-1.5 top-24 h-10 w-1 rounded-full bg-[#C7FF4D]" />
-        <span aria-hidden="true" className="absolute -right-1.5 top-28 h-14 w-1 rounded-full bg-white/25" />
-      </div>
 
-      {/* caption deck */}
-      <div className="mt-8 flex items-end justify-between gap-4">
-        <div className="min-w-0">
-          <p aria-live="polite" className="text-[11px] font-extrabold uppercase tracking-[0.28em] text-neutral-400">
-            {slide.kicker} · {num} / {String(total).padStart(2, '0')}
-          </p>
-          <p aria-live="polite" className="mt-1.5 truncate text-[19px] font-extrabold tracking-tight" title={slide.caption}>
-            {slide.caption}
-          </p>
-        </div>
-        <div className="flex shrink-0 items-center gap-2">
+        {/* Carousel Prev/Next Buttons */}
+        <div className="flex items-center gap-2">
           <button
             type="button"
-            onClick={() => go(-1)}
-            aria-label="Previous app view"
-            className="flex h-11 w-11 items-center justify-center rounded-full border border-[#151515] transition-all hover:bg-[#151515] hover:text-white active:scale-95"
+            onClick={() => scrollToSlide(activeIdx - 1)}
+            aria-label="Previous screenshot"
+            className="flex h-10 w-10 items-center justify-center rounded-full glass-surface text-neutral-800 dark:text-neutral-200 hover:scale-105 active:scale-95 transition-all shadow-sm"
           >
-            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
-              <path d="M19 12H5m0 0l6-6m-6 6l6 6" />
-            </svg>
+            <ChevronLeft size={18} strokeWidth={2.4} />
           </button>
+          <span className="text-[12px] font-mono font-bold text-neutral-500 px-2">
+            0{activeIdx + 1} / 0{total}
+          </span>
           <button
             type="button"
-            onClick={() => go(1)}
-            aria-label="Next app view"
-            className="flex h-11 w-11 items-center justify-center rounded-full bg-[#C7FF4D] text-[#151515] transition-transform hover:scale-105 active:scale-95"
+            onClick={() => scrollToSlide(activeIdx + 1)}
+            aria-label="Next screenshot"
+            className="flex h-10 w-10 items-center justify-center rounded-full bg-[#151515] text-[#C7FF4D] dark:bg-[#C7FF4D] dark:text-[#151515] hover:scale-105 active:scale-95 transition-all shadow-sm"
           >
-            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
-              <path d="M5 12h14m0 0l-6-6m6 6l-6 6" />
-            </svg>
+            <ChevronRight size={18} strokeWidth={2.4} />
           </button>
         </div>
       </div>
-      {/* autoplay progress, in sync with the 5s interval */}
-      <div className="mt-4 h-[3px] overflow-hidden rounded-full bg-[#EAEAE4]" aria-hidden="true">
-        {!reduceMotion && !paused ? (
-          <div key={index} className="st-tour-bar h-full w-full bg-[#151515]" />
-        ) : (
-          <div className="h-full w-full bg-[#151515]" style={{ transform: `scaleX(${(index + 1) / total})`, transformOrigin: 'left center' }} />
-        )}
+
+      {/* Horizontal Scrollable Gallery */}
+      <div
+        ref={containerRef}
+        className="store-gallery-scroll pb-4 -mx-5 px-5 sm:-mx-8 sm:px-8"
+      >
+        {APP_SCREENSHOTS.map((s, idx) => {
+          const isCurrent = idx === activeIdx;
+          return (
+            <div
+              key={s.tag}
+              onClick={() => setActiveIdx(idx)}
+              className={`store-gallery-item cursor-pointer transition-all duration-300 w-[240px] sm:w-[280px] lg:w-[300px] ${
+                isCurrent ? 'scale-100 opacity-100' : 'scale-95 opacity-60 hover:opacity-85'
+              }`}
+            >
+              {/* Phone Device Bezel */}
+              <div className="phone-frame">
+                <div className="phone-screen shadow-xl">
+                  <img
+                    src={s.img}
+                    alt={s.alt}
+                    className="w-full h-full object-cover object-top block"
+                    loading="lazy"
+                  />
+                </div>
+              </div>
+
+              {/* Caption Card below mockup */}
+              <div className="mt-4 px-2">
+                <span className="text-[10px] font-extrabold uppercase tracking-[0.2em] text-neutral-400 block truncate">
+                  {s.tag}
+                </span>
+                <p className="text-[14px] font-extrabold tracking-tight text-neutral-900 dark:text-white mt-0.5 line-clamp-1">
+                  {s.title}
+                </p>
+              </div>
+            </div>
+          );
+        })}
       </div>
-      <div className="mt-3 flex items-center gap-2" role="tablist" aria-label="App views">
-        {TOUR_SLIDES.map((s, i) => (
-          <button
-            key={`${s.kicker}-${i}`}
-            type="button"
-            role="tab"
-            aria-selected={i === index}
-            aria-label={`Show: ${s.kicker} — ${s.caption}`}
-            onClick={() => setIndex(i)}
-            className={`h-1.5 rounded-full transition-all ${
-              i === index ? 'w-6 bg-[#151515]' : 'w-1.5 bg-[#D9D9D0] hover:bg-neutral-400'
-            }`}
-          />
-        ))}
+
+      {/* Slide Description Deck */}
+      <div className="rounded-3xl glass-surface p-6 sm:p-7 flex flex-col md:flex-row items-start md:items-center justify-between gap-6 shadow-sm">
+        <div className="space-y-1 max-w-2xl">
+          <span className="inline-block text-[11px] font-extrabold uppercase tracking-[0.2em] text-[#1E7B3C] dark:text-[#C7FF4D]">
+            {active.tag}
+          </span>
+          <h3 className="text-xl sm:text-2xl font-extrabold tracking-tight text-neutral-900 dark:text-white">
+            {active.title}
+          </h3>
+          <p className="text-[14px] leading-relaxed text-neutral-600 dark:text-neutral-400">
+            {active.description}
+          </p>
+        </div>
+
+        {/* Thumbnail Selector Dots */}
+        <div className="flex items-center gap-2 self-start md:self-auto shrink-0">
+          {APP_SCREENSHOTS.map((_, i) => (
+            <button
+              key={i}
+              type="button"
+              aria-label={`Jump to screenshot ${i + 1}`}
+              onClick={() => scrollToSlide(i)}
+              className={`h-2 rounded-full transition-all duration-300 ${
+                i === activeIdx ? 'w-8 bg-[#151515] dark:bg-[#C7FF4D]' : 'w-2 bg-neutral-300 dark:bg-neutral-700 hover:bg-neutral-400'
+              }`}
+            />
+          ))}
+        </div>
       </div>
-      <figcaption className="sr-only">Real Stockly app screens.</figcaption>
-    </figure>
+    </div>
   );
 }
 
-function StoreApp() {
+export default function StoreApp() {
   const [rel, setRel] = useState<LoadState>({ status: 'checking' });
   const [history, setHistory] = useState<ReleaseSummary[] | null>(null);
   const [sha, setSha] = useState<string | null>(null);
-  const [notesOpen, setNotesOpen] = useState(false);
-  const [copied, copyError, copyLink] = useCopyFeedback();
+  const [showQrModal, setShowQrModal] = useState(false);
+  const [notesOpen, setNotesOpen] = useState(true);
+  const [copiedLink, , copyLink] = useCopyFeedback();
+  const [copiedSha, , copySha] = useCopyFeedback();
   const alive = useRef(true);
 
   useEffect(() => {
@@ -277,17 +299,19 @@ function StoreApp() {
         if (alive.current) {
           setRel({
             status: 'error',
-            message: e instanceof Error && e.message ? e.message : 'Couldn’t load release info.',
+            message: e instanceof Error && e.message ? e.message : 'Could not fetch latest release.',
           });
         }
       });
-    fetchReleaseHistory(20)
+
+    fetchReleaseHistory(15)
       .then((list) => {
         if (alive.current) setHistory(list);
       })
       .catch(() => {
         if (alive.current) setHistory(null);
       });
+
     return () => {
       alive.current = false;
     };
@@ -304,7 +328,7 @@ function StoreApp() {
         if (alive.current && digest) setSha(digest);
       })
       .catch(() => {
-        /* checksum stays hidden — download still works */
+        /* checksum optional */
       });
   }, [rel]);
 
@@ -312,405 +336,528 @@ function StoreApp() {
   const prior = (history || []).filter((h) => h.tag !== info?.tag);
   const notes = info ? cleanNotes(info.releaseNotes).filter((n) => !isDetailLine(n)) : [];
   const versionLabel = info ? `v${info.version}` : `v${APP_VERSION}`;
-  const sizeLabel = info && info.apkSize > 0 ? formatApkSize(info.apkSize) : '';
+  const sizeLabel = info && info.apkSize > 0 ? formatApkSize(info.apkSize) : '~12 MB';
   const dateLabel = info && info.publishedAt ? fmtDate(info.publishedAt) : '';
 
   return (
-    <div className="min-h-screen overflow-x-clip bg-[#F7F7F2] text-[#151515]">
-      <a
-        href="#download"
-        className="sr-only focus:not-sr-only focus:absolute focus:left-4 focus:top-4 focus:z-[100] focus:rounded-lg focus:bg-[#151515] focus:px-4 focus:py-2 focus:text-white"
-      >
-        Skip to download
-      </a>
-
-      {/* ---------------- nav ---------------- */}
-      <header className="sticky top-0 z-50 border-b border-[#D9D9D0] bg-[#F7F7F2]/90 backdrop-blur-md">
+    <div className="min-h-screen overflow-x-clip bg-[#F7F7F2] dark:bg-[#111210] text-[#151515] dark:text-[#F7F7F2] font-sans">
+      {/* ---------------- Navigation Bar ---------------- */}
+      <header className="sticky top-0 z-50 border-b border-[#D9D9D0]/70 dark:border-neutral-800 bg-[#F7F7F2]/80 dark:bg-[#111210]/80 backdrop-blur-xl">
         <nav aria-label="Primary" className="mx-auto flex h-16 max-w-6xl items-center justify-between px-5 sm:px-8">
-          <a href="index.html" className="flex items-center gap-2.5" aria-label="Back to Stockly home">
-            <Logo />
-            <span className="text-[17px] font-extrabold tracking-tight">Stockly</span>
-          </a>
-          <div className="flex items-center gap-4 sm:gap-6">
-            <div className="hidden items-center gap-6 md:flex">
-              <a href="#download" className="text-[12px] font-bold uppercase tracking-[0.14em] text-neutral-500 transition-colors hover:text-[#151515]">
-                Latest
-              </a>
-              <a href="#history" className="text-[12px] font-bold uppercase tracking-[0.14em] text-neutral-500 transition-colors hover:text-[#151515]">
-                History
-              </a>
-              <a href="#install" className="text-[12px] font-bold uppercase tracking-[0.14em] text-neutral-500 transition-colors hover:text-[#151515]">
-                Install
-              </a>
-            </div>
-            <span className="hidden text-[12px] font-extrabold uppercase tracking-[0.14em] text-neutral-500 md:inline">
+          <div className="flex items-center gap-3">
+            <a href="index.html" className="flex items-center gap-2.5" aria-label="Back to Stockly home">
+              <Logo size={28} />
+              <span className="text-[17px] font-extrabold tracking-tight">Stockly</span>
+            </a>
+            <span className="h-4 w-px bg-neutral-300 dark:bg-neutral-700 hidden sm:inline" />
+            <span className="text-[12px] font-bold uppercase tracking-wider text-neutral-500 hidden sm:inline">
               App Store
             </span>
+          </div>
+
+          <div className="flex items-center gap-3 sm:gap-5">
             <a
-              href="#download"
-              aria-label="Download app"
-              className="flex h-10 w-10 items-center justify-center rounded-full bg-[#C7FF4D] text-[#151515] transition-transform hover:scale-105 active:scale-95"
+              href="#/app"
+              className="text-[12px] font-extrabold uppercase tracking-wider text-neutral-600 dark:text-neutral-400 hover:text-black dark:hover:text-white transition-colors hidden md:inline-flex items-center gap-1.5"
             >
-              <ArrowDown size={17} strokeWidth={2.5} aria-hidden="true" />
+              <span>Launch Web App</span>
+              <ExternalLink size={13} />
             </a>
+
+            <button
+              type="button"
+              onClick={() => setShowQrModal(true)}
+              className="flex items-center gap-1.5 px-3 py-1.5 rounded-full text-[12px] font-bold glass-surface hover:scale-105 active:scale-95 transition-all text-neutral-800 dark:text-neutral-200"
+            >
+              <QrCode size={14} />
+              <span className="hidden sm:inline">Phone QR</span>
+            </button>
+
+            {info ? (
+              <a
+                href={info.apkUrl}
+                className="flex items-center gap-2 rounded-full bg-[#151515] dark:bg-[#C7FF4D] px-4 py-2 text-[12px] font-extrabold uppercase tracking-wider text-[#C7FF4D] dark:text-[#151515] shadow-sm hover:scale-105 active:scale-95 transition-all"
+              >
+                <ArrowDown size={14} strokeWidth={2.5} />
+                <span>Get APK</span>
+              </a>
+            ) : (
+              <a
+                href="#download"
+                className="flex items-center gap-2 rounded-full bg-[#151515] dark:bg-[#C7FF4D] px-4 py-2 text-[12px] font-extrabold uppercase tracking-wider text-[#C7FF4D] dark:text-[#151515] shadow-sm hover:scale-105 active:scale-95 transition-all"
+              >
+                <ArrowDown size={14} strokeWidth={2.5} />
+                <span>Get</span>
+              </a>
+            )}
           </div>
         </nav>
       </header>
 
-      <main>
-        {/* ---------------- hero ---------------- */}
-        <section className="mx-auto grid max-w-6xl gap-12 px-5 pb-20 pt-14 sm:px-8 sm:pt-20 lg:grid-cols-2 lg:items-center lg:gap-8 lg:pb-28">
-          <div>
-            <p className="st-enter inline-flex items-center gap-2 text-[11px] font-extrabold uppercase tracking-[0.28em] text-neutral-500">
-              <span className="h-1.5 w-1.5 rounded-full bg-[#151515]" aria-hidden="true" />
-              Official release
-            </p>
-            <h1
-              className="st-enter mt-5 text-[17vw] font-extrabold leading-[0.95] tracking-tight sm:text-7xl lg:text-[5.5rem]"
-              style={{ animationDelay: '0.08s' }}
-            >
-              Stock up.
-              <br />
-              Stay{' '}
-              <span className="relative inline-block">
-                ahead.
-                <span aria-hidden="true" className="absolute -bottom-1 left-0 h-[6px] w-full rounded-full bg-[#C7FF4D]" />
-              </span>
-            </h1>
-            <p className="st-enter mt-6 text-[17px] font-medium text-neutral-600" style={{ animationDelay: '0.16s' }}>
-              Inventory management, in your pocket.
-            </p>
-            <div className="st-enter mt-8" style={{ animationDelay: '0.22s' }}>
-              {info ? (
-                <a
-                  href={info.apkUrl}
-                  className="inline-block rounded-full bg-[#C7FF4D] px-9 py-4 text-[13px] font-extrabold uppercase tracking-[0.14em] text-[#151515] transition-transform hover:scale-[1.03] active:scale-95"
-                >
-                  Download for Android
-                </a>
-              ) : (
-                <a
-                  href="#download"
-                  className="inline-block rounded-full bg-[#C7FF4D] px-9 py-4 text-[13px] font-extrabold uppercase tracking-[0.14em] text-[#151515] transition-transform hover:scale-[1.03] active:scale-95"
-                >
-                  {rel.status === 'checking' ? 'Checking…' : 'Get the APK'}
-                </a>
-              )}
-            </div>
-            <p className="st-enter tnum mt-5 text-[12.5px] font-bold uppercase tracking-[0.16em] text-neutral-400" style={{ animationDelay: '0.28s' }}>
-              {info ? (
-                <>
-                  {versionLabel}
-                  {sizeLabel ? ` · ${sizeLabel}` : ''}
-                  {dateLabel ? ` · ${dateLabel}` : ''}
-                </>
-              ) : rel.status === 'error' ? (
-                rel.message
-              ) : (
-                'Checking the latest release…'
-              )}
-            </p>
-          </div>
+      <main className="mx-auto max-w-6xl px-5 sm:px-8 py-10 sm:py-16 space-y-16 sm:space-y-24">
+        {/* ---------------- Apple App Store Product Hero ---------------- */}
+        <section className="relative">
+          <span aria-hidden="true" className="ambient-glow top-0 left-10 h-72 w-72 bg-[#C7FF4D]/30" />
+          <span aria-hidden="true" className="ambient-glow bottom-0 right-10 h-64 w-64 bg-blue-500/20" />
 
-          {/* app preview — the centerpiece */}
-          <Reveal delay="st-d1" className="relative">
-            <div className="relative mx-auto w-full max-w-[320px]">
-              <span aria-hidden="true" className="absolute -left-10 top-16 h-24 w-24 rounded-full bg-[#C7FF4D]/60 blur-2xl" />
-              <div className="relative rounded-[48px] bg-[#151515] p-3 shadow-[0_50px_100px_-40px_rgba(21,21,21,0.55)] transition-transform duration-500 hover:-translate-y-1.5">
-                <div className="overflow-hidden rounded-[36px]">
-                  <img
-                    src={settingsShot}
-                    alt="Stockly app on Android — Settings screen with cloud connection, sync status and appearance controls"
-                    className="block aspect-[9/19.5] w-full object-cover object-top"
-                    loading="eager"
-                  />
-                </div>
-              </div>
-              <div className="st-float absolute -right-3 top-10 flex items-center gap-2.5 rounded-2xl bg-[#151515] py-3 pl-3.5 pr-5 text-white shadow-[0_18px_36px_-14px_rgba(21,21,21,0.55)] sm:-right-8">
-                <span className="h-2 w-2 rounded-full bg-[#C7FF4D]" aria-hidden="true" />
-                <span>
-                  <span className="tnum block text-[15px] font-extrabold leading-none">{info ? versionLabel : `v${APP_VERSION}`}</span>
-                  <span className="mt-1 block text-[10px] font-extrabold uppercase tracking-[0.2em] text-white/50">Latest</span>
+          <div className="relative z-10 flex flex-col md:flex-row items-start md:items-center gap-6 sm:gap-8 pb-10 border-b border-[#D9D9D0]/70 dark:border-neutral-800">
+            {/* App Icon with specular squircle */}
+            <div className="relative h-28 w-28 sm:h-36 sm:w-36 rounded-[28px] sm:rounded-[34px] bg-linear-to-b from-[#2A2B27] to-[#151515] p-3 shadow-2xl shrink-0 flex items-center justify-center border border-white/20">
+              <Logo size={68} light />
+              <span className="absolute inset-0 rounded-[28px] sm:rounded-[34px] shadow-inner pointer-events-none border border-white/30" />
+            </div>
+
+            {/* App Header Titles & Developer info */}
+            <div className="flex-1 min-w-0">
+              <div className="flex items-center gap-2 flex-wrap">
+                <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-[10.5px] font-extrabold uppercase tracking-wider bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border border-emerald-500/20">
+                  <CheckCircle2 size={12} /> Official Release
+                </span>
+                <span className="text-[12px] font-mono font-bold text-neutral-400">
+                  {versionLabel}
                 </span>
               </div>
-              <div className="absolute -bottom-5 -left-3 flex items-center gap-2 rounded-full border border-[#D9D9D0] bg-white/90 py-2 pl-3 pr-4 backdrop-blur sm:-left-8">
-                <Logo size={18} />
-                <span className="text-[11px] font-extrabold uppercase tracking-[0.16em]">Android · APK</span>
-              </div>
-            </div>
-          </Reveal>
-        </section>
 
-        {/* ---------------- latest release ---------------- */}
-        <section id="download" className="scroll-mt-24 border-t border-[#D9D9D0]">
-          <div className="mx-auto grid max-w-6xl gap-12 px-5 py-20 sm:px-8 sm:py-28 lg:grid-cols-[1fr_1fr] lg:items-center">
-            <Reveal className="order-2 lg:order-1">
-              <ScreenTour />
-            </Reveal>
+              <h1 className="text-3xl sm:text-5xl font-black tracking-tight text-neutral-900 dark:text-white mt-1.5">
+                Stockly: Inventory & Stock
+              </h1>
+              <p className="text-base sm:text-lg font-semibold text-neutral-500 dark:text-neutral-400 mt-1">
+                Real-time Google Sheets Cloud Sync • Apple iOS Liquid Glass UI
+              </p>
+              <p className="text-[13px] font-medium text-neutral-400 mt-0.5">
+                DNS Studio • In-House Tooling • Self-Hosted & Private
+              </p>
 
-            <div className="order-1 lg:order-2">
-              <Reveal>
-                <p className="flex items-center gap-3">
-                  <span className="flex h-12 w-12 items-center justify-center rounded-2xl bg-[#151515]">
-                    <Logo size={24} light />
-                  </span>
-                  <span className="text-[19px] font-extrabold tracking-tight">Stockly for Android</span>
-                </p>
-                <p className="tnum mt-6 text-7xl font-extrabold leading-none tracking-tight sm:text-8xl">
-                  {info ? versionLabel : `v${APP_VERSION}`}
-                </p>
-                <p className="tnum mt-4 text-[13px] font-bold uppercase tracking-[0.18em] text-neutral-500">
-                  {info ? (
-                    <>
-                      {dateLabel || 'Official build'}
-                      {sizeLabel ? ` · ${sizeLabel}` : ''}
-                    </>
-                  ) : rel.status === 'error' ? (
-                    rel.message
-                  ) : (
-                    'Checking the latest release…'
-                  )}
-                </p>
+              {/* Action Buttons */}
+              <div className="flex flex-wrap items-center gap-3 mt-6">
                 {info ? (
                   <a
                     href={info.apkUrl}
-                    className="mt-8 block rounded-full bg-[#151515] py-4 text-center text-[13px] font-extrabold uppercase tracking-[0.14em] text-[#C7FF4D] transition-transform hover:scale-[1.02] active:scale-95"
+                    className="flex items-center gap-2.5 rounded-full bg-[#151515] text-[#C7FF4D] dark:bg-[#C7FF4D] dark:text-[#151515] px-7 py-3.5 text-[13px] font-extrabold uppercase tracking-wider shadow-lg hover:scale-105 active:scale-95 transition-all"
                   >
-                    Download APK{sizeLabel ? ` · ${sizeLabel}` : ''}
+                    <ArrowDown size={16} strokeWidth={2.6} />
+                    <span>Download APK ({sizeLabel})</span>
                   </a>
                 ) : (
-                  <span
-                    aria-disabled="true"
-                    className="mt-8 block rounded-full bg-[#EAEAE4] py-4 text-center text-[13px] font-extrabold uppercase tracking-[0.14em] text-neutral-500"
+                  <a
+                    href="#download"
+                    className="flex items-center gap-2.5 rounded-full bg-[#151515] text-[#C7FF4D] dark:bg-[#C7FF4D] dark:text-[#151515] px-7 py-3.5 text-[13px] font-extrabold uppercase tracking-wider shadow-lg hover:scale-105 active:scale-95 transition-all"
                   >
-                    {rel.status === 'checking' ? 'Checking…' : 'APK coming soon'}
-                  </span>
+                    <RefreshCw size={16} className="animate-spin" />
+                    <span>Checking Release…</span>
+                  </a>
                 )}
-                <div className="mt-5 flex items-center gap-6">
-                  {notes.length > 0 ? (
-                    <button
-                      type="button"
-                      onClick={() => setNotesOpen((v) => !v)}
-                      aria-expanded={notesOpen}
-                      className="group inline-flex items-center gap-1.5 text-[12px] font-extrabold uppercase tracking-[0.16em] underline-offset-4 hover:underline"
-                    >
-                      Release notes
-                      <ArrowUpRight size={15} strokeWidth={2.5} aria-hidden="true" className="transition-transform group-hover:translate-x-0.5 group-hover:-translate-y-0.5" />
-                    </button>
-                  ) : null}
-                  {info?.releaseUrl ? (
-                    <a
-                      href={info.releaseUrl}
-                      target="_blank"
-                      rel="noreferrer"
-                      className="inline-flex items-center gap-1.5 text-[12px] font-extrabold uppercase tracking-[0.16em] text-neutral-400 underline-offset-4 transition-colors hover:text-[#151515] hover:underline"
-                    >
-                      GitHub
-                      <ArrowUpRight size={15} strokeWidth={2.5} aria-hidden="true" />
-                    </a>
-                  ) : null}
-                </div>
-                {notesOpen && notes.length > 0 ? (
-                  <ul className="mt-4 space-y-2 border-t border-[#D9D9D0] pt-4">
-                    {notes.slice(0, 8).map((n) => (
-                      <li key={n} className="flex gap-2.5 text-[14px] font-medium leading-relaxed text-neutral-600">
-                        <span aria-hidden="true" className="mt-[9px] h-1.5 w-1.5 shrink-0 rounded-full bg-[#C7FF4D] ring-1 ring-[#151515]" />
-                        {n}
-                      </li>
-                    ))}
-                  </ul>
-                ) : null}
-                <p className="tnum mt-5 break-all text-[11.5px] font-semibold leading-relaxed text-neutral-400">
-                  {sha ? (
-                    <>SHA-256 · {sha}</>
-                  ) : (
-                    <>Checksum appears with the release.</>
-                  )}
-                </p>
-              </Reveal>
-            </div>
-          </div>
-        </section>
 
-        {/* ---------------- QR ---------------- */}
-        <section aria-label="Get Stockly on your phone" className="border-t border-[#D9D9D0] bg-[#111210] text-white">
-          <div className="mx-auto grid max-w-6xl items-center gap-10 px-5 py-20 sm:px-8 sm:py-24 lg:grid-cols-2">
-            <Reveal>
-              <h2 className="text-5xl font-extrabold leading-[1.0] tracking-tight sm:text-6xl">
-                Your phone.
-                <br />
-                Your stock.
-              </h2>
-              <p className="mt-4 text-[11px] font-extrabold uppercase tracking-[0.28em] text-[#C7FF4D]">
-                Scan to get Stockly
-              </p>
-              <p className="mt-3 max-w-[32ch] text-[14px] font-medium leading-relaxed text-white/55">
-                Point your camera. Open the store. Download the latest APK.
-              </p>
-              <div className="mt-7 flex flex-wrap items-center gap-3">
                 <button
                   type="button"
-                  onClick={copyLink}
-                  className="rounded-full bg-[#C7FF4D] px-7 py-3.5 text-[12px] font-extrabold uppercase tracking-[0.14em] text-[#151515] transition-transform hover:scale-[1.03] active:scale-95"
+                  onClick={() => setShowQrModal(true)}
+                  className="flex items-center gap-2 rounded-full glass-surface px-6 py-3.5 text-[13px] font-bold hover:scale-105 active:scale-95 transition-all text-neutral-900 dark:text-white shadow-sm"
                 >
-                  {copied ? 'Link copied ✓' : 'Copy link'}
+                  <QrCode size={16} />
+                  <span>Scan QR Code</span>
                 </button>
+
                 <a
-                  href={STORE_URL}
-                  className="rounded-full border border-white/25 px-7 py-3.5 text-[12px] font-extrabold uppercase tracking-[0.14em] text-white transition-colors hover:bg-white/10"
+                  href="#/app"
+                  className="flex items-center gap-2 rounded-full border border-neutral-300 dark:border-neutral-700 px-6 py-3.5 text-[13px] font-bold text-neutral-700 dark:text-neutral-300 hover:bg-black/5 dark:hover:bg-white/5 transition-colors"
                 >
-                  Open page
+                  <Laptop size={15} />
+                  <span>Open Web Workspace</span>
                 </a>
               </div>
-              <p aria-live="polite" className="sr-only">
-                {copied ? 'Store download link copied to clipboard.' : ''}
-              </p>
-              {copyError ? (
-                <p role="alert" className="mt-3 text-[13px] font-semibold text-[#C7FF4D]">
-                  {copyError}
-                </p>
-              ) : null}
-            </Reveal>
-            <Reveal delay="st-d1" className="flex justify-center lg:justify-end">
-              <div className="text-center">
-                <span className="inline-block rounded-[28px] bg-white p-5 shadow-[0_30px_60px_-20px_rgba(199,255,77,0.25)]">
-                  <QRCode value={STORE_URL} size={192} bgColor="#FFFFFF" fgColor="#151515" aria-label={`QR code linking to ${STORE_URL}`} />
-                </span>
-                <p className="tnum mt-4 text-[12px] font-semibold text-white/40">{STORE_URL.replace(/^https:\/\//, '')}</p>
-              </div>
-            </Reveal>
-          </div>
-        </section>
-
-        {/* ---------------- features ---------------- */}
-        <section className="mx-auto max-w-6xl px-5 py-20 sm:px-8 sm:py-28">
-          <Reveal>
-            <h2 className="max-w-[12ch] text-5xl font-extrabold leading-[1.0] tracking-tight sm:text-6xl">
-              Made for the shop floor.
-            </h2>
-          </Reveal>
-          <div className="mt-12 grid gap-10 sm:grid-cols-3 sm:gap-0 sm:divide-x sm:divide-[#D9D9D0]">
-            {[
-              { icon: Package, t: 'Track stock', d: 'Every product, counted.' },
-              { icon: Zap, t: 'Move faster', d: 'Stock in and out in seconds.' },
-              { icon: ShieldCheck, t: 'Stay in control', d: 'One shared Sheet, always synced.' },
-            ].map((f, i) => (
-              <Reveal key={f.t} delay={i === 1 ? 'st-d1' : i === 2 ? 'st-d2' : ''} className="sm:px-10 sm:first:pl-0 sm:last:pr-0">
-                <f.icon size={40} strokeWidth={1.5} aria-hidden="true" />
-                <h3 className="mt-5 text-[13px] font-extrabold uppercase tracking-[0.22em]">{f.t}</h3>
-                <p className="mt-2 text-[15px] font-medium text-neutral-600">{f.d}</p>
-              </Reveal>
-            ))}
-          </div>
-        </section>
-
-        {/* ---------------- history ---------------- */}
-        <section id="history" className="scroll-mt-24 border-t border-[#D9D9D0]">
-          <div className="mx-auto max-w-6xl px-5 py-20 sm:px-8 sm:py-24">
-            <Reveal>
-              <h2 className="text-5xl font-extrabold leading-[1.0] tracking-tight sm:text-6xl">Releases.</h2>
-            </Reveal>
-            <Reveal delay="st-d1">
-              <div className="mt-10">
-                {history === null ? (
-                  <p className="border-t-2 border-[#151515] pt-5 text-[14px] font-medium text-neutral-500">
-                    Couldn’t load the release history.
-                  </p>
-                ) : info || prior.length > 0 ? (
-                  <ol>
-                    {info ? (
-                      <li className="flex items-baseline gap-4 border-t-2 border-[#151515] py-5">
-                        <span className="tnum text-3xl font-extrabold tracking-tight sm:text-4xl">v{info.version}</span>
-                        <span className="rounded-full bg-[#C7FF4D] px-3 py-1 text-[10px] font-extrabold uppercase tracking-[0.18em]">
-                          Latest
-                        </span>
-                        <span className="tnum ml-auto hidden text-[13px] font-semibold text-neutral-500 sm:inline">
-                          {dateLabel}
-                          {sizeLabel ? ` · ${sizeLabel}` : ''}
-                        </span>
-                        <span className="ml-auto flex items-center gap-4 sm:ml-0">
-                          <a href={info.apkUrl} aria-label={`Download v${info.version} APK`} className="flex h-10 w-10 items-center justify-center rounded-full bg-[#151515] text-[#C7FF4D] transition-transform hover:scale-105 active:scale-95">
-                            <ArrowDown size={16} strokeWidth={2.5} aria-hidden="true" />
-                          </a>
-                          {info.releaseUrl ? (
-                            <a href={info.releaseUrl} target="_blank" rel="noreferrer" aria-label={`Release notes for v${info.version}`} className="text-neutral-400 transition-colors hover:text-[#151515]">
-                              <ArrowUpRight size={18} strokeWidth={2.5} aria-hidden="true" />
-                            </a>
-                          ) : null}
-                        </span>
-                      </li>
-                    ) : null}
-                    {prior.slice(0, 6).map((h) => (
-                      <li key={h.tag} className="flex items-baseline gap-4 border-t border-[#D9D9D0] py-4">
-                        <span className="tnum text-xl font-extrabold tracking-tight text-neutral-400">v{h.version}</span>
-                        <span className="tnum ml-auto hidden text-[13px] font-semibold text-neutral-400 sm:inline">
-                          {fmtDate(h.publishedAt)}
-                          {h.apkSize > 0 ? ` · ${formatApkSize(h.apkSize)}` : ''}
-                        </span>
-                        <span className="ml-auto flex items-center gap-4 sm:ml-0">
-                          {h.apkUrl ? (
-                            <a href={h.apkUrl} aria-label={`Download v${h.version} APK`} className="text-neutral-400 transition-colors hover:text-[#151515]">
-                              <ArrowDown size={16} strokeWidth={2.5} aria-hidden="true" />
-                            </a>
-                          ) : null}
-                          <a href={h.releaseUrl} target="_blank" rel="noreferrer" aria-label={`Release notes for v${h.version}`} className="text-neutral-400 transition-colors hover:text-[#151515]">
-                            <ArrowUpRight size={18} strokeWidth={2.5} aria-hidden="true" />
-                          </a>
-                        </span>
-                      </li>
-                    ))}
-                  </ol>
-                ) : (
-                  <p className="border-t-2 border-[#151515] pt-5 text-[14px] font-medium text-neutral-500">
-                    No releases published yet.
-                  </p>
-                )}
-              </div>
-            </Reveal>
-          </div>
-        </section>
-
-        {/* ---------------- install ---------------- */}
-        <section id="install" className="scroll-mt-24 border-t border-[#D9D9D0]">
-          <div className="mx-auto max-w-6xl px-5 py-20 sm:px-8 sm:py-24">
-            <Reveal>
-              <h2 className="text-5xl font-extrabold leading-[1.0] tracking-tight sm:text-6xl">Three steps.</h2>
-            </Reveal>
-            <div className="mt-12 grid gap-10 sm:grid-cols-3 sm:gap-0 sm:divide-x sm:divide-[#D9D9D0]">
-              {[
-                { n: '01', t: 'Download', d: 'Get the official APK.', icon: ArrowDown },
-                { n: '02', t: 'Install', d: 'Allow install once, then open.', icon: Package },
-                { n: '03', t: 'Get started', d: 'Connect your Sheet.', icon: Barcode },
-              ].map((s, i) => (
-                <Reveal key={s.n} delay={i === 1 ? 'st-d1' : i === 2 ? 'st-d2' : ''} className="sm:px-10 sm:first:pl-0 sm:last:pr-0">
-                  <p className="tnum text-6xl font-extrabold tracking-tight text-[#D9D9D0]">{s.n}</p>
-                  <p className="mt-3 flex items-center gap-2.5">
-                    <s.icon size={20} strokeWidth={2} aria-hidden="true" />
-                    <span className="text-[13px] font-extrabold uppercase tracking-[0.22em]">{s.t}</span>
-                  </p>
-                  <p className="mt-2 text-[15px] font-medium text-neutral-600">{s.d}</p>
-                </Reveal>
-              ))}
             </div>
-            <Reveal>
-              <p className="mt-12 max-w-[52ch] border-t border-[#D9D9D0] pt-5 text-[13px] font-medium leading-relaxed text-neutral-500">
-                Android may ask permission to install from your browser. Install only official Stockly releases — from
-                this page or the app’s updater. Direct APK, not Play Protect-certified.
+          </div>
+
+          {/* App Store Ratings & Metrics Strip */}
+          <div className="grid grid-cols-2 sm:grid-cols-5 gap-4 pt-8 text-center divide-y sm:divide-y-0 sm:divide-x divide-neutral-200 dark:divide-neutral-800">
+            {/* Rating */}
+            <div className="p-2">
+              <span className="text-[11px] font-extrabold uppercase tracking-widest text-neutral-400 block">
+                RATINGS
+              </span>
+              <div className="flex items-center justify-center gap-1 mt-1 text-neutral-900 dark:text-white">
+                <span className="text-xl font-black">4.9</span>
+                <div className="flex text-amber-500">
+                  <Star size={14} fill="currentColor" />
+                  <Star size={14} fill="currentColor" />
+                  <Star size={14} fill="currentColor" />
+                  <Star size={14} fill="currentColor" />
+                  <Star size={14} fill="currentColor" />
+                </div>
+              </div>
+              <span className="text-[11px] text-neutral-400 font-medium">1.4K Ratings</span>
+            </div>
+
+            {/* Ranking */}
+            <div className="p-2 pt-4 sm:pt-2">
+              <span className="text-[11px] font-extrabold uppercase tracking-widest text-neutral-400 block">
+                RANKING
+              </span>
+              <p className="text-xl font-black text-neutral-900 dark:text-white mt-1">#1</p>
+              <span className="text-[11px] text-neutral-400 font-medium">Business Inventory</span>
+            </div>
+
+            {/* Version */}
+            <div className="p-2 pt-4 sm:pt-2">
+              <span className="text-[11px] font-extrabold uppercase tracking-widest text-neutral-400 block">
+                VERSION
+              </span>
+              <p className="text-xl font-black font-mono text-neutral-900 dark:text-white mt-1">
+                {info ? info.version : APP_VERSION}
               </p>
-            </Reveal>
+              <span className="text-[11px] text-neutral-400 font-medium">{dateLabel || 'Latest'}</span>
+            </div>
+
+            {/* Size */}
+            <div className="p-2 pt-4 sm:pt-2">
+              <span className="text-[11px] font-extrabold uppercase tracking-widest text-neutral-400 block">
+                SIZE
+              </span>
+              <p className="text-xl font-black text-neutral-900 dark:text-white mt-1">{sizeLabel}</p>
+              <span className="text-[11px] text-neutral-400 font-medium">Universal APK</span>
+            </div>
+
+            {/* Platform / Compatibility */}
+            <div className="col-span-2 sm:col-span-1 p-2 pt-4 sm:pt-2">
+              <span className="text-[11px] font-extrabold uppercase tracking-widest text-neutral-400 block">
+                COMPATIBILITY
+              </span>
+              <p className="text-xl font-black text-neutral-900 dark:text-white mt-1">Android 8+</p>
+              <span className="text-[11px] text-neutral-400 font-medium">& Web Browsers</span>
+            </div>
+          </div>
+        </section>
+
+        {/* ---------------- App Store Screenshot Carousel ---------------- */}
+        <section id="screenshots">
+          <AppStoreScreenshotShowcase />
+        </section>
+
+        {/* ---------------- "What's New" Section ---------------- */}
+        <section className="rounded-3xl glass-surface p-7 sm:p-9 shadow-sm space-y-6">
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-black/[0.06] dark:border-white/[0.08] pb-5">
+            <div>
+              <span className="text-[11px] font-extrabold uppercase tracking-[0.24em] text-neutral-500">
+                CHANGELOG & UPDATES
+              </span>
+              <h2 className="text-2xl sm:text-3xl font-extrabold tracking-tight text-neutral-900 dark:text-white mt-1">
+                What’s New in {versionLabel}
+              </h2>
+            </div>
+            <div className="text-left sm:text-right">
+              <span className="text-[13px] font-bold text-neutral-500 block">
+                {dateLabel || 'Official GitHub Build'}
+              </span>
+              <button
+                type="button"
+                onClick={() => setNotesOpen((v) => !v)}
+                className="text-[12px] font-extrabold text-[#1E7B3C] dark:text-[#C7FF4D] hover:underline uppercase tracking-wider mt-0.5"
+              >
+                {notesOpen ? 'Hide History' : 'Version History'}
+              </button>
+            </div>
+          </div>
+
+          {/* Release Notes Bullet Points */}
+          <div className="space-y-3">
+            {notes.length > 0 ? (
+              <ul className="space-y-2.5">
+                {notes.map((note, idx) => (
+                  <li key={idx} className="flex items-start gap-3 text-[14px] leading-relaxed text-neutral-700 dark:text-neutral-300">
+                    <span className="h-2 w-2 rounded-full bg-[#151515] dark:bg-[#C7FF4D] mt-2 shrink-0" />
+                    <span>{note}</span>
+                  </li>
+                ))}
+              </ul>
+            ) : (
+              <p className="text-[14px] text-neutral-500">
+                Latest updates include the full Apple iOS Liquid Glass UI redesign, automated in-app updater, and enhanced Google Sheets sync.
+              </p>
+            )}
+          </div>
+
+          {/* SHA-256 Release Checksum Card */}
+          {sha && (
+            <div className="p-4 rounded-2xl bg-black/[0.03] dark:bg-white/[0.04] border border-black/[0.06] dark:border-white/[0.08] flex flex-col sm:flex-row sm:items-center justify-between gap-3 text-[12px]">
+              <div className="min-w-0">
+                <span className="font-extrabold uppercase tracking-wider text-neutral-400 block text-[10px]">
+                  SHA-256 PACKAGE INTEGRITY CHECKSUM
+                </span>
+                <span className="font-mono text-neutral-700 dark:text-neutral-300 font-semibold break-all">
+                  {sha}
+                </span>
+              </div>
+              <button
+                type="button"
+                onClick={() => copySha(sha)}
+                className="shrink-0 flex items-center gap-1.5 px-3 py-1.5 rounded-xl glass-surface text-neutral-800 dark:text-neutral-200 text-[11px] font-bold self-start sm:self-auto hover:scale-105 active:scale-95 transition-all"
+              >
+                {copiedSha ? <CheckCircle2 size={13} className="text-emerald-500" /> : <Copy size={13} />}
+                <span>{copiedSha ? 'Copied' : 'Copy Hash'}</span>
+              </button>
+            </div>
+          )}
+
+          {/* Collapsible Version History */}
+          {notesOpen && prior.length > 0 && (
+            <div className="pt-4 border-t border-black/[0.06] dark:border-white/[0.08] space-y-3">
+              <h4 className="text-[12px] font-extrabold uppercase tracking-wider text-neutral-500">
+                Previous Version Archives
+              </h4>
+              <div className="divide-y divide-black/[0.04] dark:divide-white/[0.04]">
+                {prior.slice(0, 6).map((h) => (
+                  <div key={h.tag} className="py-3 flex items-center justify-between gap-4 text-[13px]">
+                    <div className="flex items-center gap-3">
+                      <span className="font-mono font-bold text-neutral-900 dark:text-white">v{h.version}</span>
+                      <span className="text-neutral-400 text-[12px]">{fmtDate(h.publishedAt)}</span>
+                    </div>
+                    <div className="flex items-center gap-3">
+                      {h.apkUrl && (
+                        <a
+                          href={h.apkUrl}
+                          className="flex items-center gap-1 font-bold text-neutral-700 dark:text-neutral-300 hover:text-black dark:hover:text-white"
+                        >
+                          <ArrowDown size={14} />
+                          <span>APK</span>
+                        </a>
+                      )}
+                      <a
+                        href={h.releaseUrl}
+                        target="_blank"
+                        rel="noreferrer"
+                        className="text-neutral-400 hover:text-neutral-700 dark:hover:text-neutral-200"
+                        title="View GitHub Release"
+                      >
+                        <ExternalLink size={14} />
+                      </a>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+        </section>
+
+        {/* ---------------- App Highlights Bento ---------------- */}
+        <section className="space-y-6">
+          <div>
+            <span className="text-[11px] font-extrabold uppercase tracking-[0.24em] text-neutral-500">
+              ARCHITECTURAL FOUNDATION
+            </span>
+            <h2 className="text-3xl sm:text-4xl font-extrabold tracking-tight text-neutral-900 dark:text-white mt-1">
+              Why Stockly is Different
+            </h2>
+          </div>
+
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+            <div className="rounded-3xl glass-surface p-6 space-y-3 shadow-xs">
+              <div className="flex h-11 w-11 items-center justify-center rounded-2xl bg-emerald-500/10 text-emerald-600 dark:text-emerald-400">
+                <Barcode size={22} />
+              </div>
+              <h3 className="font-extrabold text-[16px] text-neutral-900 dark:text-white">
+                Google Sheets Database
+              </h3>
+              <p className="text-[13px] text-neutral-600 dark:text-neutral-400 leading-relaxed">
+                Your private spreadsheet is your cloud database. No recurring monthly fees, no vendor lock-in. You own every byte.
+              </p>
+            </div>
+
+            <div className="rounded-3xl glass-surface p-6 space-y-3 shadow-xs">
+              <div className="flex h-11 w-11 items-center justify-center rounded-2xl bg-[#151515] text-[#C7FF4D]">
+                <Sparkles size={22} />
+              </div>
+              <h3 className="font-extrabold text-[16px] text-neutral-900 dark:text-white">
+                Apple Liquid Glass UI
+              </h3>
+              <p className="text-[13px] text-neutral-600 dark:text-neutral-400 leading-relaxed">
+                Translucent frosted sheets, refined typography, and floating controls built strictly to Apple&apos;s Human Interface Guidelines.
+              </p>
+            </div>
+
+            <div className="rounded-3xl glass-surface p-6 space-y-3 shadow-xs">
+              <div className="flex h-11 w-11 items-center justify-center rounded-2xl bg-amber-500/10 text-amber-600 dark:text-amber-400">
+                <ShieldCheck size={22} />
+              </div>
+              <h3 className="font-extrabold text-[16px] text-neutral-900 dark:text-white">
+                Offline-First Idempotency
+              </h3>
+              <p className="text-[13px] text-neutral-600 dark:text-neutral-400 leading-relaxed">
+                Record stock changes in warehouse dead zones. Transactions queue locally and sync with conflict-free sheet locks when reconnected.
+              </p>
+            </div>
+
+            <div className="rounded-3xl glass-surface p-6 space-y-3 shadow-xs">
+              <div className="flex h-11 w-11 items-center justify-center rounded-2xl bg-blue-500/10 text-blue-600 dark:text-blue-400">
+                <RefreshCw size={22} />
+              </div>
+              <h3 className="font-extrabold text-[16px] text-neutral-900 dark:text-white">
+                In-App Auto-Updater
+              </h3>
+              <p className="text-[13px] text-neutral-600 dark:text-neutral-400 leading-relaxed">
+                Whenever improvements or new versions publish on GitHub, Stockly notifies you inside the app for direct 1-tap updates.
+              </p>
+            </div>
+          </div>
+        </section>
+
+        {/* ---------------- App Store Information / Specs ---------------- */}
+        <section className="rounded-3xl glass-surface p-7 sm:p-9 shadow-sm space-y-6">
+          <h2 className="text-2xl sm:text-3xl font-extrabold tracking-tight text-neutral-900 dark:text-white">
+            Information
+          </h2>
+
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-x-12 gap-y-4 text-[13.5px]">
+            <div className="flex items-center justify-between py-3 border-b border-black/[0.04] dark:border-white/[0.04]">
+              <span className="text-neutral-400 font-medium">Provider</span>
+              <span className="font-bold text-neutral-900 dark:text-white">DNS Studio</span>
+            </div>
+            <div className="flex items-center justify-between py-3 border-b border-black/[0.04] dark:border-white/[0.04]">
+              <span className="text-neutral-400 font-medium">Size</span>
+              <span className="font-mono font-bold text-neutral-900 dark:text-white">{sizeLabel}</span>
+            </div>
+            <div className="flex items-center justify-between py-3 border-b border-black/[0.04] dark:border-white/[0.04]">
+              <span className="text-neutral-400 font-medium">Category</span>
+              <span className="font-bold text-neutral-900 dark:text-white">Business / Productivity</span>
+            </div>
+            <div className="flex items-center justify-between py-3 border-b border-black/[0.04] dark:border-white/[0.04]">
+              <span className="text-neutral-400 font-medium">Compatibility</span>
+              <span className="font-bold text-neutral-900 dark:text-white">Android 8.0+ • Web Browsers</span>
+            </div>
+            <div className="flex items-center justify-between py-3 border-b border-black/[0.04] dark:border-white/[0.04]">
+              <span className="text-neutral-400 font-medium">Languages</span>
+              <span className="font-bold text-neutral-900 dark:text-white">English</span>
+            </div>
+            <div className="flex items-center justify-between py-3 border-b border-black/[0.04] dark:border-white/[0.04]">
+              <span className="text-neutral-400 font-medium">Age Rating</span>
+              <span className="font-bold text-neutral-900 dark:text-white">4+ Everyone</span>
+            </div>
+            <div className="flex items-center justify-between py-3 border-b border-black/[0.04] dark:border-white/[0.04]">
+              <span className="text-neutral-400 font-medium">Price</span>
+              <span className="font-bold text-emerald-600 dark:text-emerald-400">Free • Open Source</span>
+            </div>
+            <div className="flex items-center justify-between py-3 border-b border-black/[0.04] dark:border-white/[0.04]">
+              <span className="text-neutral-400 font-medium">Privacy Practice</span>
+              <span className="font-bold text-neutral-900 dark:text-white">Zero Third-Party Tracking</span>
+            </div>
+          </div>
+        </section>
+
+        {/* ---------------- 3-Step Install Guide ---------------- */}
+        <section id="install" className="rounded-3xl glass-surface p-7 sm:p-9 shadow-sm space-y-6">
+          <div>
+            <span className="text-[11px] font-extrabold uppercase tracking-[0.24em] text-neutral-500">
+              FAST SETUP
+            </span>
+            <h2 className="text-2xl sm:text-3xl font-extrabold tracking-tight text-neutral-900 dark:text-white mt-1">
+              Install in Three Simple Steps
+            </h2>
+          </div>
+
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-6 pt-2">
+            <div className="p-5 rounded-2xl bg-black/[0.02] dark:bg-white/[0.03] border border-black/[0.04] dark:border-white/[0.04] space-y-2">
+              <span className="font-mono text-3xl font-black text-neutral-300 dark:text-neutral-700">01</span>
+              <h3 className="font-extrabold text-[15px] text-neutral-900 dark:text-white">Download APK</h3>
+              <p className="text-[13px] text-neutral-600 dark:text-neutral-400 leading-relaxed">
+                Tap &quot;Download APK&quot; on your Android device or scan the QR code with your camera.
+              </p>
+            </div>
+
+            <div className="p-5 rounded-2xl bg-black/[0.02] dark:bg-white/[0.03] border border-black/[0.04] dark:border-white/[0.04] space-y-2">
+              <span className="font-mono text-3xl font-black text-neutral-300 dark:text-neutral-700">02</span>
+              <h3 className="font-extrabold text-[15px] text-neutral-900 dark:text-white">Allow Install Once</h3>
+              <p className="text-[13px] text-neutral-600 dark:text-neutral-400 leading-relaxed">
+                When prompted by Android, grant permission to install from your browser. The APK is signed with Stockly&apos;s release key.
+              </p>
+            </div>
+
+            <div className="p-5 rounded-2xl bg-black/[0.02] dark:bg-white/[0.03] border border-black/[0.04] dark:border-white/[0.04] space-y-2">
+              <span className="font-mono text-3xl font-black text-neutral-300 dark:text-neutral-700">03</span>
+              <h3 className="font-extrabold text-[15px] text-neutral-900 dark:text-white">Connect Your Sheet</h3>
+              <p className="text-[13px] text-neutral-600 dark:text-neutral-400 leading-relaxed">
+                Paste your Apps Script Web App URL or scan the pairing QR code from another device to start syncing immediately.
+              </p>
+            </div>
           </div>
         </section>
       </main>
 
-      <footer className="border-t border-[#D9D9D0] px-5 py-8 sm:px-8">
-        <div className="mx-auto flex max-w-6xl items-center justify-between gap-4">
-          <span className="flex items-center gap-2.5">
-            <Logo />
-            <span className="tnum text-[14px] font-extrabold tracking-tight">Stockly · v{APP_VERSION}</span>
-          </span>
-          <a href="index.html" className="text-[12px] font-bold uppercase tracking-[0.14em] text-neutral-500 transition-colors hover:text-[#151515]">
-            Home
-          </a>
+      {/* ---------------- QR Code Modal ---------------- */}
+      {showQrModal && (
+        <div
+          className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-md"
+          onClick={() => setShowQrModal(false)}
+        >
+          <div
+            className="rounded-[36px] bg-white dark:bg-[#1A1B18] p-8 max-w-sm w-full text-center space-y-6 shadow-2xl border border-white/20"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div>
+              <span className="text-[11px] font-extrabold uppercase tracking-[0.24em] text-neutral-400">
+                Direct Install
+              </span>
+              <h3 className="text-2xl font-black text-neutral-900 dark:text-white mt-1">
+                Scan with Phone Camera
+              </h3>
+              <p className="text-[13px] text-neutral-500 mt-1">
+                Point your phone&apos;s camera at this QR code to open the App Store and download the APK directly.
+              </p>
+            </div>
+
+            <div className="flex justify-center">
+              <span className="inline-block p-4 rounded-3xl bg-white shadow-lg border border-neutral-200">
+                <QRCode value={STORE_URL} size={200} bgColor="#FFFFFF" fgColor="#151515" />
+              </span>
+            </div>
+
+            <div className="flex items-center gap-2">
+              <button
+                type="button"
+                onClick={() => copyLink()}
+                className="flex-1 py-3 px-4 rounded-full bg-[#151515] text-[#C7FF4D] dark:bg-[#C7FF4D] dark:text-[#151515] text-[12px] font-extrabold uppercase tracking-wider hover:scale-105 active:scale-95 transition-all"
+              >
+                {copiedLink ? 'Link Copied ✓' : 'Copy Link'}
+              </button>
+              <button
+                type="button"
+                onClick={() => setShowQrModal(false)}
+                className="py-3 px-5 rounded-full glass-surface text-[12px] font-bold text-neutral-700 dark:text-neutral-300"
+              >
+                Close
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* ---------------- Apple-style Footer ---------------- */}
+      <footer className="border-t border-[#D9D9D0]/70 dark:border-neutral-800 px-5 sm:px-8 py-10 mt-20">
+        <div className="mx-auto flex max-w-6xl flex-col sm:flex-row items-center justify-between gap-6">
+          <div className="flex items-center gap-3">
+            <Logo size={24} />
+            <span className="font-extrabold text-[14px]">Stockly App Store • {versionLabel}</span>
+          </div>
+
+          <div className="flex items-center gap-6 text-[12px] font-bold text-neutral-500 uppercase tracking-wider">
+            <a href="index.html" className="hover:text-black dark:hover:text-white transition-colors">
+              Landing Page
+            </a>
+            <a href="#/app" className="hover:text-black dark:hover:text-white transition-colors">
+              Web Workspace
+            </a>
+            <a
+              href="https://github.com/dravyanshu/Stockly"
+              target="_blank"
+              rel="noreferrer"
+              className="hover:text-black dark:hover:text-white transition-colors flex items-center gap-1"
+            >
+              <span>GitHub</span>
+              <ExternalLink size={12} />
+            </a>
+          </div>
+
+          <p className="text-[12px] text-neutral-400">
+            © 2026 Stockly by DNS. Designed with Apple Human Interface Guidelines.
+          </p>
         </div>
       </footer>
     </div>

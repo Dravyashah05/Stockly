@@ -124,124 +124,86 @@ export function useParallax<T extends HTMLElement>(speed = 0.06) {
   return ref;
 }
 
-/* ---------------- mock data (interface illustration only) ---------------- */
-
-const ROWS = [
-  { init: 'B', tint: '#E4EBFF', ink: '#2B4BD3', name: 'Basmati Rice 5kg', meta: 'GROCERIES · SKU-4821', qty: '142 in stock', ok: true },
-  { init: 'C', tint: '#E7F7E4', ink: '#1E7B3C', name: 'Cold-Pressed Oil 1L', meta: 'BEVERAGES · SKU-1180', qty: '86 in stock', ok: true },
-  { init: 'D', tint: '#FBEACB', ink: '#9A5B00', name: 'Detergent Bar 200g', meta: 'HOUSEHOLD · SKU-3390', qty: '4 · low', ok: false },
-];
-
-/* Floating dashboard composition for the hero. */
+/* Floating dashboard composition for the hero showcasing authentic app UI */
 export function DashboardMock() {
   return (
-    <div className="relative mx-auto w-full max-w-[520px]">
-      {/* main panel */}
-      <div className="st-enter relative z-10 rounded-[28px] border border-[#D9D9D0] bg-white p-5 shadow-[0_30px_60px_-30px_rgba(21,21,21,0.35)] sm:p-6" style={{ animationDelay: '0.1s' }}>
-        <div className="flex items-center justify-between">
-          <p className="text-[11px] font-extrabold uppercase tracking-[0.18em] text-[#151515]">Stock overview</p>
-          <span className="inline-flex items-center gap-1.5 rounded-full bg-[#151515] px-2.5 py-1 text-[10px] font-extrabold uppercase tracking-widest text-[#C7FF4D]">
-            <span className="st-blink h-1.5 w-1.5 rounded-full bg-[#C7FF4D]" />
-            Synced
-          </span>
-        </div>
-        <div className="mt-4 flex items-end justify-between gap-4">
-          <div>
-            <p className="text-[52px] font-extrabold leading-none tracking-tight sm:text-[64px]">1,248</p>
-            <p className="mt-1 text-[11px] font-bold uppercase tracking-[0.18em] text-neutral-500">Units · 36 products</p>
-          </div>
-          <svg width="120" height="48" viewBox="0 0 120 48" fill="none" aria-hidden="true" className="shrink-0">
-            <path d="M2 40 L20 34 L38 36 L56 26 L74 28 L92 14 L118 10" stroke="#151515" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" />
-            <circle cx="118" cy="10" r="4" fill="#C7FF4D" stroke="#151515" strokeWidth="2" />
-          </svg>
-        </div>
-        <div className="mt-4 border-t border-[#EAEAE4]">
-          {ROWS.map((r) => (
-            <div key={r.name} className="flex items-center gap-3 border-b border-[#EAEAE4] py-3 last:border-0">
-              <span
-                className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl text-[15px] font-extrabold"
-                style={{ background: r.tint, color: r.ink }}
-              >
-                {r.init}
-              </span>
-              <span className="min-w-0 flex-1">
-                <span className="block truncate text-[14px] font-bold">{r.name}</span>
-                <span className="block text-[10.5px] font-semibold uppercase tracking-wider text-neutral-500">{r.meta}</span>
-              </span>
-              <span className={`shrink-0 rounded-full px-2.5 py-1 text-[11px] font-extrabold ${r.ok ? 'bg-[#E7F7E4] text-[#1E7B3C]' : 'bg-[#FBEACB] text-[#9A5B00]'}`}>
-                {r.qty}
-              </span>
-            </div>
-          ))}
+    <div className="relative mx-auto w-full max-w-[480px]">
+      {/* Background ambient glow */}
+      <span aria-hidden="true" className="ambient-glow -top-12 -left-12 h-64 w-64 bg-[#C7FF4D]/35" />
+      <span aria-hidden="true" className="ambient-glow -bottom-10 -right-10 h-72 w-72 bg-blue-500/20" />
+
+      {/* Hero Smartphone Bezel showing real Overview screen */}
+      <div className="phone-frame relative z-10 mx-auto max-w-[310px] transform hover:scale-[1.02] transition-transform duration-500">
+        <div className="phone-screen shadow-2xl">
+          <img
+            src="/screenshots/screen-home.png"
+            alt="Stockly Mobile App on Android with Apple iOS Liquid Glass UI"
+            className="w-full h-full object-cover object-top block"
+            loading="eager"
+          />
         </div>
       </div>
 
-      {/* floating: low-stock alert */}
+      {/* Floating Card 1: Google Sheets Live Sync */}
       <div
-        className="st-enter st-float absolute -left-3 top-16 z-20 flex items-center gap-2.5 rounded-2xl border border-[#D9D9D0] bg-[#F7F7F2] px-3.5 py-3 shadow-[0_18px_36px_-18px_rgba(21,21,21,0.4)] sm:-left-10"
-        style={{ animationDelay: '0.35s' }}
+        className="st-enter st-float absolute -left-4 top-20 z-20 flex items-center gap-2.5 rounded-2xl glass-surface px-4 py-3 sm:-left-12"
+        style={{ animationDelay: '0.25s' }}
       >
-        <span className="flex h-9 w-9 items-center justify-center rounded-xl bg-[#151515] text-[13px] font-extrabold text-[#C7FF4D]">!</span>
-        <span>
-          <span className="block text-[12.5px] font-extrabold">Low stock</span>
-          <span className="block text-[11.5px] font-medium text-neutral-500">Detergent · 4 left</span>
+        <span className="flex h-9 w-9 items-center justify-center rounded-xl bg-[#151515] text-[#C7FF4D]">
+          <span className="st-blink h-2 w-2 rounded-full bg-[#C7FF4D]" />
         </span>
+        <div>
+          <span className="block text-[13px] font-extrabold text-[#151515] dark:text-white">Sheets Live Sync</span>
+          <span className="block text-[11px] font-medium text-neutral-500">2-way instant sync</span>
+        </div>
       </div>
 
-      {/* floating: movement toast */}
+      {/* Floating Card 2: Stock In movement toast */}
       <div
-        className="st-enter st-float-2 absolute -bottom-6 right-2 z-20 flex items-center gap-2.5 rounded-2xl bg-[#151515] px-3.5 py-3 text-white shadow-[0_18px_36px_-14px_rgba(21,21,21,0.55)] sm:-right-6"
-        style={{ animationDelay: '0.5s' }}
+        className="st-enter st-float-2 absolute -right-4 bottom-24 z-20 flex items-center gap-2.5 rounded-2xl bg-[#151515] px-4 py-3 text-white shadow-xl sm:-right-8"
+        style={{ animationDelay: '0.45s' }}
       >
-        <span className="rounded-lg bg-[#C7FF4D] px-2 py-1 text-[12px] font-extrabold text-[#151515]">+50</span>
-        <span>
-          <span className="block text-[12.5px] font-extrabold">Stock in recorded</span>
-          <span className="block text-[11.5px] font-medium text-white/60">Rice · just now</span>
-        </span>
+        <span className="rounded-xl bg-[#C7FF4D] px-2.5 py-1 text-[13px] font-black text-[#151515]">+50</span>
+        <div>
+          <span className="block text-[13px] font-extrabold text-white">Stock In Recorded</span>
+          <span className="block text-[11px] font-medium text-neutral-400">Crystal Beads · ₹10</span>
+        </div>
+      </div>
+
+      {/* Floating Card 3: Asset Valuation & Health Pill */}
+      <div
+        className="st-enter absolute -bottom-5 left-1/2 -translate-x-1/2 z-20 flex items-center gap-3 rounded-full glass-surface px-5 py-2.5 shadow-lg whitespace-nowrap"
+        style={{ animationDelay: '0.6s' }}
+      >
+        <span className="text-[12px] font-bold text-neutral-500">Stock Health:</span>
+        <span className="text-[12px] font-extrabold text-emerald-600 dark:text-emerald-400">95% Optimal</span>
+        <span className="h-3 w-px bg-neutral-300 dark:bg-neutral-700" />
+        <span className="text-[12px] font-extrabold text-[#151515] dark:text-white">20 Products</span>
       </div>
     </div>
   );
 }
 
-/* Smartphone mockup running a compact Stockly interface. */
+/* Smartphone mockup showing authentic Inventory catalogue */
 export function PhoneMock() {
   return (
-    <div className="relative mx-auto w-[270px] rounded-[44px] border border-[#D9D9D0] bg-[#151515] p-2.5 shadow-[0_40px_80px_-40px_rgba(21,21,21,0.5)] sm:w-[300px]">
-      <div className="overflow-hidden rounded-[34px] bg-[#F7F7F2]">
-        <div className="flex justify-center pt-2.5">
-          <span className="h-5 w-24 rounded-full bg-[#151515]" />
+    <div className="relative mx-auto max-w-[320px]">
+      <span aria-hidden="true" className="ambient-glow top-1/4 left-1/4 h-56 w-56 bg-[#C7FF4D]/30" />
+      <div className="phone-frame relative z-10 hover:-translate-y-2 transition-transform duration-500">
+        <div className="phone-screen shadow-2xl">
+          <img
+            src="/screenshots/screen-inventory.png"
+            alt="Stockly Real-time Inventory Catalog screen"
+            className="w-full h-full object-cover object-top block"
+            loading="lazy"
+          />
         </div>
-        <div className="px-4 pb-4 pt-2">
-          <p className="text-[15px] font-extrabold tracking-tight">Products</p>
-          <p className="text-[10.5px] font-semibold text-neutral-500">20 items · synced 09:41</p>
-          <div className="mt-2.5 rounded-2xl border border-[#EAEAE4] bg-white px-3 py-2.5 text-[11.5px] font-medium text-neutral-400">
-            Search name, SKU…
-          </div>
-          <div className="mt-2.5 space-y-1.5">
-            {[
-              { i: 'A', t: '#E4EBFF', c: '#2B4BD3', n: 'AB Chain', s: '20 in stock', ok: true },
-              { i: 'C', t: '#E7F7E4', c: '#1E7B3C', n: 'Crystal Beads', s: '20 in stock', ok: true },
-              { i: 'G', t: '#FBEACB', c: '#9A5B00', n: 'Gold Chain', s: '3 · low', ok: false },
-            ].map((p) => (
-              <div key={p.n} className="flex items-center gap-2.5 rounded-2xl border border-[#EAEAE4] bg-white px-2.5 py-2">
-                <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl text-[13px] font-extrabold" style={{ background: p.t, color: p.c }}>
-                  {p.i}
-                </span>
-                <span className="min-w-0 flex-1">
-                  <span className="block truncate text-[12px] font-bold">{p.n}</span>
-                  <span className={`block text-[10.5px] font-bold ${p.ok ? 'text-[#1E7B3C]' : 'text-[#9A5B00]'}`}>{p.s}</span>
-                </span>
-              </div>
-            ))}
-          </div>
-          <div className="mt-2.5 grid grid-cols-4 gap-1 rounded-2xl bg-white p-1.5 text-center text-[8.5px] font-extrabold text-neutral-400">
-            {['Home', 'Items', 'Logs', 'More'].map((t, i) => (
-              <span key={t} className={`rounded-xl py-1.5 ${i === 1 ? 'bg-[#151515] text-[#C7FF4D]' : ''}`}>
-                {t}
-              </span>
-            ))}
-          </div>
-        </div>
+      </div>
+
+      {/* Overlapping Sheet Preview badge */}
+      <div className="absolute -bottom-4 -right-4 z-20 flex items-center gap-2 rounded-2xl bg-[#151515] px-4 py-2.5 text-white shadow-lg sm:-right-6">
+        <span className="h-2 w-2 rounded-full bg-[#C7FF4D]" />
+        <span className="text-[12px] font-extrabold uppercase tracking-wider text-white">Liquid Glass iOS UI</span>
       </div>
     </div>
   );

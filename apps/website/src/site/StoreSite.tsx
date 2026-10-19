@@ -111,33 +111,33 @@ export default function StoreSite() {
       {/* ---------------- hero ---------------- */}
       <section id="top" className="relative mx-auto grid max-w-6xl gap-12 px-5 pb-20 pt-32 sm:px-8 lg:grid-cols-[1.05fr_1fr] lg:items-center lg:pt-40">
         <div>
-          <p className="st-enter inline-block rounded-full border border-[#D9D9D0] px-3.5 py-1.5 text-[11px] font-extrabold uppercase tracking-[0.22em]">
-            Stock management, reimagined.
+          <p className="st-enter inline-block rounded-full border border-[#D9D9D0] dark:border-neutral-700 px-3.5 py-1.5 text-[11px] font-extrabold uppercase tracking-[0.22em]">
+            Apple iOS Liquid Glass • Google Sheets Backend
           </p>
           <h1 className="st-enter mt-5 text-[13.5vw] font-extrabold leading-[0.98] tracking-tight sm:text-6xl lg:text-[5.2rem]" style={{ animationDelay: '0.08s' }}>
             Know your stock.
             <br />
             Move with <span className="relative inline-block">clarity<span aria-hidden="true" className="absolute -bottom-1 left-0 h-[5px] w-full rounded-full bg-[#C7FF4D]" />.</span>
           </h1>
-          <p className="st-enter mt-5 max-w-[34ch] text-[17px] font-medium leading-relaxed text-neutral-600" style={{ animationDelay: '0.16s' }}>
-            Your inventory. Under control.
+          <p className="st-enter mt-5 max-w-[36ch] text-[17px] font-medium leading-relaxed text-neutral-600 dark:text-neutral-400" style={{ animationDelay: '0.16s' }}>
+            Your inventory, effortlessly under control. Translucent Apple-inspired mobile design paired with your own private Google Sheet.
           </p>
           <div className="st-enter mt-8 flex flex-wrap gap-3" style={{ animationDelay: '0.24s' }}>
-            <a href="#/app" className="rounded-full bg-[#151515] px-7 py-3.5 text-[13px] font-extrabold uppercase tracking-[0.14em] text-white transition-transform hover:scale-[1.03] active:scale-95 shadow-md">
+            <a href="#/app" className="rounded-full bg-[#151515] dark:bg-[#C7FF4D] px-7 py-3.5 text-[13px] font-extrabold uppercase tracking-[0.14em] text-white dark:text-[#151515] transition-transform hover:scale-[1.03] active:scale-95 shadow-md">
               Launch Web App
             </a>
-            <a href="#store" className="rounded-full bg-[#C7FF4D] px-7 py-3.5 text-[13px] font-extrabold uppercase tracking-[0.14em] text-[#151515] transition-transform hover:scale-[1.03] active:scale-95">
-              Download APK
+            <a href="store.html" className="rounded-full bg-[#C7FF4D] dark:bg-[#151515] px-7 py-3.5 text-[13px] font-extrabold uppercase tracking-[0.14em] text-[#151515] dark:text-[#C7FF4D] border border-neutral-300 dark:border-neutral-700 transition-transform hover:scale-[1.03] active:scale-95">
+              App Store APK
             </a>
-            <a href="#how" className="rounded-full border border-[#151515] px-7 py-3.5 text-[13px] font-extrabold uppercase tracking-[0.14em] transition-colors hover:bg-[#151515] hover:text-white">
+            <a href="#how" className="rounded-full border border-[#151515] dark:border-white px-7 py-3.5 text-[13px] font-extrabold uppercase tracking-[0.14em] transition-colors hover:bg-[#151515] hover:text-white dark:hover:bg-white dark:hover:text-[#151515]">
               See how it works
             </a>
           </div>
-          <dl className="st-enter mt-10 flex gap-8 border-t border-[#D9D9D0] pt-5" style={{ animationDelay: '0.32s' }}>
+          <dl className="st-enter mt-10 flex gap-8 border-t border-[#D9D9D0] dark:border-neutral-800 pt-5" style={{ animationDelay: '0.32s' }}>
             {[
-              ['Android', 'Mobile-first'],
-              ['Sheets', 'Your database'],
-              ['Cached', 'Last synced data'],
+              ['Liquid Glass', 'Mobile-first'],
+              ['Google Sheets', 'Your database'],
+              ['In-App Updates', 'GitHub release'],
             ].map(([k, v]) => (
               <div key={k}>
                 <dt className="text-[10.5px] font-extrabold uppercase tracking-[0.2em] text-neutral-500">{v}</dt>
@@ -155,7 +155,7 @@ export default function StoreSite() {
       <section id="product" className="mx-auto max-w-6xl scroll-mt-20 px-5 py-16 sm:px-8 sm:py-24">
         <Reveal>
           <p className="text-[11px] font-extrabold uppercase tracking-[0.22em] text-neutral-500">01 · The inventory canvas</p>
-          <h2 className="mt-3 max-w-[12ch] text-5xl font-extrabold leading-[1.0] tracking-tight sm:text-7xl">
+          <h2 className="mt-3 max-w-[14ch] text-5xl font-extrabold leading-[1.0] tracking-tight sm:text-7xl">
             Less searching. More knowing.
           </h2>
         </Reveal>
@@ -163,23 +163,23 @@ export default function StoreSite() {
           <Reveal delay="st-d1">
             <CanvasNumbers />
           </Reveal>
-          <Reveal delay="st-d2" className="rounded-[28px] border border-[#D9D9D0] bg-white p-4 shadow-[0_24px_48px_-30px_rgba(21,21,21,0.3)] sm:p-5">
+          <Reveal delay="st-d2" className="rounded-[28px] border border-[#D9D9D0] dark:border-neutral-800 bg-white dark:bg-[#181916] p-4 shadow-[0_24px_48px_-30px_rgba(21,21,21,0.3)] sm:p-5">
             {[
-              { n: 'AB Chain', m: 'Bracelet · min 5', s: '20 in stock', ok: true },
-              { n: 'Crystal Beads', m: 'Only chain · min 10', s: '20 in stock', ok: true },
-              { n: 'Gold Chain', m: 'Only chain · min 8', s: '3 · low', ok: false },
-              { n: 'Rhodium Chain', m: 'Only chain · min 6', s: '12 in stock', ok: true },
+              { n: 'Crystal Beads', m: 'Only Chain · min 10', s: '10 · low', ok: false },
+              { n: 'FC Chain', m: 'Bracelet · min 5', s: '43 in stock', ok: true },
+              { n: 'BB Single Tukda', m: 'Black beads · min 5', s: '20 in stock', ok: true },
+              { n: 'Rhodium Chain', m: 'Only Chain · min 5', s: '20 in stock', ok: true },
             ].map((p, i) => (
-              <div key={p.n} className="flex items-center gap-3 border-b border-[#EAEAE4] px-2 py-3 last:border-0">
+              <div key={p.n} className="flex items-center gap-3 border-b border-[#EAEAE4] dark:border-neutral-800 px-2 py-3 last:border-0">
                 <span className="w-7 text-[13px] font-extrabold text-neutral-400">0{i + 1}</span>
                 <span className="min-w-0 flex-1">
-                  <span className="block truncate text-[15px] font-bold">{p.n}</span>
+                  <span className="block truncate text-[15px] font-bold text-neutral-900 dark:text-white">{p.n}</span>
                   <span className="block text-[11px] font-semibold uppercase tracking-wider text-neutral-500">{p.m}</span>
                 </span>
-                <span className="h-1.5 w-16 overflow-hidden rounded-full bg-[#EAEAE4] sm:w-24" aria-hidden="true">
-                  <span className={`block h-full rounded-full ${p.ok ? 'bg-[#151515]' : 'bg-[#9A5B00]'}`} style={{ width: p.ok ? '82%' : '24%' }} />
+                <span className="h-1.5 w-16 overflow-hidden rounded-full bg-[#EAEAE4] dark:bg-neutral-800 sm:w-24" aria-hidden="true">
+                  <span className={`block h-full rounded-full ${p.ok ? 'bg-emerald-500' : 'bg-amber-500'}`} style={{ width: p.ok ? '85%' : '25%' }} />
                 </span>
-                <span className={`shrink-0 rounded-full px-2.5 py-1 text-[11px] font-extrabold ${p.ok ? 'bg-[#E7F7E4] text-[#1E7B3C]' : 'bg-[#FBEACB] text-[#9A5B00]'}`}>
+                <span className={`shrink-0 rounded-full px-2.5 py-1 text-[11px] font-extrabold ${p.ok ? 'bg-[#E7F7E4] text-[#1E7B3C] dark:bg-emerald-500/10 dark:text-emerald-400' : 'bg-[#FBEACB] text-[#9A5B00] dark:bg-amber-500/10 dark:text-amber-400'}`}>
                   {p.s}
                 </span>
               </div>
@@ -268,19 +268,19 @@ export default function StoreSite() {
 
 function CanvasNumbers() {
   const [ref, inView] = useInView<HTMLDivElement>();
-  const units = useCountUp(1248, inView);
-  const prods = useCountUp(36, inView);
-  const low = useCountUp(4, inView);
+  const units = useCountUp(413, inView);
+  const prods = useCountUp(20, inView);
+  const low = useCountUp(1, inView);
   return (
-    <div ref={ref} className="grid grid-cols-3 gap-4 border-t border-[#151515] pt-6 lg:grid-cols-1 lg:gap-6">
-      <p className="col-span-3 text-[10px] font-extrabold uppercase tracking-[0.2em] text-neutral-500 lg:col-span-1">Example inventory</p>
+    <div ref={ref} className="grid grid-cols-3 gap-4 border-t border-[#151515] dark:border-white pt-6 lg:grid-cols-1 lg:gap-6">
+      <p className="col-span-3 text-[10px] font-extrabold uppercase tracking-[0.2em] text-neutral-500 lg:col-span-1">Live inventory snapshot</p>
       {[
-        [units.toLocaleString('en-IN'), 'Units in example'],
-        [String(prods), 'Sample products'],
-        [String(low), 'Low stock examples'],
+        [units.toLocaleString('en-IN'), 'Units in stock'],
+        [String(prods), 'Catalogue products'],
+        [String(low), 'Needs replenishment'],
       ].map(([v, l]) => (
         <div key={l}>
-          <p className="tnum text-5xl font-extrabold tracking-tight sm:text-6xl">{v}</p>
+          <p className="tnum text-5xl font-extrabold tracking-tight sm:text-6xl text-neutral-900 dark:text-white">{v}</p>
           <p className="mt-1 text-[11px] font-extrabold uppercase tracking-[0.2em] text-neutral-500">{l}</p>
         </div>
       ))}
@@ -297,8 +297,8 @@ function HowItWorks() {
   const [step, setStep] = useState(2);
   // Latch the count-up on its first run so later cycle loops don't restart it.
   const [counted, setCounted] = useState(false);
-  const qty = useCountUp(170, counted, 900);
-  const shown = step < 1 ? 120 : Math.min(Math.max(qty, 120), 170);
+  const qty = useCountUp(15, counted, 900);
+  const shown = step < 1 ? 10 : Math.min(Math.max(qty, 10), 15);
 
   useEffect(() => {
     if (!inView) return;
@@ -346,9 +346,9 @@ function HowItWorks() {
         <Reveal delay="st-d1">
           <div className="relative overflow-hidden rounded-[32px] bg-[#1A1B18] p-8 text-center sm:p-12">
             <div aria-hidden="true" className="pointer-events-none absolute -right-24 -top-24 h-72 w-72 rounded-full bg-[#C7FF4D]/15 blur-3xl" />
-            <p className="text-[11px] font-extrabold uppercase tracking-[0.22em] text-white/50">Basmati Rice 5kg</p>
+            <p className="text-[11px] font-extrabold uppercase tracking-[0.22em] text-white/50">Crystal Beads (Only Chain)</p>
             <p className="tnum mt-2 text-[88px] font-extrabold leading-none tracking-tight text-[#C7FF4D] sm:text-[120px]">{shown}</p>
-            <p className="mt-2 text-[13px] font-bold uppercase tracking-[0.2em] text-white/60">+50 recorded</p>
+            <p className="mt-2 text-[13px] font-bold uppercase tracking-[0.2em] text-white/60">+5 recorded (10 → 15)</p>
             <div className="mx-auto mt-6 h-1.5 w-48 overflow-hidden rounded-full bg-white/10" aria-hidden="true">
               <div className="h-full rounded-full bg-[#C7FF4D] transition-all duration-500" style={{ width: `${((step + 1) / 3) * 100}%` }} />
             </div>
@@ -362,10 +362,11 @@ function HowItWorks() {
 /* ---------------- C: feature moments ---------------- */
 
 const KNOW_ROWS = [
-  { n: 'Basmati Rice 5kg', s: '142 in stock' },
-  { n: 'Cold-Pressed Oil 1L', s: '86 in stock' },
-  { n: 'Detergent Bar 200g', s: '4 · low' },
-  { n: 'Sugar 1kg', s: '64 in stock' },
+  { n: 'Crystal Beads', s: '10 · low' },
+  { n: 'FC Chain', s: '43 in stock' },
+  { n: 'BB Single Tukda', s: '20 in stock' },
+  { n: 'Rhodium Chain', s: '20 in stock' },
+  { n: 'Gold Chain', s: '20 in stock' },
 ];
 
 function Features() {
@@ -475,12 +476,13 @@ function Features() {
             </div>
             <div className="mt-3 space-y-1.5">
               {[
-                ['+50', 'Basmati Rice · 09:41'],
-                ['−2', 'Detergent Bar · 09:12'],
-                ['+10', 'Sugar 1kg · 08:58'],
+                ['+1', 'Crystal Beads · 14:07'],
+                ['−1', 'FC Chain · 14:05'],
+                ['+1', 'FC Chain · 13:54'],
+                ['+20', 'FC Chain · 17 Oct'],
               ].map(([q, m]) => (
-                <div key={m} className="flex items-center justify-between rounded-2xl bg-[#F7F7F2] px-3.5 py-2.5">
-                  <span className={`tnum text-[15px] font-extrabold ${q.startsWith('+') ? 'text-[#1E7B3C]' : 'text-[#9A3C00]'}`}>{q}</span>
+                <div key={m} className="flex items-center justify-between rounded-2xl bg-[#F7F7F2] dark:bg-[#1A1B18] px-3.5 py-2.5">
+                  <span className={`tnum text-[15px] font-extrabold ${q.startsWith('+') ? 'text-[#1E7B3C] dark:text-[#C7FF4D]' : 'text-[#9A3C00] dark:text-amber-400'}`}>{q}</span>
                   <span className="text-[12.5px] font-semibold text-neutral-500">{m}</span>
                 </div>
               ))}

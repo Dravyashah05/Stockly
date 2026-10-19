@@ -85,6 +85,84 @@ body {
   animation: st-tour-bar 5s linear forwards;
 }
 
+/* ---------- Apple Liquid Glass Utilities ---------- */
+.glass-surface {
+  background: rgba(255, 255, 255, 0.75);
+  backdrop-filter: blur(24px) saturate(180%);
+  -webkit-backdrop-filter: blur(24px) saturate(180%);
+  border: 1px solid rgba(255, 255, 255, 0.6);
+  box-shadow: 0 12px 36px -10px rgba(0, 0, 0, 0.08), inset 0 1px 0 rgba(255, 255, 255, 0.8);
+}
+
+.dark .glass-surface {
+  background: rgba(26, 27, 30, 0.75);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  box-shadow: 0 16px 40px -12px rgba(0, 0, 0, 0.5), inset 0 1px 0 rgba(255, 255, 255, 0.15);
+}
+
+.glass-pill {
+  background: rgba(255, 255, 255, 0.85);
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
+  border: 1px solid rgba(255, 255, 255, 0.5);
+  box-shadow: 0 4px 16px -4px rgba(0, 0, 0, 0.06);
+}
+
+.dark .glass-pill {
+  background: rgba(35, 36, 40, 0.85);
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  box-shadow: 0 4px 16px -4px rgba(0, 0, 0, 0.4);
+}
+
+/* Modern phone bezel container */
+.phone-frame {
+  position: relative;
+  background: #151515;
+  border-radius: 46px;
+  padding: 10px;
+  box-shadow:
+    0 0 0 1px rgba(255, 255, 255, 0.1),
+    0 25px 60px -15px rgba(0, 0, 0, 0.4),
+    0 10px 20px -8px rgba(0, 0, 0, 0.2);
+  transition: transform 0.4s cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+.phone-screen {
+  position: relative;
+  overflow: hidden;
+  border-radius: 38px;
+  background: #000;
+  aspect-ratio: 9 / 19.5;
+}
+
+/* App Store horizontal scroll gallery */
+.store-gallery-scroll {
+  display: flex;
+  gap: 20px;
+  overflow-x: auto;
+  scroll-snap-type: x mandatory;
+  scroll-behavior: smooth;
+  -webkit-overflow-scrolling: touch;
+  scrollbar-width: none;
+  padding-block: 10px;
+}
+.store-gallery-scroll::-webkit-scrollbar {
+  display: none;
+}
+.store-gallery-item {
+  scroll-snap-align: center;
+  flex: 0 0 auto;
+}
+
+/* Ambient glow orb */
+.ambient-glow {
+  position: absolute;
+  border-radius: 9999px;
+  filter: blur(70px);
+  pointer-events: none;
+  z-index: 0;
+}
+
 /* ---------- reduced motion: static, fully readable ---------- */
 @media (prefers-reduced-motion: reduce) {
   html { scroll-behavior: auto; }
