@@ -403,7 +403,7 @@ export function Sheet({
   // `position: fixed` and collapse the sheet at the content bottom.
   return createPortal(
     <div className="fixed inset-0 z-50" data-sheet-title={title} role="dialog" aria-modal="true" aria-label={label || title}>
-      <button aria-label="Close dialog" onClick={onClose} className={`animate-fade-in absolute inset-0 ${backdropCls || 'bg-black/45'}`} />
+      <button aria-label="Close dialog" onClick={onClose} className={`animate-fade-in absolute inset-0 ${backdropCls || 'bg-black/50 backdrop-blur-md'}`} />
       <div className="sheet-dialog-position absolute inset-x-0 bottom-0 mx-auto flex max-w-md justify-center">
         <div
           ref={panelRef}
@@ -495,7 +495,7 @@ export function Field({
 }
 
 export const inputCls =
-  'min-h-[48px] w-full rounded-2xl border border-(--stroke-dim) bg-(--field) px-4 py-3 text-[15px] text-(--ink) outline-none transition placeholder:text-(--ink-3) focus:border-(--accent) focus:ring-[3px] focus:ring-(--accent-soft)';
+  'min-h-[48px] w-full rounded-2xl border border-(--stroke-dim) bg-(--field) backdrop-blur-md px-4 py-3 text-[15px] text-(--ink) outline-none transition placeholder:text-(--ink-3) focus:border-(--accent) focus:ring-[3px] focus:ring-(--accent-soft)';
 
 /* ---------- Shared search bar (single implementation for every list) ---------- */
 export const SearchBar = memo(function SearchBar({
@@ -522,7 +522,7 @@ export const SearchBar = memo(function SearchBar({
           placeholder={placeholder}
           aria-label={label || placeholder}
           role="searchbox"
-          className="min-h-12 w-full rounded-xl border border-(--stroke) bg-(--field) py-2.5 pl-10 pr-4 text-[16px] text-(--ink) outline-none transition focus:border-(--accent) focus:ring-[3px] focus:ring-(--accent-soft) placeholder:text-(--ink-3)"
+          className="min-h-12 w-full rounded-2xl border border-(--stroke-dim) bg-(--field) backdrop-blur-md py-2.5 pl-10 pr-4 text-[16px] text-(--ink) outline-none transition focus:border-(--accent) focus:ring-[3px] focus:ring-(--accent-soft) placeholder:text-(--ink-3)"
         />
     </div>
   );

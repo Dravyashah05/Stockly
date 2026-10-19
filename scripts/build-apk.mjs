@@ -38,6 +38,10 @@ if (isWin) {
       stdio: 'ignore',
       shell: true,
     });
+    spawnSync('attrib', ['+P', '-U', join(androidDir, 'app', 'src', 'main', 'assets', 'public', '*'), '/s'], {
+      stdio: 'ignore',
+      shell: true,
+    });
   } catch {
     /* ignore attribute clearance errors */
   }
